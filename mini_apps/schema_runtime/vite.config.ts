@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), viteSingleFile()],
   base: './',
   build: {
     outDir: path.resolve(__dirname, '../../assets/mini_apps/schema_runtime'),
     emptyOutDir: true,
-    assetsDir: 'assets',
   },
 });

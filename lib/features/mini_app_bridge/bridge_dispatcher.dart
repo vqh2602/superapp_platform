@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_all/webview_all.dart';
 import '../../../core/bridge_protocol/bridge_request.dart';
 import '../../../core/bridge_protocol/bridge_response.dart';
 import '../../../core/errors/bridge_error.dart';
@@ -111,7 +111,15 @@ class BridgeDispatcher {
 
   Future<void> _sendResponse(BridgeResponse response) async {
     final jsonStr = jsonEncode(response.toJson());
-    final script = 'window.SuperAppBridge && window.SuperAppBridge.dispatchResponse($jsonStr);';
+    final script = '''
+      try {
+        if (window.SuperAppBridge && typeof window.SuperAppBridge.dispatchResponse === 'function') {
+          window.SuperAppBridge.dispatchResponse($jsonStr);
+        }
+      } catch (err) {
+        console.error('[Bridge Dispatcher] Failed to dispatch response for "${response.id}":', err.message || err, err.stack || '');
+      }
+    ''';
     try {
       await controller.runJavaScript(script);
     } catch (_) {

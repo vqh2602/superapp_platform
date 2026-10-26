@@ -14,7 +14,7 @@
         "http",
         "intl",
         "uuid",
-        "webview_flutter"
+        "webview_all"
       ],
       "devDependencies": [
         "flutter_lints",
@@ -47,6 +47,20 @@
       ]
     },
     {
+      "name": "webview_all",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "webview_all_android",
+        "webview_all_linux",
+        "webview_all_ohos",
+        "webview_all_web",
+        "webview_all_windows",
+        "webview_all_wkwebview",
+        "webview_platform_interface"
+      ]
+    },
+    {
       "name": "http",
       "version": "1.6.0",
       "dependencies": [
@@ -71,16 +85,6 @@
       "dependencies": [
         "crypto",
         "fixnum"
-      ]
-    },
-    {
-      "name": "webview_flutter",
-      "version": "4.14.1",
-      "dependencies": [
-        "flutter",
-        "webview_flutter_android",
-        "webview_flutter_platform_interface",
-        "webview_flutter_wkwebview"
       ]
     },
     {
@@ -212,6 +216,71 @@
       ]
     },
     {
+      "name": "webview_all_web",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "web",
+        "webview_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_all_ohos",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "webview_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_all_linux",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "path",
+        "webview_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_all_windows",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "path",
+        "webview_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_platform_interface",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_all_wkwebview",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "path",
+        "webview_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_all_android",
+      "version": "1.4.7",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "webview_platform_interface"
+      ]
+    },
+    {
       "name": "web",
       "version": "1.1.1",
       "dependencies": []
@@ -243,34 +312,6 @@
       "name": "crypto",
       "version": "3.0.8",
       "dependencies": []
-    },
-    {
-      "name": "webview_flutter_wkwebview",
-      "version": "3.25.1",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "path",
-        "webview_flutter_platform_interface"
-      ]
-    },
-    {
-      "name": "webview_flutter_platform_interface",
-      "version": "2.15.1",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "webview_flutter_android",
-      "version": "4.12.0",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "webview_flutter_platform_interface"
-      ]
     },
     {
       "name": "logging",
@@ -368,17 +409,17 @@
       ]
     },
     {
-      "name": "typed_data",
-      "version": "1.4.0",
-      "dependencies": [
-        "collection"
-      ]
-    },
-    {
       "name": "plugin_platform_interface",
       "version": "2.1.8",
       "dependencies": [
         "meta"
+      ]
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
       ]
     },
     {

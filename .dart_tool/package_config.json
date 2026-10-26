@@ -254,28 +254,52 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "webview_flutter",
-      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_flutter-4.14.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.10"
-    },
-    {
-      "name": "webview_flutter_android",
-      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_flutter_android-4.12.0",
+      "name": "webview_all",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all-1.4.7",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
-      "name": "webview_flutter_platform_interface",
-      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_flutter_platform_interface-2.15.1",
+      "name": "webview_all_android",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_android-1.4.7",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
-      "name": "webview_flutter_wkwebview",
-      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.25.1",
+      "name": "webview_all_linux",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_linux-1.4.7",
       "packageUri": "lib/",
-      "languageVersion": "3.10"
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_all_ohos",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_ohos-1.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_all_web",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_web-1.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_all_windows",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_windows-1.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_all_wkwebview",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_all_wkwebview-1.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_platform_interface",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/webview_platform_interface-1.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "superapp_platform",

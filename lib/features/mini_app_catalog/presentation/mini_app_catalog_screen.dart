@@ -241,23 +241,28 @@ class _MiniAppCatalogScreenState extends ConsumerState<MiniAppCatalogScreen> {
 
             // Section Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.widgets_rounded, size: 20, color: AppTheme.primary),
-                    SizedBox(width: 8),
-                    Text(
-                      'DANH SÁCH MINI APPS ĐƯỢC DUYỆT',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: Color(0xFF475569),
+                const Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.widgets_rounded, size: 20, color: AppTheme.primary),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'DANH SÁCH MINI APPS ĐƯỢC DUYỆT',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: Color(0xFF475569),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -378,12 +383,14 @@ class _MiniAppCatalogScreenState extends ConsumerState<MiniAppCatalogScreen> {
                     children: [
                       Icon(Icons.layers_outlined, color: AppTheme.primary, size: 20),
                       SizedBox(width: 8),
-                      Text(
-                        'Kiến trúc Nền tảng Động (Dynamic Architecture)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Color(0xFF0F172A),
+                      Expanded(
+                        child: Text(
+                          'Kiến trúc Nền tảng Động (Dynamic Architecture)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
                     ],
@@ -547,39 +554,45 @@ class _MiniAppCatalogScreenState extends ConsumerState<MiniAppCatalogScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            app.category,
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
-                      child: Text(
-                        app.category,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${app.capabilities.length} caps',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${app.capabilities.length} capabilities',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () {
                     context.push('/miniapp/${app.id}');
                   },
                   icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                  label: Text(isPlayground ? 'Mở Playground' : 'Mở Mini App'),
+                  label: Text(isPlayground ? 'Playground' : 'Mở App'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isPlayground
                         ? AppTheme.primary
                         : (isSchema ? const Color(0xFF059669) : const Color(0xFF334155)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

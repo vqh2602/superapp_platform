@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_all/webview_all.dart';
 import '../../../core/bridge_protocol/bridge_event.dart';
 
 class BridgeEventEmitter {
@@ -9,7 +9,16 @@ class BridgeEventEmitter {
 
   Future<void> emit(String eventName, [Map<String, dynamic>? payload]) async {
     final event = BridgeEvent.create(eventName, payload);
-    final script = 'window.SuperAppBridge && window.SuperAppBridge.dispatchEvent(${jsonEncode(event.toJson())});';
+    final eventJson = jsonEncode(event.toJson());
+    final script = '''
+      try {
+        if (window.SuperAppBridge && typeof window.SuperAppBridge.dispatchEvent === 'function') {
+          window.SuperAppBridge.dispatchEvent($eventJson);
+        }
+      } catch (err) {
+        console.error('[Bridge EventEmitter] Failed to dispatch event "$eventName":', err.message || err, err.stack || '');
+      }
+    ''';
     try {
       await controller.runJavaScript(script);
     } catch (_) {

@@ -3,26 +3,23 @@ import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import path from 'path';
 
-function stripModuleTag(): Plugin {
+function removeModuleAttrs(): Plugin {
   return {
-    name: 'strip-module-tag',
-    enforce: 'post',
-    generateBundle(_, bundle) {
-      for (const file in bundle) {
-        const item = bundle[file];
-        if (file.endsWith('.html') && 'source' in item && typeof item.source === 'string') {
-          item.source = item.source
-            .replace(/<script type="module"[^>]*>/g, '<script>')
-            .replace(/<script type="module">/g, '<script>');
-        }
-      }
+    name: 'remove-module-attrs',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html: string) {
+        return html
+          .replace(/<script type="module" crossorigin>/g, '<script>')
+          .replace(/<script type="module">/g, '<script>');
+      },
     },
   };
 }
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), viteSingleFile(), stripModuleTag()],
+  plugins: [react(), viteSingleFile(), removeModuleAttrs()],
   base: './',
   build: {
     outDir: path.resolve(__dirname, '../../assets/mini_apps/sdk_playground'),

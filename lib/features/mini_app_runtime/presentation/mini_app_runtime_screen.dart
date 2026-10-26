@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_all/webview_all.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
 import '../../mini_app_catalog/data/mini_app_repository.dart';
@@ -15,6 +15,8 @@ import '../../user_profile/data/mock_user_repository.dart';
 import '../../device/data/mock_device_adapter.dart';
 import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
+import '../domain/web_log_entry.dart';
+import 'widgets/webview_debug_bottom_sheet.dart';
 import '../../../../core/config/app_theme.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
@@ -34,6 +36,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   BridgeEventEmitter? _eventEmitter;
   bool _isLoading = true;
   String? _loadError;
+  final List<WebLogEntry> _webLogs = [];
+  bool _hasBlankScreenWarning = false;
 
   @override
   void initState() {
@@ -62,6 +66,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   Future<void> _initMiniApp() async {
+    setState(() {
+      _hasBlankScreenWarning = false;
+    });
+
     MiniAppManifest? manifest = ref
         .read(miniAppRepositoryProvider)
         .getAppById(_currentAppId);
@@ -118,29 +126,71 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       controller: controller,
       dispatcher: dispatcher,
       contextGetter: () => context,
+      onWebDebugMessage: (rawMessage) {
+        try {
+          final data = jsonDecode(rawMessage) as Map<String, dynamic>;
+          final entry = WebLogEntry.fromJson(data);
+          if (mounted) {
+            setState(() {
+              _webLogs.insert(0, entry);
+              if (_webLogs.length > 500) _webLogs.removeLast();
+            });
+          }
+        } catch (e) {
+          debugPrint('[WebDebug] Failed to parse message: $rawMessage');
+        }
+      },
     );
 
     controller.setOnConsoleMessage((JavaScriptConsoleMessage consoleMessage) {
       debugPrint('[MiniApp Web Console] (${consoleMessage.level.name}): ${consoleMessage.message}');
+      final isExisting = _webLogs.any((l) => l.message == consoleMessage.message);
+      if (!isExisting && mounted) {
+        setState(() {
+          _webLogs.insert(
+            0,
+            WebLogEntry(
+              id: 'native_console_${DateTime.now().microsecondsSinceEpoch}',
+              type: 'console',
+              level: consoleMessage.level.name.toLowerCase(),
+              message: consoleMessage.message,
+            ),
+          );
+          if (_webLogs.length > 500) _webLogs.removeLast();
+        });
+      }
     });
 
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (url) {
+          // Inject debug polyfill first to intercept early errors
+          controller.runJavaScript(BridgeChannel.webDebugPolyfillScript);
           controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
           if (validManifest.isSchemaApp && validManifest.schema != null) {
             final schemaJson = jsonEncode(validManifest.schema);
             controller.runJavaScript(
-              'window.__MINIAPP_SCHEMA__ = $schemaJson; window.__MINIAPP_APP_ID__ = "${validManifest.id}"; window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));',
+              '''try {
+                window.__MINIAPP_SCHEMA__ = $schemaJson;
+                window.__MINIAPP_APP_ID__ = "${validManifest.id}";
+                window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
+              } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
             );
           }
         },
         onPageFinished: (url) {
+          controller.runJavaScript(BridgeChannel.webDebugPolyfillScript);
           controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
           if (validManifest.isSchemaApp && validManifest.schema != null) {
             final schemaJson = jsonEncode(validManifest.schema);
             controller.runJavaScript(
-              'if (!window.__MINIAPP_SCHEMA__) { window.__MINIAPP_SCHEMA__ = $schemaJson; window.__MINIAPP_APP_ID__ = "${validManifest.id}"; } window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));',
+              '''try {
+                if (!window.__MINIAPP_SCHEMA__) {
+                  window.__MINIAPP_SCHEMA__ = $schemaJson;
+                  window.__MINIAPP_APP_ID__ = "${validManifest.id}";
+                }
+                window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
+              } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
             );
           }
           setState(() {
@@ -151,6 +201,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
             'version': validManifest.version,
           });
           emitter.emit('miniapp.show');
+
+          // Check if root element mounted after 2.5 seconds
+          Future.delayed(const Duration(milliseconds: 2500), () async {
+            if (!mounted || _webViewController == null) return;
+            try {
+              final res = await _webViewController!.runJavaScriptReturningResult(
+                '(function() { var r = document.getElementById("root"); return !!(r && (r.childElementCount > 0 || r.innerHTML.length > 0)); })()'
+              );
+              final isRendered = res.toString() == 'true';
+              if (!isRendered && mounted) {
+                setState(() {
+                  _hasBlankScreenWarning = true;
+                });
+              }
+            } catch (_) {}
+          });
         },
         onWebResourceError: (error) {
           setState(() {
@@ -174,6 +240,17 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
   }
 
+  void _openWebDebugModal(MiniAppManifest? manifest) {
+    WebViewDebugBottomSheet.show(
+      context,
+      controller: _webViewController,
+      logs: _webLogs,
+      onClearLogs: () => setState(() => _webLogs.clear()),
+      appId: _currentAppId,
+      appTitle: manifest?.name ?? 'Mini App',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final manifest = ref
@@ -186,6 +263,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         _eventEmitter!.emitSessionChanged(state: 'logged_out');
       }
     });
+
+    final errorCount = _webLogs.where((l) => l.isError).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -220,12 +299,56 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           ],
         ),
         actions: [
+          // WebView Debug Inspector button with error counter badge
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                tooltip: 'WebView Debug Inspector',
+                icon: Icon(
+                  Icons.bug_report_rounded,
+                  color: errorCount > 0 ? Colors.red : const Color(0xFF2563EB),
+                ),
+                onPressed: () => _openWebDebugModal(manifest),
+              ),
+              if (errorCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withValues(alpha: 0.4),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Center(
+                      child: Text(
+                        errorCount > 99 ? '99+' : '$errorCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
-            tooltip: 'Tải lại',
+            tooltip: 'Tải lại Mini App',
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               setState(() {
                 _isLoading = true;
+                _hasBlankScreenWarning = false;
               });
               _webViewController?.reload();
             },
@@ -243,6 +366,62 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         children: [
           if (_webViewController != null && _loadError == null)
             WebViewWidget(controller: _webViewController!),
+
+          // Diagnostic Alert Banner for blank screen or unhandled errors
+          if (_hasBlankScreenWarning && !_isLoading && _loadError == null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 20,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF1E293B),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Cảnh báo WebView',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
+                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF38BDF8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: () => _openWebDebugModal(manifest),
+                        child: const Text('DEBUG NGAY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           if (_isLoading)
             Container(
