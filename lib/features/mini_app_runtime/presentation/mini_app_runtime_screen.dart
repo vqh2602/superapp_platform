@@ -108,6 +108,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       contextGetter: () => context,
     );
 
+    controller.setOnConsoleMessage((JavaScriptConsoleMessage consoleMessage) {
+      debugPrint('[MiniApp Web Console] (${consoleMessage.level.name}): ${consoleMessage.message}');
+    });
+
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (url) {

@@ -13,7 +13,7 @@ import {
   LogOut,
   Scan,
   MapPin,
-  Image,
+  ImageIcon,
   Store,
   FileText,
   UserCircle,
@@ -299,7 +299,7 @@ export const FeatureCatalog: React.FC = () => {
         <div className="feature-grid">
           <FeatureItem icon={<Scan size={20} />} config={deviceScanQrConfig} statusText="Mock QR" />
           <FeatureItem icon={<MapPin size={20} />} config={deviceLocationConfig} statusText="Mock GPS" />
-          <FeatureItem icon={<Image size={20} />} config={deviceImageConfig} statusText="Mock Image" />
+          <FeatureItem icon={<ImageIcon size={20} />} config={deviceImageConfig} statusText="Mock Image" />
         </div>
       </section>
 

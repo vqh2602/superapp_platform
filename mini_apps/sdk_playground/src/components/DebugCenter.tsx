@@ -8,7 +8,11 @@ export const DebugCenter: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const copyLog = (log: any) => {
-    navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+      }
+    } catch (_) {}
     setCopiedId(log.id);
     setTimeout(() => setCopiedId(null), 2000);
   };

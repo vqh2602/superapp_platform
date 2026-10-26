@@ -74,7 +74,11 @@ export const RunnerModal: React.FC<RunnerModalProps> = ({ config, onClose }) => 
   const copyToClipboard = () => {
     const payload = result || error;
     if (!payload) return;
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      }
+    } catch (_) {}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
