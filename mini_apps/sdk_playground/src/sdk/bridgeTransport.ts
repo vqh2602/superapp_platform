@@ -21,11 +21,9 @@ let requestSeq = 1;
 
 export class BridgeTransport {
   private appId: string;
-  private isNativeBridgeAvailable: boolean;
 
   constructor(appId: string = 'sdk_playground') {
     this.appId = appId;
-    this.isNativeBridgeAvailable = typeof window !== 'undefined' && !!(window.FlutterBridge?.postMessage || window.SuperAppBridge?.postMessage);
   }
 
   public isConnectedToNative(): boolean {
