@@ -1,0 +1,175 @@
+import '../../../../core/errors/bridge_error.dart';
+import '../../authentication/data/mock_auth_repository.dart';
+import '../../authentication/data/mock_auth_code_service.dart';
+import '../../authentication/data/mock_token_service.dart';
+import '../../authentication/presentation/controllers/auth_controller.dart';
+import '../../device/data/mock_device_adapter.dart';
+import '../../payment/data/mock_order_repository.dart';
+import '../../permissions/data/mock_permission_repository.dart';
+import '../../permissions/presentation/permission_prompt_dialog.dart';
+import '../../user_profile/data/mock_user_repository.dart';
+import '../../debug_center/data/debug_log_repository.dart';
+import '../domain/action_context.dart';
+import '../domain/action_definition.dart';
+import '../handlers/auth_action_handler.dart';
+import '../handlers/user_action_handler.dart';
+import '../handlers/navigation_action_handler.dart';
+import '../handlers/device_action_handler.dart';
+import '../handlers/payment_action_handler.dart';
+import '../handlers/permission_action_handler.dart';
+import '../handlers/debug_action_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class NativeActionDispatcher {
+  final MockAuthRepository authRepo;
+  final MockAuthCodeService authCodeService;
+  final MockTokenService tokenService;
+  final MockUserRepository userRepo;
+  final MockDeviceAdapter deviceAdapter;
+  final MockOrderRepository orderRepo;
+  final MockPermissionRepository permissionRepo;
+  final DebugLogRepository debugLogRepo;
+
+  final Map<String, NativeActionHandler> _handlers = {};
+
+  NativeActionDispatcher({
+    required this.authRepo,
+    required this.authCodeService,
+    required this.tokenService,
+    required this.userRepo,
+    required this.deviceAdapter,
+    required this.orderRepo,
+    required this.permissionRepo,
+    required this.debugLogRepo,
+    Function(String appId)? onSwitchMiniApp,
+  }) {
+    _registerHandlers(onSwitchMiniApp);
+  }
+
+  void _registerHandlers(Function(String appId)? onSwitchMiniApp) {
+    final list = <NativeActionHandler>[
+      // Auth
+      AuthRequestCodeHandler(authRepo: authRepo, authCodeService: authCodeService),
+      AuthExchangeCodeHandler(tokenService: tokenService),
+      AuthRefreshTokenHandler(tokenService: tokenService),
+      AuthLogoutHandler(authRepo: authRepo),
+
+      // User
+      UserGetProfileHandler(userRepo: userRepo),
+      UserGetBasicInfoHandler(userRepo: userRepo),
+
+      // Navigation
+      NavigationOpenNativePageHandler(),
+      NavigationCloseHandler(),
+      NavigationOpenMiniAppHandler(onSwitchApp: onSwitchMiniApp),
+
+      // Device
+      DeviceScanQrHandler(deviceAdapter: deviceAdapter),
+      DeviceGetLocationHandler(deviceAdapter: deviceAdapter),
+      DevicePickImageHandler(deviceAdapter: deviceAdapter),
+
+      // Payment
+      PaymentCreateOrderHandler(orderRepo: orderRepo, authRepo: authRepo),
+      PaymentOpenCheckoutHandler(orderRepo: orderRepo),
+
+      // Permission
+      PermissionRequestHandler(permissionRepo: permissionRepo),
+      PermissionCheckHandler(permissionRepo: permissionRepo),
+
+      // Debug
+      DebugEchoHandler(),
+      DebugSimulateFailureHandler(),
+    ];
+
+    for (final h in list) {
+      _handlers[h.actionName] = h;
+    }
+  }
+
+  /// Dispatches an action with all security and capability checks.
+  Future<dynamic> dispatch(
+    String actionName,
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    // 0. Simulation hooks from Debug Center
+    if (debugLogRepo.simulateTimeout) {
+      await Future.delayed(const Duration(milliseconds: 3000));
+      throw BridgeError.timeout('Bridge simulation: Request timed out');
+    }
+    if (debugLogRepo.simulateUnauthorized) {
+      throw BridgeError.authRequired('Bridge simulation: Authentication required');
+    }
+    if (debugLogRepo.simulatePermissionDenied) {
+      throw BridgeError.permissionDenied('Bridge simulation: Permission denied');
+    }
+    if (debugLogRepo.simulateNativeFailure) {
+      throw BridgeError.internal('Bridge simulation: Forced native failure');
+    }
+
+    // 1. Mini App identity verification
+    if (context.appId.isEmpty) {
+      throw BridgeError.invalidParams('Mini App identifier (appId) is missing');
+    }
+
+    // 2. Action allowlist lookup
+    final handler = _handlers[actionName];
+    if (handler == null) {
+      throw BridgeError.actionNotFound(actionName);
+    }
+
+    // 3. Manifest capability check
+    // If mini app has a manifest, the capability must be declared in it
+    if (context.manifest != null && handler.requiredCapability != null) {
+      final declared = context.manifest!.capabilities.contains(handler.requiredCapability);
+      if (!declared) {
+        throw BridgeError.permissionDenied(
+          'Capability "${handler.requiredCapability}" is not declared in Mini App manifest',
+        );
+      }
+    }
+
+    // 4. Runtime permission check
+    if (handler.requiredCapability != null) {
+      final cap = handler.requiredCapability!;
+      final isGranted = permissionRepo.isGranted(context.appId, cap);
+      if (!isGranted) {
+        // If not yet granted and context has UI, prompt user
+        if (context.buildContext != null) {
+          final granted = await PermissionPromptDialog.show(
+            context.buildContext!,
+            appName: context.manifest?.name ?? context.appId,
+            capabilityKey: cap,
+          );
+          permissionRepo.setPermission(context.appId, cap, granted);
+          if (!granted) {
+            throw BridgeError.permissionDenied(cap);
+          }
+        } else {
+          throw BridgeError.permissionDenied(cap);
+        }
+      }
+    }
+
+    // 5. Authentication requirement check
+    if (handler.requiresAuth && !authRepo.isAuthenticated) {
+      throw BridgeError.authRequired();
+    }
+
+    // 6. Execute action
+    return await handler.handle(payload, context);
+  }
+}
+
+final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
+  return NativeActionDispatcher(
+    authRepo: ref.watch(mockAuthRepositoryProvider),
+    authCodeService: ref.watch(mockAuthCodeServiceProvider),
+    tokenService: ref.watch(mockTokenServiceProvider),
+    userRepo: ref.watch(mockUserRepositoryProvider),
+    deviceAdapter: ref.watch(deviceAdapterProvider),
+    orderRepo: ref.watch(mockOrderRepositoryProvider),
+    permissionRepo: ref.watch(mockPermissionRepositoryProvider),
+    debugLogRepo: ref.watch(debugLogRepositoryProvider),
+  );
+});
