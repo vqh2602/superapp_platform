@@ -4,6 +4,9 @@ class AppConfig {
   static const String appVersion = '1.0.0';
   static const String bridgeChannelName = 'FlutterBridge';
 
+  /// Catalog REST API URL for Dynamic Mini App Registry
+  static const String catalogApiUrl = 'http://localhost:3000/api/v1/catalog';
+
   /// Auth code expiration in seconds (spec: 60s)
   static const int authCodeTtlSeconds = 60;
 

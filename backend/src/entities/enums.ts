@@ -1,0 +1,26 @@
+export enum MiniAppStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  IN_REVIEW = 'IN_REVIEW',
+  APPROVED = 'APPROVED',
+  PUBLISHED = 'PUBLISHED',
+  REJECTED = 'REJECTED',
+  UNPUBLISHED = 'UNPUBLISHED',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export enum MiniAppRuntimeType {
+  WEB = 'web',
+  SCHEMA = 'schema',
+}
+
+export enum ReviewAction {
+  SUBMIT = 'SUBMIT',
+  START_REVIEW = 'START_REVIEW',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+  PUBLISH = 'PUBLISH',
+  UNPUBLISH = 'UNPUBLISH',
+  SUSPEND = 'SUSPEND',
+  ROLLBACK = 'ROLLBACK',
+}

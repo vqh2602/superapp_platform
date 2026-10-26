@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
 import '../../mini_app_catalog/data/mini_app_repository.dart';
+import '../../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../../mini_app_bridge/bridge_channel.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';
 import '../../mini_app_bridge/bridge_event_emitter.dart';
@@ -59,17 +61,27 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
   }
 
-  void _initMiniApp() {
-    final manifest = ref
+  Future<void> _initMiniApp() async {
+    MiniAppManifest? manifest = ref
         .read(miniAppRepositoryProvider)
         .getAppById(_currentAppId);
+
+    if (manifest == null || (manifest.isSchemaApp && manifest.schema == null)) {
+      manifest = await ref
+          .read(miniAppRepositoryProvider)
+          .fetchRemoteManifest(_currentAppId);
+    }
+
     if (manifest == null) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loadError = 'Mini App "$_currentAppId" không tồn tại trong danh mục';
+        _loadError = 'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
       });
       return;
     }
+
+    final validManifest = manifest;
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -97,7 +109,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       actionDispatcher: actionDispatcher,
       debugLogRepo: ref.read(debugLogRepositoryProvider),
       controller: controller,
-      manifest: manifest,
+      manifest: validManifest,
     );
 
     final emitter = BridgeEventEmitter(controller);
@@ -116,15 +128,27 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       NavigationDelegate(
         onPageStarted: (url) {
           controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
+          if (validManifest.isSchemaApp && validManifest.schema != null) {
+            final schemaJson = jsonEncode(validManifest.schema);
+            controller.runJavaScript(
+              'window.__MINIAPP_SCHEMA__ = $schemaJson; window.__MINIAPP_APP_ID__ = "${validManifest.id}"; window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));',
+            );
+          }
         },
         onPageFinished: (url) {
           controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
+          if (validManifest.isSchemaApp && validManifest.schema != null) {
+            final schemaJson = jsonEncode(validManifest.schema);
+            controller.runJavaScript(
+              'if (!window.__MINIAPP_SCHEMA__) { window.__MINIAPP_SCHEMA__ = $schemaJson; window.__MINIAPP_APP_ID__ = "${validManifest.id}"; } window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));',
+            );
+          }
           setState(() {
             _isLoading = false;
           });
           emitter.emit('miniapp.ready', {
-            'appId': manifest.id,
-            'version': manifest.version,
+            'appId': validManifest.id,
+            'version': validManifest.version,
           });
           emitter.emit('miniapp.show');
         },
@@ -140,11 +164,13 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     _webViewController = controller;
     _eventEmitter = emitter;
 
-    // Load entry point
-    if (manifest.isAsset) {
-      controller.loadFlutterAsset(manifest.entryUrl);
+    // Load entry point based on runtime type
+    if (validManifest.isSchemaApp) {
+      controller.loadFlutterAsset('assets/mini_apps/schema_runtime/index.html');
+    } else if (validManifest.isAsset) {
+      controller.loadFlutterAsset(validManifest.entryUrl);
     } else {
-      controller.loadRequest(Uri.parse(manifest.entryUrl));
+      controller.loadRequest(Uri.parse(validManifest.entryUrl));
     }
   }
 
