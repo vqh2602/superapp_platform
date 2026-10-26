@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sample Store Mini App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f8fafc; color: #0f172a; padding: 16px; }
+    .store-card { background: white; border-radius: 16px; padding: 18px; border: 1px solid #e2e8f0; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    .store-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .store-title { font-size: 18px; font-weight: 800; color: #0f172a; }
+    .badge { background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+    .welcome { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+    .product-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+    .product-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid #f1f5f9; border-radius: 12px; background: #ffffff; }
+    .product-info h4 { font-size: 14px; font-weight: 700; }
+    .product-info p { font-size: 12px; color: #64748b; }
+    .price { font-weight: 800; color: #2563eb; font-size: 14px; }
+    .buy-btn { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .btn-group { display: flex; flex-direction: column; gap: 10px; }
+    .action-btn { width: 100%; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-secondary { background: #f1f5f9; color: #334155; }
+    .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #475569; }
+    .result-box { margin-top: 14px; padding: 12px; background: #0f172a; color: #38bdf8; border-radius: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; display: none; }
+  </style>
+</head>
+<body>
+  <div class="store-card">
+    <div class="store-header">
+      <h1 class="store-title">☕ Highland Coffee Mini App</h1>
+      <span class="badge">Mini App 2</span>
+    </div>
+    <p class="welcome" id="user-greeting">Đang tải thông tin khách hàng từ Super App...</p>
+
+    <div class="product-grid">
+      <div class="product-item">
+        <div class="product-info">
+          <h4>Cà phê Phin Sữa Đá</h4>
+          <p>Size L • Đậm đà truyền thống</p>
+        </div>
+        <div class="price">45.000 ₫</div>
+        <button class="buy-btn" onclick="checkout(45000, 'Cà phê Phin Sữa Đá Size L')">Đặt mua</button>
+      </div>
+
+      <div class="product-item">
+        <div class="product-info">
+          <h4>Trà Sen Vàng Kem Cheese</h4>
+          <p>Size M • Hạt sen bùi thơm</p>
+        </div>
+        <div class="price">55.000 ₫</div>
+        <button class="buy-btn" onclick="checkout(55000, 'Trà Sen Vàng Kem Cheese')">Đặt mua</button>
+      </div>
+
+      <div class="product-item">
+        <div class="product-info">
+          <h4>Bánh Mì Chả Lụa Xá Xíu</h4>
+          <p>Bánh mì giòn rụm nóng hổi</p>
+        </div>
+        <div class="price">35.000 ₫</div>
+        <button class="buy-btn" onclick="checkout(35000, 'Bánh Mì Chả Lụa Xá Xíu')">Đặt mua</button>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="action-btn btn-secondary" onclick="switchBackToPlayground()">🔄 Quay lại SDK Playground</button>
+      <button class="action-btn btn-outline" onclick="closeMiniApp()">🚪 Đóng Mini App</button>
+    </div>
+
+    <div id="result-box" class="result-box"></div>
+  </div>
+
+  <script>
+    let seq = 1;
+
+    function invokeBridge(action, payload) {
+      return new Promise((resolve, reject) => {
+        const id = 'req_store_' + Date.now() + '_' + (seq++);
+        const request = {
+          id: id,
+          action: action,
+          payload: payload || {},
+          appId: 'sample_store',
+          timestamp: Date.now()
+        };
+
+        if (window.FlutterBridge && window.FlutterBridge.postMessage) {
+          window.SuperAppBridge = window.SuperAppBridge || { _callbacks: {} };
+          window.SuperAppBridge._callbacks = window.SuperAppBridge._callbacks || {};
+          window.SuperAppBridge._callbacks[id] = function(res) {
+            if (res.success) resolve(res.data);
+            else reject(res.error);
+          };
+          window.FlutterBridge.postMessage(JSON.stringify(request));
+        } else {
+          // Browser fallback
+          setTimeout(() => resolve({ mock: true, action: action, status: 'SUCCESS' }), 300);
+        }
+      });
+    }
+
+    // Load basic user info
+    invokeBridge('user.getBasicInfo')
+      .then(user => {
+        document.getElementById('user-greeting').innerText = 'Xin chào: ' + (user.name || 'Khách hàng') + ' (ID: ' + (user.id || 'N/A') + ')';
+      })
+      .catch(() => {
+        document.getElementById('user-greeting').innerText = 'Xin chào quý khách!';
+      });
+
+    async function checkout(amount, desc) {
+      const resultBox = document.getElementById('result-box');
+      resultBox.style.display = 'block';
+      resultBox.innerText = 'Đang khởi tạo đơn hàng...';
+
+      try {
+        const order = await invokeBridge('payment.createOrder', {
+          amount: amount,
+          description: desc,
+          currency: 'VND'
+        });
+
+        resultBox.innerText = 'Đơn hàng: ' + order.orderId + '\\nĐang mở cổng thanh toán Native...';
+
+        const checkoutResult = await invokeBridge('payment.openCheckout', {
+          orderId: order.orderId
+        });
+
+        resultBox.innerText = 'Kết quả thanh toán:\\n' + JSON.stringify(checkoutResult, null, 2);
+      } catch (err) {
+        resultBox.innerText = 'Lỗi thanh toán:\\n' + JSON.stringify(err, null, 2);
+      }
+    }
+
+    function switchBackToPlayground() {
+      invokeBridge('navigation.openMiniApp', { appId: 'sdk_playground' });
+    }
+
+    function closeMiniApp() {
+      invokeBridge('navigation.close');
+    }
+  </script>
+</body>
+</html>

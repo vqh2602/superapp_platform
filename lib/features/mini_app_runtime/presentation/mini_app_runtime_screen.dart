@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
@@ -17,16 +18,15 @@ import '../../../../core/config/app_theme.dart';
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
 
-  const MiniAppRuntimeScreen({
-    super.key,
-    required this.appId,
-  });
+  const MiniAppRuntimeScreen({super.key, required this.appId});
 
   @override
-  ConsumerState<MiniAppRuntimeScreen> createState() => _MiniAppRuntimeScreenState();
+  ConsumerState<MiniAppRuntimeScreen> createState() =>
+      _MiniAppRuntimeScreenState();
 }
 
-class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> with WidgetsBindingObserver {
+class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
+    with WidgetsBindingObserver {
   late String _currentAppId;
   WebViewController? _webViewController;
   BridgeEventEmitter? _eventEmitter;
@@ -60,7 +60,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> wit
   }
 
   void _initMiniApp() {
-    final manifest = ref.read(miniAppRepositoryProvider).getAppById(_currentAppId);
+    final manifest = ref
+        .read(miniAppRepositoryProvider)
+        .getAppById(_currentAppId);
     if (manifest == null) {
       setState(() {
         _isLoading = false;
@@ -116,7 +118,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> wit
           setState(() {
             _isLoading = false;
           });
-          emitter.emit('miniapp.ready', {'appId': manifest.id, 'version': manifest.version});
+          emitter.emit('miniapp.ready', {
+            'appId': manifest.id,
+            'version': manifest.version,
+          });
           emitter.emit('miniapp.show');
         },
         onWebResourceError: (error) {
@@ -141,7 +146,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> wit
 
   @override
   Widget build(BuildContext context) {
-    final manifest = ref.watch(miniAppRepositoryProvider).getAppById(_currentAppId);
+    final manifest = ref
+        .watch(miniAppRepositoryProvider)
+        .getAppById(_currentAppId);
 
     // Listen to session changes to notify Mini App if logged out
     ref.listen(authStateProvider, (prev, next) {
@@ -197,7 +204,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> wit
             tooltip: 'Bridge Logs',
             icon: const Icon(Icons.developer_mode_rounded),
             onPressed: () {
-              Navigator.pushNamed(context, '/debug');
+              context.push('/debug');
             },
           ),
         ],
@@ -233,12 +240,19 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen> wit
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       _loadError!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
