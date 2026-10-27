@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_all/webview_all.dart';
@@ -76,6 +77,25 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
   }
 
+  Color _parseColor(String? hexString, {Color defaultColor = Colors.white}) {
+    if (hexString == null || hexString.isEmpty) return defaultColor;
+    try {
+      String hex = hexString.replaceAll('#', '').trim();
+      if (hex.length == 6) {
+        hex = 'FF$hex';
+      } else if (hex.length == 3) {
+        hex = 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
+      }
+      return Color(int.parse(hex, radix: 16));
+    } catch (_) {
+      return defaultColor;
+    }
+  }
+
+  bool _isColorDark(Color color) {
+    return color.computeLuminance() < 0.5;
+  }
+
   Future<void> _initMiniApp() async {
     setState(() {
       _hasBlankScreenWarning = false;
@@ -97,10 +117,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
 
     final validManifest = manifest;
+    final themeHex = validManifest.schema?['theme']?['backgroundColor'] as String?;
+    final themeBg = _parseColor(themeHex, defaultColor: Colors.white);
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white);
+      ..setBackgroundColor(themeBg);
 
     final endpoint = ref.read(backendEndpointProvider);
     final actionDispatcher = NativeActionDispatcher(
@@ -172,10 +194,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       }
     });
 
+    const resetScript = '''
+      (function() {
+        if (!document.getElementById('__superapp_runtime_reset__')) {
+          var style = document.createElement('style');
+          style.id = '__superapp_runtime_reset__';
+          style.innerHTML = '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } html, body { width: 100% !important; min-height: 100% !important; margin: 0 !important; padding: 0 !important; background-color: transparent !important; overflow-x: hidden !important; } #root { width: 100% !important; min-height: 100% !important; }';
+          (document.head || document.documentElement).appendChild(style);
+        }
+      })();
+    ''';
+
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (url) {
           if (!kIsWeb) {
+            _safeRunScript(controller, resetScript);
             _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
             _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
             if (validManifest.isSchemaApp && validManifest.schema != null) {
@@ -192,6 +226,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           }
         },
         onPageFinished: (url) async {
+          await _safeRunScript(controller, resetScript);
           await _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
           await _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
           if (validManifest.isSchemaApp && validManifest.schema != null) {
@@ -381,225 +416,249 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         .watch(miniAppRepositoryProvider)
         .getAppById(_currentAppId);
 
+    final themeHex = manifest?.schema?['theme']?['backgroundColor'] as String?;
+    final themeBgColor = _parseColor(themeHex, defaultColor: Colors.white);
+    final isDarkTheme = _isColorDark(themeBgColor);
+
     ref.listen(authStateProvider, (prev, next) {
       if (!next.isAuthenticated && _eventEmitter != null) {
         _eventEmitter!.emitSessionChanged(state: 'logged_out');
       }
     });
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // WeChat-style Mini Program Top Navigation Bar (Circled in red in Image 4)
-            Container(
-              height: 48,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFEEEEEE), width: 0.8),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkTheme ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkTheme ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: themeBgColor,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // WeChat-style Mini Program Top Navigation Bar (Circled in red in Image 4)
+              Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: themeBgColor,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDarkTheme
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : const Color(0xFFEEEEEE),
+                      width: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Center Title
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 90),
-                      child: Text(
-                        manifest?.name ?? 'Mini App',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Center Title
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 90),
+                        child: Text(
+                          manifest?.name ?? 'Mini App',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
 
-                  // Right Capsule Bar: [ ••• | ⊙ ]
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFD1D5DB), width: 0.8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Nút thông tin miniapp (•••)
-                          InkWell(
-                            onTap: () => _showMiniAppInfoDialog(manifest),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              child: Icon(
-                                Icons.more_horiz_rounded,
-                                size: 20,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                          ),
-                          // Capsule Divider
-                          Container(
+                    // Right Capsule Bar: [ ••• | ⊙ ]
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isDarkTheme
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkTheme
+                                ? Colors.white.withValues(alpha: 0.25)
+                                : const Color(0xFFD1D5DB),
                             width: 0.8,
-                            height: 16,
-                            color: const Color(0xFFE5E7EB),
                           ),
-                          // Nút đóng miniapp (⊙)
-                          InkWell(
-                            onTap: () {
-                              _eventEmitter?.emit('miniapp.close');
-                              Navigator.of(context).pop();
-                            },
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDarkTheme ? 0.2 : 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
                             ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              child: Icon(
-                                Icons.adjust_rounded,
-                                size: 18,
-                                color: Color(0xFF0F172A),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Nút thông tin miniapp (•••)
+                            InkWell(
+                              onTap: () => _showMiniAppInfoDialog(manifest),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Mini App Content: Full Screen, Edge-to-Edge (No white margins on left/right)
-            Expanded(
-              child: Stack(
-                children: [
-                  if (_webViewController != null && _loadError == null)
-                    SizedBox(
-                      width: double.infinity,
-                      height: double.infinity,
-                      child: WebViewWidget(controller: _webViewController!),
-                    ),
-
-                  // Diagnostic Alert Banner for blank screen (Only in debug mode)
-                  if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 20,
-                      child: Material(
-                        elevation: 8,
-                        borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xFF1E293B),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
-                                  style: TextStyle(color: Colors.white, fontSize: 12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                child: Icon(
+                                  Icons.more_horiz_rounded,
+                                  size: 20,
+                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
-                                onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                            ),
+                            // Capsule Divider
+                            Container(
+                              width: 0.8,
+                              height: 16,
+                              color: isDarkTheme
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : const Color(0xFFE5E7EB),
+                            ),
+                            // Nút đóng miniapp (⊙)
+                            InkWell(
+                              onTap: () {
+                                _eventEmitter?.emit('miniapp.close');
+                                Navigator.of(context).pop();
+                              },
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                child: Icon(
+                                  Icons.adjust_rounded,
+                                  size: 18,
+                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Mini App Content: Full Screen, Edge-to-Edge (No white margins on left/right)
+              Expanded(
+                child: Stack(
+                  children: [
+                    if (_webViewController != null && _loadError == null)
+                      SizedBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        child: WebViewWidget(controller: _webViewController!),
+                      ),
+
+                    // Diagnostic Alert Banner for blank screen (Only in debug mode)
+                    if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 20,
+                        child: Material(
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF1E293B),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
+                                    style: TextStyle(color: Colors.white, fontSize: 12),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                  onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (_isLoading)
+                      Container(
+                        color: themeBgColor,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Đang khởi tạo Mini App...',
+                                style: TextStyle(
+                                  color: isDarkTheme ? Colors.white70 : const Color(0xFF64748B),
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
 
-                  if (_isLoading)
-                    Container(
-                      color: Colors.white,
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(
-                              color: Color(0xFF00BA52),
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Đang khởi tạo Mini App...',
-                              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                            ),
-                          ],
+                    if (_loadError != null)
+                      Container(
+                        color: themeBgColor,
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                size: 48,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _loadError!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isLoading = true;
+                                    _loadError = null;
+                                    _initMiniApp();
+                                  });
+                                },
+                                child: const Text('Thử lại'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-
-                  if (_loadError != null)
-                    Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.all(24),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              size: 48,
-                              color: Colors.red,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _loadError!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLoading = true;
-                                  _loadError = null;
-                                });
-                                _initMiniApp();
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00BA52),
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Thử lại'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

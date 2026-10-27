@@ -123,7 +123,14 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
+        backgroundColor: schema.theme?.backgroundColor || 'transparent',
+      }}
+    >
       {/* Floating Demo MiniApp Switcher for standalone browser preview mode */}
       {!isNativeBridge && (
         <div
@@ -174,7 +181,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      <SchemaRenderer schema={schema} appId={appId} />
+      <SchemaRenderer schema={schema} appId={appId} isNativeBridge={isNativeBridge} />
     </div>
   );
 };

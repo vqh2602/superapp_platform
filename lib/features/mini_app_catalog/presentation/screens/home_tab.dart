@@ -330,11 +330,15 @@ class HomeTab extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        user != null ? 'ID: ${user.id} • ${user.role}' : 'Chưa đăng nhập',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
+                      Expanded(
+                        child: Text(
+                          user != null ? 'ID: ${user.id} • ${user.role}' : 'Chưa đăng nhập',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ),
                     ],

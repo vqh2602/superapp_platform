@@ -134,6 +134,18 @@ export const ButtonComponent: React.FC<ComponentProps> = ({ definition, onAction
   );
 };
 
+const isDarkColor = (colorStr?: string) => {
+  if (!colorStr) return false;
+  const hex = colorStr.replace('#', '').trim();
+  if (hex.length === 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
+  }
+  return false;
+};
+
 export const ContainerComponent: React.FC<ComponentProps> = ({ definition, renderChild }) => {
   const {
     padding = 16,
@@ -144,14 +156,24 @@ export const ContainerComponent: React.FC<ComponentProps> = ({ definition, rende
     flexDirection = 'column',
   } = definition.props;
 
+  const isDarkBg = isDarkColor(backgroundColor);
+
   return (
     <div
       style={{
         backgroundColor,
         padding: `${padding}px`,
         borderRadius: `${borderRadius}px`,
-        border: border ? '1px solid #E2E8F0' : 'none',
-        boxShadow: shadow ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
+        border: border
+          ? isDarkBg
+            ? '1px solid rgba(255, 255, 255, 0.12)'
+            : '1px solid #E2E8F0'
+          : 'none',
+        boxShadow: shadow
+          ? isDarkBg
+            ? '0 4px 12px rgba(0,0,0,0.3)'
+            : '0 2px 8px rgba(0,0,0,0.04)'
+          : 'none',
         display: 'flex',
         flexDirection: flexDirection as any,
         gap: '8px',
