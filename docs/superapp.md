@@ -1,5 +1,8 @@
 # SuperApp Mobile Platform (Flutter Master Shell)
 
+> Backend đã có [API user/token/consent thật](authentication.md). Các phần mock trong tài liệu này mô tả client hiện tại; Flutter/SDK chưa tự nối sang API mới. Khi tích hợp, dùng PKCE S256 để đổi code lấy token riêng cho miniapp, giữ token Super App trong native host và lưu consent qua User Permission API. Xem [hợp đồng bridge ↔ backend](authentication.md#nối-vào-bridge-và-sdk).
+
+
 Tài liệu kỹ thuật chi tiết về kiến trúc mã nguồn, bảng tính năng hỗ trợ đa nền tảng (Platform Matrix) và các thành phần cốt lõi của ứng dụng trung tâm **SuperApp Master Platform** xây dựng trên **Flutter**.
 
 ---

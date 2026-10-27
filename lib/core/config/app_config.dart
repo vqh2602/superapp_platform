@@ -4,6 +4,9 @@ class AppConfig {
   static const String appVersion = '1.0.0';
   static const String bridgeChannelName = 'FlutterBridge';
 
+  /// Default Backend Base URL
+  static const String defaultBaseUrl = 'http://localhost:3000';
+
   /// Catalog REST API URL for Dynamic Mini App Registry
   static const String catalogApiUrl = 'http://localhost:3000/api/v1/catalog';
 

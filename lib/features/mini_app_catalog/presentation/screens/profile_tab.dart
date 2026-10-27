@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../../core/config/app_theme.dart';
+import '../../../../core/config/debug_mode_provider.dart';
 
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key});
@@ -119,13 +120,15 @@ class ProfileTab extends ConsumerWidget {
                   subtitle: 'Xem hồ sơ đầy đủ đồng bộ với Mini App',
                   onTap: () => context.push('/profile'),
                 ),
-                const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-                _buildMenuItem(
-                  icon: Icons.bug_report_outlined,
-                  title: 'Trung tâm Debug Logs',
-                  subtitle: 'Theo dõi Bridge logs và sự kiện RPC',
-                  onTap: () => context.push('/debug'),
-                ),
+                if (ref.watch(isDebugModeEnabledProvider)) ...[
+                  const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
+                  _buildMenuItem(
+                    icon: Icons.bug_report_outlined,
+                    title: 'Trung tâm Debug Logs',
+                    subtitle: 'Theo dõi Bridge logs và sự kiện RPC',
+                    onTap: () => context.push('/debug'),
+                  ),
+                ],
                 const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
                 _buildMenuItem(
                   icon: Icons.assignment_outlined,

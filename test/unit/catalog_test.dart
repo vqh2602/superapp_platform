@@ -61,7 +61,7 @@ void main() {
   });
 
   group('MiniAppRepository Dynamic & Offline Tests', () {
-    test('Offline fallback returns seed apps', () async {
+    test('Offline network failure throws error and does not return seed apps', () async {
       // Mock client that simulates network failure
       final mockClient = MockClient((request) async {
         throw Exception('No network connectivity');
@@ -72,42 +72,9 @@ void main() {
         catalogUrl: 'http://mock.catalog.local',
       );
 
-      final apps = await repo.getPublishedMiniApps();
-      expect(apps.length, greaterThanOrEqualTo(2));
-      expect(apps.any((a) => a.id == 'sdk_playground'), isTrue);
-      expect(apps.any((a) => a.id == 'sample_store'), isTrue);
-
-      final single = repo.getAppById('sdk_playground');
-      expect(single, isNotNull);
-      expect(single?.name, equals('SDK Playground'));
-
-      // Verify Schema Mini Apps are correctly configured and not pointing to sample_store
-      final shopeeApp = repo.getAppById('shopee');
-      expect(shopeeApp, isNotNull);
-      expect(shopeeApp!.isSchemaApp, isTrue);
-      expect(shopeeApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
-      expect(shopeeApp.schema, isNotNull);
-      expect(shopeeApp.schema!['pages'], isNotEmpty);
-
-      final tiktokApp = repo.getAppById('tiktok');
-      expect(tiktokApp, isNotNull);
-      expect(tiktokApp!.isSchemaApp, isTrue);
-      expect(tiktokApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
-
-      final freeFireApp = repo.getAppById('free_fire');
-      expect(freeFireApp, isNotNull);
-      expect(freeFireApp!.isSchemaApp, isTrue);
-      expect(freeFireApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
-
-      final viettelApp = repo.getAppById('viettel_tammi');
-      expect(viettelApp, isNotNull);
-      expect(viettelApp!.isSchemaApp, isTrue);
-
-      // Verify sample_store is distinct as Type A web app
-      final storeApp = repo.getAppById('sample_store');
-      expect(storeApp, isNotNull);
-      expect(storeApp!.isWebApp, isTrue);
-      expect(storeApp.entryUrl, equals('assets/mini_apps/sample_store/index.html'));
+      expect(() => repo.getPublishedMiniApps(), throwsA(isA<Exception>()));
+      expect(repo.getAllApps(), isEmpty);
+      expect(repo.getAppById('sdk_playground'), isNull);
     });
 
     test('Empty remote catalog stays empty instead of restoring seed apps', () async {
@@ -146,6 +113,21 @@ void main() {
       hidden = true;
       expect(await repo.getPublishedMiniApps(forceRefresh: true), isEmpty);
       expect(repo.getAppById('sdk_playground'), isNull);
+    });
+
+    test('Resolves packaged entry and icon paths using the configured backend', () async {
+      final repo = MiniAppRepository(
+        httpClient: MockClient((_) async => http.Response(jsonEncode({
+          'id': 'web_demo', 'name': 'Web Demo', 'version': '1.0.0',
+          'description': '', 'icon': '/api/v1/miniapps/web_demo/1.0.0/icon.png',
+          'entryUrl': '/api/v1/miniapps/web_demo/1.0.0/dist/index.html',
+          'isAsset': false, 'capabilities': [],
+        }), 200)),
+        catalogUrl: 'http://192.168.1.20:3000/api/v1/catalog',
+      );
+      final manifest = await repo.fetchRemoteManifest('web_demo');
+      expect(manifest?.entryUrl, 'http://192.168.1.20:3000/api/v1/miniapps/web_demo/1.0.0/dist/index.html');
+      expect(manifest?.icon, 'http://192.168.1.20:3000/api/v1/miniapps/web_demo/1.0.0/icon.png');
     });
 
     test('Fetches published apps from catalog API successfully', () async {

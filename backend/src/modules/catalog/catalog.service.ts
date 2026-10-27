@@ -23,6 +23,12 @@ export interface PublishedManifestDto {
   entryUrl?: string | null;
   isAsset: boolean;
   capabilities: string[];
+  requestedPermissions?: string[];
+  developerName?: string;
+  supportEmail?: string;
+  website?: string;
+  themeColor?: string;
+  packageBaseUrl?: string;
   schemaVersion?: number;
   schema?: Record<string, any> | null;
   updatedAt: string;
@@ -81,6 +87,11 @@ export class CatalogService {
       entryUrl: app.entryUrl,
       isAsset: app.isAsset,
       capabilities: app.capabilities || [],
+      requestedPermissions: app.requestedPermissions || [],
+      developerName: app.developerName,
+      supportEmail: app.supportEmail,
+      website: app.website,
+      themeColor: app.themeColor,
       updatedAt: app.updatedAt.toISOString(),
     }));
 
@@ -120,6 +131,12 @@ export class CatalogService {
       entryUrl: version?.entryUrl || app.entryUrl,
       isAsset: app.isAsset,
       capabilities: app.capabilities || [],
+      requestedPermissions: app.requestedPermissions || [],
+      developerName: app.developerName,
+      supportEmail: app.supportEmail,
+      website: app.website,
+      themeColor: app.themeColor,
+      packageBaseUrl: version?.packageKey ? `/api/v1/miniapps/${appId}/${app.activePublishedVersion}/` : undefined,
       schemaVersion: version?.schemaVersion || 1,
       schema: version?.schema || null,
       updatedAt: app.updatedAt.toISOString(),

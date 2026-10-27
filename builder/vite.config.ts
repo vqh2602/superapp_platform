@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.MINIAPP_API_TARGET || 'http://localhost:3000',
         changeOrigin: true,
       },
     },
@@ -16,7 +16,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.MINIAPP_API_TARGET || 'http://localhost:3000',
         changeOrigin: true,
       },
     },

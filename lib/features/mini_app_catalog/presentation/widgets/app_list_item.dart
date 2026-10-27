@@ -162,12 +162,15 @@ class AppListItem extends StatelessWidget {
           ),
         ],
       ),
-      child: Center(
-        child: Icon(
-          iconData,
-          color: Colors.white,
-          size: 28,
-        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: app.icon.startsWith('http://') || app.icon.startsWith('https://')
+            ? Image.network(
+                app.icon,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, stackTrace) => Icon(iconData, color: Colors.white, size: 28),
+              )
+            : Icon(iconData, color: Colors.white, size: 28),
       ),
     );
   }

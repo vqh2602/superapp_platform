@@ -6,7 +6,12 @@ abstract class AuthRepository {
   MockUser? get currentUser;
   bool get isAuthenticated;
 
-  Future<AuthSession> login(String userId);
+  Future<AuthSession> login(String emailOrUserId, [String? password]);
+  Future<AuthSession> register({
+    required String email,
+    required String password,
+    required String displayName,
+  });
   Future<void> logout();
   Stream<AuthSession?> get sessionStream;
 }

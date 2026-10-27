@@ -20,7 +20,7 @@ export class MiniAppEntity {
   @Column({ type: 'text', default: '' })
   description: string;
 
-  @Column({ type: 'varchar', length: 64, default: 'code' })
+  @Column({ type: 'varchar', length: 512, default: 'code' })
   icon: string;
 
   @Column({ type: 'varchar', length: 64, default: 'General' })
@@ -55,7 +55,22 @@ export class MiniAppEntity {
   @Column({ type: 'simple-array', default: '' })
   capabilities: string[];
 
-  // Current working draft schema / draft data
+  @Column({ type: 'simple-array', default: '' })
+  requestedPermissions: string[];
+
+  @Column({ type: 'varchar', length: 128, default: '' })
+  developerName: string;
+
+  @Column({ type: 'varchar', length: 254, default: '' })
+  supportEmail: string;
+
+  @Column({ type: 'varchar', length: 512, default: '' })
+  website: string;
+
+  @Column({ type: 'varchar', length: 7, default: '#6366F1' })
+  themeColor: string;
+
+  // Legacy schema snapshots remain readable for existing demo apps.
   @Column({ type: 'jsonb', nullable: true })
   draftSchema?: Record<string, any> | null;
 

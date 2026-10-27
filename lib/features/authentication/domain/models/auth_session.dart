@@ -16,6 +16,17 @@ class AuthSession {
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
+  factory AuthSession.fromBackendJson(Map<String, dynamic> json) {
+    final userJson = (json['user'] as Map<String, dynamic>?) ?? {};
+    final expiresIn = json['expiresIn'] as int? ?? 3600;
+    return AuthSession(
+      user: MockUser.fromBackendJson(userJson),
+      accessToken: json['accessToken'] as String? ?? '',
+      refreshToken: json['refreshToken'] as String? ?? '',
+      expiresAt: DateTime.now().add(Duration(seconds: expiresIn)),
+    );
+  }
+
   AuthSession copyWith({
     MockUser? user,
     String? accessToken,

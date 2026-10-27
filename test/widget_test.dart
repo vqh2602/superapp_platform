@@ -17,9 +17,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
 
-    // Should navigate to Mock Login Screen
-    expect(find.text('SuperApp Login'), findsOneWidget);
-    expect(find.text('Nguyễn Văn A'), findsOneWidget);
-    expect(find.text('Trần Thị B'), findsOneWidget);
+    // Should navigate to Login Screen with Endpoint, Email, Password & Register fields
+    expect(find.text('SuperApp Platform'), findsOneWidget);
+    expect(find.text('Backend Endpoint URL'), findsOneWidget);
+    expect(find.text('Email / Tài khoản'), findsOneWidget);
+    expect(find.text('Mật khẩu'), findsOneWidget);
+    expect(find.text('Đăng nhập SuperApp'), findsOneWidget);
+    expect(find.text('Đăng ký tài khoản mới'), findsOneWidget);
   });
 }

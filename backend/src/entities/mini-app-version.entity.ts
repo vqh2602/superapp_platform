@@ -48,6 +48,18 @@ export class MiniAppVersionEntity {
   @Column({ type: 'text', nullable: true })
   reviewNotes?: string | null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  manifest?: Record<string, any> | null;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  packageKey?: string | null;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  checksum?: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  packageSize?: number | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

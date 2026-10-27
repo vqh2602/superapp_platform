@@ -49,8 +49,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
-        ref.watch(miniAppRepositoryProvider).getAllApps();
+    final catalogAsync = ref.watch(dynamicCatalogProvider);
+    final allApps = catalogAsync.valueOrNull ?? [];
 
     final filteredApps = _currentQuery.trim().isEmpty
         ? <MiniAppManifest>[]
@@ -311,8 +311,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ],
               ),
-              child: Center(
-                child: Icon(icon, color: Colors.white, size: 28),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: app.icon.startsWith('http://') || app.icon.startsWith('https://')
+                    ? Image.network(app.icon, fit: BoxFit.cover,
+                        errorBuilder: (_, error, stackTrace) => Icon(icon, color: Colors.white, size: 28))
+                    : Icon(icon, color: Colors.white, size: 28),
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/authentication/presentation/screens/splash_screen.dart';
 import '../../features/authentication/presentation/screens/mock_login_screen.dart';
+import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/mini_app_catalog/presentation/mini_app_catalog_screen.dart';
 import '../../features/mini_app_runtime/presentation/mini_app_runtime_screen.dart';
 import '../../features/debug_center/presentation/native_debug_screen.dart';
@@ -22,6 +23,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const MockLoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
     ),
     GoRoute(
       path: '/home',

@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "appId": "schema_demo",
+  "name": "Demo Schema",
+  "description": "Mini App mẫu theo chuẩn gói Super App v1",
+  "category": "Demo",
+  "version": "1.0.0",
+  "runtimeType": "schema",
+  "entry": "schema.json",
+  "icon": "icon.png",
+  "permissions": [
+    "navigation.close"
+  ],
+  "developerName": "Super App Demo",
+  "supportEmail": "demo@example.com",
+  "website": "https://example.com",
+  "themeColor": "#6366F1"
+}

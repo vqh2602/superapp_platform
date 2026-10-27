@@ -5,6 +5,7 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
+import '../../../../core/config/debug_mode_provider.dart';
 
 class HomeTab extends ConsumerWidget {
   final VoidCallback? onNavigateToSearch;
@@ -18,8 +19,8 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final user = authState.currentUser;
-    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
-        ref.watch(miniAppRepositoryProvider).getAllApps();
+    final catalogAsync = ref.watch(dynamicCatalogProvider);
+    final allApps = catalogAsync.valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -124,35 +125,117 @@ class HomeTab extends ConsumerWidget {
                   ],
                 ),
               ),
-              _buildFeaturedHorizontal(context, allApps),
-
-              const SizedBox(height: 16),
-
-              // 6. DANH SÁCH MINI APP ĐƯỢC ĐỀ XUẤT (List with only Name + Description, "Mở" button)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: const Text(
-                  'Khám phá Mini Apps',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+              if (catalogAsync.isLoading && allApps.isEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00BA52)),
                   ),
                 ),
-              ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+              ] else if (catalogAsync.hasError && allApps.isEmpty) ...[
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.cloud_off_rounded, color: Color(0xFFDC2626), size: 36),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Không thể tải Mini App từ Backend',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF991B1B), fontSize: 15),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${catalogAsync.error}'.replaceFirst('Exception: ', ''),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          ref.invalidate(dynamicCatalogProvider);
+                          ref.invalidate(catalogCategoriesProvider);
+                        },
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Thử lại'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: allApps.map((app) {
-                    return AppListItem(app: app);
-                  }).toList(),
+              ] else if (allApps.isEmpty) ...[
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.inbox_outlined, color: Color(0xFF94A3B8), size: 40),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Chưa có Mini App nào từ Backend',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Danh sách Mini App lấy trực tiếp từ Backend Registry. Hãy tải lên và publish qua Manager.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          ref.invalidate(dynamicCatalogProvider);
+                        },
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Tải lại'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ] else ...[
+                _buildFeaturedHorizontal(context, allApps),
+
+                const SizedBox(height: 16),
+
+                // 6. DANH SÁCH MINI APP ĐƯỢC ĐỀ XUẤT (List with only Name + Description, "Mở" button)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: const Text(
+                    'Khám phá Mini Apps',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: allApps.map((app) {
+                      return AppListItem(app: app);
+                    }).toList(),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 20),
 
@@ -262,11 +345,12 @@ class HomeTab extends ConsumerWidget {
           ),
 
           // Header Quick Actions
-          IconButton(
-            tooltip: 'Debug Logs',
-            icon: const Icon(Icons.bug_report_outlined, color: Color(0xFF64748B), size: 22),
-            onPressed: () => context.push('/debug'),
-          ),
+          if (ref.watch(isDebugModeEnabledProvider))
+            IconButton(
+              tooltip: 'Debug Logs',
+              icon: const Icon(Icons.bug_report_outlined, color: Color(0xFF64748B), size: 22),
+              onPressed: () => context.push('/debug'),
+            ),
           IconButton(
             tooltip: 'Đăng xuất',
             icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 22),
@@ -464,7 +548,13 @@ class HomeTab extends ConsumerWidget {
                     color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: app.icon.startsWith('http://') || app.icon.startsWith('https://')
+                        ? Image.network(app.icon, fit: BoxFit.cover,
+                            errorBuilder: (_, error, stackTrace) => const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24))
+                        : const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

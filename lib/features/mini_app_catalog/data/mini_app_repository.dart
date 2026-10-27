@@ -2,344 +2,44 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/config/app_config.dart';
+import '../../../../core/config/app_config.dart';
+import '../../../../core/config/endpoint_config.dart';
 import '../domain/mini_app_manifest.dart';
-import 'sample_mini_app_schemas.dart';
 
 class MiniAppRepository {
   final http.Client? httpClient;
   final String _catalogUrl;
 
-  MiniAppRepository({
-    this.httpClient,
-    String? catalogUrl,
-  })  : _catalogUrl = catalogUrl ?? AppConfig.catalogApiUrl;
-
-  /// Seed / Static fallback apps for offline resilience and backward compatibility
-  static const List<MiniAppManifest> _seedApps = [
-    MiniAppManifest(
-      id: 'sdk_playground',
-      name: 'SDK Playground',
-      description: 'React + TypeScript Mini App test bed with interactive SDK runner',
-      version: '1.2.0',
-      icon: 'code',
-      category: 'Utilities',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sdk_playground/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'auth.requestCode',
-        'user.getProfile',
-        'user.getBasicInfo',
-        'navigation.openNativePage',
-        'navigation.close',
-        'navigation.openMiniApp',
-        'device.scanQRCode',
-        'device.getLocation',
-        'device.pickImage',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'permission.request',
-        'permission.getPermissions',
-        'storage.setSecureItem',
-        'storage.getSecureItem',
-        'storage.removeSecureItem',
-        'storage.clear',
-        'storage.setCredentials',
-        'storage.getCredentials',
-        'storage.deleteCredentials',
-        'storage.secure',
-        'contacts',
-        'device.scanQr',
-        'scanQr',
-        'device.scanBarcode',
-        'scanBarcode',
-        'getPhoto',
-        'pickImages',
-        'saveImageToGallery',
-        'pickVideo',
-        'saveVideoToGallery',
-        'saveFile',
-        'pickFile',
-        'filePreview',
-        'showToast',
-        'vibrate',
-        'copyToClipboard',
-        'setBrightness',
-        'setStatusBarStyle',
-        'setStatusBarColor',
-        'setNavigationBarColor',
-        'configAppView',
-        'showMiniappMenu',
-        'closeApp',
-        'getNetworkInfo',
-        'getDeviceLanguage',
-        'getSuperAppSettings',
-        'getSystemInfo',
-        'getAppInfo',
-        'getBatteryInfo',
-        'getContacts',
-        'setSecretData',
-        'getSecretData',
-        'removeSecretData',
-        'microphone',
-        'openPhone',
-        'openSMS',
-        'openExternalBrowser',
-        'openDeepLink',
-        'speechToText',
-        'hideKeyboard',
-        'debug.echo',
-        'debug.simulateFailure',
-      ],
-    ),
-    MiniAppManifest(
-      id: 'sample_store',
-      name: 'Highland Coffee Store',
-      description: 'Chuỗi cửa hàng đồ uống & cà phê truyền thống Việt Nam',
-      version: '1.0.4',
-      icon: 'coffee',
-      category: 'Food & Drink',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-      ],
-    ),
-    MiniAppManifest(
-      id: 'shopee',
-      name: 'Shopee: Mua Sắm Online',
-      description: 'Sàn thương mại điện tử hàng đầu với triệu ưu đãi',
-      version: '3.1.2',
-      icon: 'shopping',
-      category: 'Shopping',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-      ],
-      schema: SampleMiniAppSchemas.shopeeSchema,
-    ),
-    MiniAppManifest(
-      id: 'tiktok',
-      name: 'TikTok-Global Video Community',
-      description: 'Short-Form Video Platform & Creative Community',
-      version: '2.4.1',
-      icon: 'video',
-      category: 'Photo & Video',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-        'navigation.openNativePage',
-      ],
-      schema: SampleMiniAppSchemas.tiktokSchema,
-    ),
-    MiniAppManifest(
-      id: 'youtube',
-      name: 'YouTube',
-      description: 'Videos, Music and Live Streams from around the globe',
-      version: '18.2.0',
-      icon: 'entertainment',
-      category: 'Entertainment',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-      ],
-      schema: SampleMiniAppSchemas.youtubeSchema,
-    ),
-    MiniAppManifest(
-      id: 'viettel_tammi',
-      name: 'Viettel Tammi',
-      description: 'Dịch vụ viễn thông, số hoá tiện ích thông minh',
-      version: '1.5.0',
-      icon: 'utilities',
-      category: 'Utilities',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'user.getProfile',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-      ],
-      schema: SampleMiniAppSchemas.viettelTammiSchema,
-    ),
-    MiniAppManifest(
-      id: 'free_fire',
-      name: 'Free Fire MAX',
-      description: 'Game bắn súng sinh tồn chiến thuật thời gian thực',
-      version: '2.9.0',
-      icon: 'games',
-      category: 'Games',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-      ],
-      schema: SampleMiniAppSchemas.freeFireSchema,
-    ),
-    MiniAppManifest(
-      id: 'capcut',
-      name: 'CapCut - Photo & Video Editor',
-      description: 'Công cụ sáng tạo và chỉnh sửa video hiệu ứng đỉnh cao',
-      version: '2.1.0',
-      icon: 'video',
-      category: 'Photo & Video',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.pickImage',
-      ],
-      schema: SampleMiniAppSchemas.capcutSchema,
-    ),
-    MiniAppManifest(
-      id: 'messenger',
-      name: 'Messenger',
-      description: 'Text, audio and video calls with friends and groups',
-      version: '4.1.0',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'navigation.openNativePage',
-      ],
-      schema: SampleMiniAppSchemas.messengerSchema,
-    ),
-    MiniAppManifest(
-      id: 'facebook',
-      name: 'Facebook',
-      description: 'Explore the things you love and connect with community',
-      version: '3.9.5',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'navigation.openNativePage',
-      ],
-      schema: SampleMiniAppSchemas.facebookSchema,
-    ),
-    MiniAppManifest(
-      id: 'zalo',
-      name: 'Zalo',
-      description: 'Fast. Stable. Private. Nhắn tin và gọi điện tiện lợi',
-      version: '2.8.2',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-      ],
-      schema: SampleMiniAppSchemas.zaloSchema,
-    ),
-    MiniAppManifest(
-      id: 'fc_mobile',
-      name: 'FC Mobile VN',
-      description: 'Trải nghiệm bóng đá đỉnh cao chân thực và sôi động',
-      version: '1.8.4',
-      icon: 'games',
-      category: 'Games',
-      appRuntimeType: 'schema',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: [
-        'user.getBasicInfo',
-        'navigation.close',
-        'payment.createOrder',
-        'payment.openCheckout',
-        'device.scanQRCode',
-      ],
-      schema: SampleMiniAppSchemas.fcMobileSchema,
-    ),
-  ];
-
-  // In-memory dynamic apps cache
   final List<MiniAppManifest> _dynamicApps = [];
   bool _hasFetched = false;
 
-  /// Returns all available apps (dynamic if fetched, otherwise seed apps)
+  MiniAppRepository({
+    this.httpClient,
+    String? catalogUrl,
+  }) : _catalogUrl = catalogUrl ?? AppConfig.catalogApiUrl;
+
   List<MiniAppManifest> getAllApps() {
-    if (_hasFetched || _dynamicApps.isNotEmpty) {
-      return List.unmodifiable(_dynamicApps);
-    }
-    return List.unmodifiable(_seedApps);
+    return List.unmodifiable(_dynamicApps);
   }
 
-  /// Get app manifest by ID (checks dynamic cache first, then seed fallback)
   MiniAppManifest? getAppById(String id) {
     try {
-      final foundDynamic = _dynamicApps.firstWhere((app) => app.id == id);
-      return foundDynamic;
+      return _dynamicApps.firstWhere((a) => a.id == id);
     } catch (_) {
-      if (_hasFetched) return null;
-      try {
-        return _seedApps.firstWhere((app) => app.id == id);
-      } catch (_) {
-        return null;
+      return null;
+    }
+  }
+
+  MiniAppManifest _manifestFromApi(Map<String, dynamic> data) {
+    final json = Map<String, dynamic>.from(data);
+    final api = Uri.parse(_catalogUrl);
+    for (final key in ['entryUrl', 'icon']) {
+      final value = json[key];
+      if (value is String && value.startsWith('/')) {
+        json[key] = api.resolve(value).toString();
       }
     }
+    return MiniAppManifest.fromJson(json);
   }
 
   /// Fetch single app details & schema from remote catalog API
@@ -347,11 +47,11 @@ class MiniAppRepository {
     try {
       final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/apps/$id');
-      final res = await client.get(uri).timeout(const Duration(seconds: 4));
+      final res = await client.get(uri).timeout(const Duration(seconds: 5));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
-        final manifest = MiniAppManifest.fromJson(data);
+        final manifest = _manifestFromApi(data);
         // Cache or update in dynamic list
         _dynamicApps.removeWhere((a) => a.id == id);
         _dynamicApps.add(manifest);
@@ -368,7 +68,7 @@ class MiniAppRepository {
     return getAppById(id);
   }
 
-  /// Fetch published apps from Dynamic Catalog API with offline fallback
+  /// Fetch published apps from Backend Catalog API (No local assets fallback)
   Future<List<MiniAppManifest>> getPublishedMiniApps({
     String? category,
     String? search,
@@ -378,39 +78,46 @@ class MiniAppRepository {
       await _fetchFromApi();
     }
 
-    Iterable<MiniAppManifest> source = _hasFetched ? _dynamicApps : _seedApps;
+    Iterable<MiniAppManifest> source = _dynamicApps;
 
     if (category != null && category.isNotEmpty && category != 'All') {
-      source = source.where((a) => a.category.toLowerCase() == category.toLowerCase());
+      source = source.where(
+          (a) => a.category.toLowerCase() == category.toLowerCase());
     }
 
     if (search != null && search.trim().isNotEmpty) {
       final q = search.trim().toLowerCase();
       source = source.where((a) =>
-          a.name.toLowerCase().contains(q) || a.description.toLowerCase().contains(q));
+          a.name.toLowerCase().contains(q) ||
+          a.description.toLowerCase().contains(q));
     }
 
     return List.unmodifiable(source.toList());
   }
 
-  /// Query distinct categories
+  /// Query distinct categories from Backend Catalog API
   Future<List<String>> getCategories() async {
     try {
       final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/categories');
-      final res = await client.get(uri).timeout(const Duration(seconds: 3));
+      final res = await client.get(uri).timeout(const Duration(seconds: 4));
 
       if (res.statusCode == 200) {
-        final list = (jsonDecode(res.body) as List<dynamic>).map((e) => e.toString()).toList();
+        final list = (jsonDecode(res.body) as List<dynamic>)
+            .map((e) => e.toString())
+            .toList();
         return list;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[MiniAppRepository] Fetch categories failed: $e');
+    }
 
-    // Fallback to local categories
+    // Fallback to categories from currently loaded backend apps
     final set = <String>{'All'};
-    final list = _hasFetched ? _dynamicApps : _seedApps;
-    for (final app in list) {
-      set.add(app.category);
+    for (final app in _dynamicApps) {
+      if (app.category.isNotEmpty) {
+        set.add(app.category);
+      }
     }
     return set.toList();
   }
@@ -419,7 +126,7 @@ class MiniAppRepository {
     try {
       final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/apps');
-      final res = await client.get(uri).timeout(const Duration(seconds: 4));
+      final res = await client.get(uri).timeout(const Duration(seconds: 6));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
@@ -427,18 +134,17 @@ class MiniAppRepository {
         _dynamicApps.clear();
 
         for (final item in items) {
-          _dynamicApps.add(MiniAppManifest.fromJson(item as Map<String, dynamic>));
+          _dynamicApps.add(_manifestFromApi(item as Map<String, dynamic>));
         }
         _hasFetched = true;
       } else {
-        throw StateError('Catalog API returned ${res.statusCode}');
+        throw StateError('Catalog API returned status ${res.statusCode}');
       }
     } catch (e) {
-      debugPrint('[MiniAppRepository] API fetch failed, using offline seed apps: $e');
-      if (_dynamicApps.isEmpty) {
-        _dynamicApps.addAll(_seedApps);
-      }
+      debugPrint('[MiniAppRepository] Backend Catalog API fetch failed: $e');
+      _dynamicApps.clear();
       _hasFetched = true;
+      rethrow;
     }
   }
 
@@ -448,9 +154,10 @@ class MiniAppRepository {
   }
 }
 
-/// Core singleton provider for MiniAppRepository
+/// Core singleton provider for MiniAppRepository bound to backendEndpointProvider
 final miniAppRepositoryProvider = Provider<MiniAppRepository>((ref) {
-  return MiniAppRepository();
+  final endpoint = ref.watch(backendEndpointProvider);
+  return MiniAppRepository(catalogUrl: endpoint.catalogUrl);
 });
 
 /// Selected category filter state
@@ -460,7 +167,8 @@ final selectedCategoryProvider = StateProvider<String>((ref) => 'All');
 final catalogSearchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Dynamic catalog query provider (FutureProvider for automatic async state & refresh)
-final dynamicCatalogProvider = FutureProvider.autoDispose<List<MiniAppManifest>>((ref) async {
+final dynamicCatalogProvider =
+    FutureProvider.autoDispose<List<MiniAppManifest>>((ref) async {
   final repo = ref.watch(miniAppRepositoryProvider);
   final category = ref.watch(selectedCategoryProvider);
   final search = ref.watch(catalogSearchQueryProvider);
@@ -472,7 +180,8 @@ final dynamicCatalogProvider = FutureProvider.autoDispose<List<MiniAppManifest>>
 });
 
 /// Categories list provider
-final catalogCategoriesProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+final catalogCategoriesProvider =
+    FutureProvider.autoDispose<List<String>>((ref) async {
   final repo = ref.watch(miniAppRepositoryProvider);
   return repo.getCategories();
 });

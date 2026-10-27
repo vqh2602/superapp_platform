@@ -45,8 +45,8 @@ class _AppsTabState extends ConsumerState<AppsTab>
 
   @override
   Widget build(BuildContext context) {
-    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
-        ref.watch(miniAppRepositoryProvider).getAllApps();
+    final catalogAsync = ref.watch(dynamicCatalogProvider);
+    final allApps = catalogAsync.valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -121,6 +121,35 @@ class _AppsTabState extends ConsumerState<AppsTab>
   }
 
   Widget _buildAppList(List<MiniAppManifest> apps) {
+    if (apps.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.apps_outlined, color: Color(0xFF94A3B8), size: 44),
+              const SizedBox(height: 12),
+              const Text(
+                'Không có ứng dụng nào từ Backend',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Danh sách được nạp trực tiếp từ Backend Registry.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => ref.invalidate(dynamicCatalogProvider),
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Tải lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: apps.length,

@@ -1,5 +1,8 @@
 # SuperApp Mini App Developer SDK
 
+> Backend đã có [API user/token/consent thật](authentication.md). Các phần mock trong tài liệu này mô tả client hiện tại; Flutter/SDK chưa tự nối sang API mới. Khi tích hợp, dùng PKCE S256 để đổi code lấy token riêng cho miniapp, giữ token Super App trong native host và lưu consent qua User Permission API. Xem [hợp đồng bridge ↔ backend](authentication.md#nối-vào-bridge-và-sdk).
+
+
 Tài liệu hướng dẫn phát triển Mini App dành cho lập trình viên (3rd-Party Developers) sử dụng bộ công cụ **SuperApp JavaScript/TypeScript SDK**.
 
 ---

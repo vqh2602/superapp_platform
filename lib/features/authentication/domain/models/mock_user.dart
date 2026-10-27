@@ -36,6 +36,19 @@ class MockUser {
 
   static const List<MockUser> demoUsers = [userA, userB];
 
+  factory MockUser.fromBackendJson(Map<String, dynamic> json) {
+    return MockUser(
+      id: json['id'] as String? ?? '',
+      name: (json['displayName'] ?? json['name'] ?? '') as String,
+      phone: (json['phone'] ?? '') as String,
+      role: (json['role'] ?? 'customer') as String,
+      email: (json['email'] ?? '') as String,
+      avatarUrl: (json['avatarUrl'] as String?)?.isNotEmpty == true
+          ? json['avatarUrl'] as String
+          : null,
+    );
+  }
+
   Map<String, dynamic> toBasicInfoJson() => {
     'id': id,
     'name': name,

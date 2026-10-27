@@ -48,3 +48,9 @@ yarn-error.log*
 
 # FVM Version Cache
 .fvm/
+# Uploaded Mini App packages
+backend/storage/
+.dart_tool/
+# Keep the small prebuilt release sample
+!examples/miniapps/web-demo/dist/
+!examples/miniapps/web-demo/dist/**

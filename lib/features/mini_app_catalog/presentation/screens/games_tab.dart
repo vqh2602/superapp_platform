@@ -13,8 +13,8 @@ class GamesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
-        ref.watch(miniAppRepositoryProvider).getAllApps();
+    final catalogAsync = ref.watch(dynamicCatalogProvider);
+    final allApps = catalogAsync.valueOrNull ?? [];
     final gameApps = allApps
         .where((a) =>
             a.category.toLowerCase().contains('game') ||

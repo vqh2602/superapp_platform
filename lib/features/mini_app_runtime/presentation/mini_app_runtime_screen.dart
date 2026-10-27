@@ -18,6 +18,7 @@ import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../../storage/data/mock_secure_storage_repository.dart';
 import '../domain/web_log_entry.dart';
+import '../../../../core/config/debug_mode_provider.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
@@ -347,13 +348,14 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tải lại'),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.push('/debug');
-              },
-              child: const Text('Debug Logs'),
-            ),
+            if (ref.read(isDebugModeEnabledProvider))
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/debug');
+                },
+                child: const Text('Debug Logs'),
+              ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
               style: ElevatedButton.styleFrom(
@@ -497,8 +499,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                       child: WebViewWidget(controller: _webViewController!),
                     ),
 
-                  // Diagnostic Alert Banner for blank screen
-                  if (_hasBlankScreenWarning && !_isLoading && _loadError == null)
+                  // Diagnostic Alert Banner for blank screen (Only in debug mode)
+                  if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
                     Positioned(
                       left: 16,
                       right: 16,
