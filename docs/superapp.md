@@ -143,11 +143,21 @@ lib/
 - **Đồng bộ quyết định lên Backend**: Khi người dùng đồng ý cấp quyền, quyết định được lưu trên Backend qua `PUT /api/v1/users/me/apps/:appId/permissions`.
 - **Trung tâm Quyền riêng tư**: Trong Profile Tab, người dùng có thể xem danh sách các Mini App đã từng cấp quyền và dễ dàng thu hồi quyền (DELETE / PUT) trực tiếp về Backend.
 
-### 3.5. WeChat-Style Top Capsule Navigation Bar
+### 3.5. WeChat/Zalo-Style Capsule Bar & Action Bottom Sheet
 - Tích hợp thanh điều khiển chuẩn hiện đại ở góc trên bên phải gồm 2 nút:
-  - **Nút ba chấm (`•••`)**: Mở hộp thoại thông tin chi tiết của Mini App (ID, phiên bản, quyền truy cập, nút tải lại và nút mở Debug Logs).
+  - **Nút ba chấm (`•••`)**: Mở Action Bottom Sheet thông tin và điều khiển ứng dụng chuẩn Zalo/WeChat:
+    - *Header ứng dụng*: Icon, tên Mini App, nhãn xác thực đơn vị chủ quản, và nút `(i)` xem chi tiết metadata kỹ thuật.
+    - *Gửi tới (Chia sẻ nhanh)*: Danh sách liên hệ gần đây (Sầu Riêng, XU É 12, Nhóm, Xem thêm) để chia sẻ tức thì.
+    - *Thanh liên kết Mini App*: Hiển thị URL chia sẻ (`https://superapp.vn/s/:id`) kèm nút sao chép vào bộ nhớ tạm.
+    - *Lưới 6 tính năng điều khiển (Action Grid)*:
+      1. **Mã QR**: Mở hộp thoại quét mã QR để mở Mini App trên thiết bị khác.
+      2. **Tạo phím tắt**: Tạo lối tắt truy cập nhanh trên màn hình chính.
+      3. **Yêu thích**: Đánh dấu / bỏ đánh dấu Mini App yêu thích (icon sao vàng).
+      4. **Thu nhỏ**: Thu nhỏ Mini App và trở về màn hình chủ SuperApp mà không mất phiên.
+      5. **Quản lý quyền**: Xem và bật/tắt quyền (Camera, QR, Thanh toán, v.v.), thu hồi quyền trực tiếp với Backend.
+      6. **Tải lại**: Khởi động lại và làm mới trang WebView.
   - **Nút tròn thoát (`⊙`)**: Gửi sự kiện `miniapp.close` tới Mini App và đóng runtime an toàn.
-- Giao diện tràn viền (Edge-to-Edge) tối ưu không gian hiển thị cho webview.
+- Giao diện tràn viền (Edge-to-Edge) tự động đồng bộ màu nền theo theme của Mini App.
 
 ### 3.6. Watchdog phát hiện màn hình trắng (Blank Screen Watchdog)
 - Tự động kiểm tra DOM sau 2.5 giây từ khi tải xong trang (`document.getElementById("root")`).

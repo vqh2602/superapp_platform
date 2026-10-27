@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
@@ -19,6 +18,7 @@ import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../../storage/data/mock_secure_storage_repository.dart';
 import '../domain/web_log_entry.dart';
+import 'widgets/mini_app_action_bottom_sheet.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
 
@@ -311,101 +311,21 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     });
   }
 
-  void _showMiniAppInfoDialog(MiniAppManifest? manifest) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00BA52).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.info_outline_rounded, color: Color(0xFF00BA52), size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  manifest?.name ?? 'Thông tin Mini App',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildInfoRow('Mã ứng dụng (ID)', manifest?.id ?? _currentAppId),
-                _buildInfoRow('Phiên bản', 'v${manifest?.version ?? "1.0.0"}'),
-                _buildInfoRow('Loại Runtime', manifest?.isSchemaApp == true ? 'No-Code Schema' : 'Web View App'),
-                _buildInfoRow('Danh mục', manifest?.category ?? 'Chung'),
-                const SizedBox(height: 8),
-                const Text('Mô tả:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
-                const SizedBox(height: 2),
-                Text(
-                  manifest?.description ?? 'Chưa có mô tả chi tiết.',
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                ),
-                const SizedBox(height: 12),
-                const Text('Quyền truy cập (Capabilities):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: (manifest?.capabilities ?? ['navigation.close']).map((c) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(c, style: const TextStyle(fontSize: 10, color: Color(0xFF334155), fontFamily: 'monospace')),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _isLoading = true;
-                  _hasBlankScreenWarning = false;
-                });
-                _webViewController?.reload();
-              },
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Tải lại'),
-            ),
-            if (ref.read(isDebugModeEnabledProvider))
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  context.push('/debug');
-                },
-                child: const Text('Debug Logs'),
-              ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00BA52),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Đóng'),
-            ),
-          ],
-        );
+  void _showMiniAppActionBottomSheet(MiniAppManifest? manifest) {
+    MiniAppActionBottomSheet.show(
+      context,
+      manifest: manifest,
+      appId: _currentAppId,
+      onReload: () {
+        setState(() {
+          _isLoading = true;
+          _hasBlankScreenWarning = false;
+        });
+        _webViewController?.reload();
+      },
+      onMinimize: () {
+        _eventEmitter?.emit('miniapp.hide');
+        Navigator.of(context).pop();
       },
     );
   }
@@ -502,7 +422,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                           children: [
                             // Nút thông tin miniapp (•••)
                             InkWell(
-                              onTap: () => _showMiniAppInfoDialog(manifest),
+                              onTap: () => _showMiniAppActionBottomSheet(manifest),
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(16),
                                 bottomLeft: Radius.circular(16),
@@ -660,19 +580,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF0F172A))),
-        ],
       ),
     );
   }
