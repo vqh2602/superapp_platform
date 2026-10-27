@@ -1,3 +1,4 @@
+import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../../authentication/data/mock_auth_repository.dart';
 import '../../authentication/data/mock_auth_code_service.dart';
@@ -49,17 +50,33 @@ class NativeActionDispatcher {
     required this.permissionRepo,
     required this.debugLogRepo,
     MockSecureStorageRepository? secureStorageRepo,
+    String? miniappUrl,
+    String? authUrl,
     Function(String appId)? onSwitchMiniApp,
   }) : secureStorageRepo = secureStorageRepo ?? MockSecureStorageRepository() {
-    _registerHandlers(onSwitchMiniApp);
+    _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
   }
 
-  void _registerHandlers(Function(String appId)? onSwitchMiniApp) {
+  void _registerHandlers(
+    Function(String appId)? onSwitchMiniApp, {
+    String? miniappUrl,
+    String? authUrl,
+  }) {
     final list = <NativeActionHandler>[
       // Auth
-      AuthRequestCodeHandler(authRepo: authRepo, authCodeService: authCodeService),
-      AuthExchangeCodeHandler(tokenService: tokenService),
-      AuthRefreshTokenHandler(tokenService: tokenService),
+      AuthRequestCodeHandler(
+        authRepo: authRepo,
+        authCodeService: authCodeService,
+        miniappUrl: miniappUrl,
+      ),
+      AuthExchangeCodeHandler(
+        tokenService: tokenService,
+        miniappUrl: miniappUrl,
+      ),
+      AuthRefreshTokenHandler(
+        tokenService: tokenService,
+        authUrl: authUrl,
+      ),
       AuthLogoutHandler(authRepo: authRepo),
 
       // User
@@ -285,6 +302,7 @@ class NativeActionDispatcher {
 }
 
 final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
+  final endpoint = ref.watch(backendEndpointProvider);
   return NativeActionDispatcher(
     authRepo: ref.watch(mockAuthRepositoryProvider),
     authCodeService: ref.watch(mockAuthCodeServiceProvider),
@@ -295,5 +313,7 @@ final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
     permissionRepo: ref.watch(mockPermissionRepositoryProvider),
     debugLogRepo: ref.watch(debugLogRepositoryProvider),
     secureStorageRepo: ref.watch(mockSecureStorageRepositoryProvider),
+    miniappUrl: endpoint.miniappUrl,
+    authUrl: endpoint.authUrl,
   );
 });

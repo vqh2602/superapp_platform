@@ -2,7 +2,11 @@
 
 Backend đã có tài khoản thật trong PostgreSQL, đăng ký/đăng nhập bằng email và password, token theo phiên, mã đăng nhập Mini App và quyết định cấp quyền theo từng user/app.
 
-Các API dưới đây đã được triển khai. Flutter và SDK hiện vẫn dùng các repository/transport mock cũ; chúng chưa tự động gọi các API này. Phần **Nối vào bridge** bên dưới là hợp đồng tích hợp cho client.
+Ứng dụng **Flutter SuperApp đã kết nối hoàn chỉnh với các API Backend này**:
+- Xác thực người dùng (đăng nhập, đăng ký, hồ sơ, refresh token, đăng xuất) qua HTTP API thật với endpoint tùy biến linh hoạt.
+- Mini App Bridge tích hợp luồng xin Auth Code (`/miniapp/auth/code`) và đổi Token PKCE S256 (`/miniapp/auth/token`).
+- Đồng bộ quyền và quyết định của người dùng với Backend User Permission API (`/users/me/apps/:appId/permissions`).
+- Quản lý và lưu trữ đơn hàng thanh toán trên PostgreSQL qua Order API (`/orders`).
 
 Base URL: `http://localhost:3000/api/v1`. Body JSON, trừ API upload gói. Các endpoint có xác thực nhận `Authorization: Bearer <accessToken>`; không nhận userId từ client để xác định chủ tài khoản.
 
@@ -215,17 +219,22 @@ Quyền được kiểm tra lại ở mỗi request profile/permissions và mỗ
 
 ## Nối vào bridge và SDK
 
-| Tính năng hiện có | API backend cần nối |
-| --- | --- |
-| Super App login/register | `/auth/register`, `/auth/login`, `/auth/me`, `/auth/refresh` |
-| `auth.requestCode` hoặc SDK `auth.login` | Mini App gửi challenge/scopes; native host gọi `/miniapp/auth/code` bằng token Super App |
-| `auth.exchangeCode` | `/miniapp/auth/token` bằng code/verifier |
-| `auth.refreshToken` | `/auth/refresh` bằng refresh token Mini App |
-| `user.getBasicInfo` / `user.getProfile` | `/miniapp/me` bằng token Mini App với scope tương ứng |
-| `permission.request` | Host hỏi user; host lưu kết quả bằng PUT `/users/me/apps/:appId/permissions` |
-| `permission.getPermissions` | Host dùng GET user/app permissions; Mini App dùng GET `/miniapp/permissions` |
-| Host logout | `/auth/logout` hoặc `/auth/logout-all` |
-| Mini App logout | `/auth/logout` bằng token Mini App |
+Flutter SuperApp đã tích hợp trực tiếp các API Backend theo hợp đồng sau:
+
+| Tính năng trong Client | API Backend được kết nối | Trạng thái tích hợp |
+| --- | --- | --- |
+| Super App login/register | `/auth/register`, `/auth/login`, `/auth/me`, `/auth/refresh` | ✅ Đã kết nối (`MockAuthRepository`) |
+| `auth.requestCode` hoặc SDK `auth.login` | Mini App gửi challenge/scopes; native host gọi `/miniapp/auth/code` bằng token Super App | ✅ Đã kết nối (`AuthActionHandler`) |
+| `auth.exchangeCode` | `/miniapp/auth/token` bằng code/verifier | ✅ Đã kết nối (`AuthActionHandler`) |
+| `auth.refreshToken` | `/auth/refresh` bằng refresh token Mini App | ✅ Đã kết nối (`AuthActionHandler`) |
+| `user.getBasicInfo` / `user.getProfile` | `/miniapp/me` bằng token Mini App với scope tương ứng | ✅ Đã kết nối (`MockUserRepository`) |
+| `permission.request` | Host hỏi user; host lưu kết quả bằng PUT `/users/me/apps/:appId/permissions` | ✅ Đã kết nối (`MockPermissionRepository`) |
+| `permission.getPermissions` | Host dùng GET user/app permissions; Mini App dùng GET `/miniapp/permissions` | ✅ Đã kết nối (`MockPermissionRepository`) |
+| Host logout | `/auth/logout` hoặc `/auth/logout-all` | ✅ Đã kết nối (`MockAuthRepository`) |
+| Mini App logout | `/auth/logout` bằng token Mini App | ✅ Đã kết nối (`AuthActionHandler`) |
+| Quản lý đơn hàng (Payment) | `/orders`, `/orders/:orderId/status` | ✅ Đã kết nối (`MockOrderRepository`) |
+
+API không thay thế native camera/GPS hay tự hiển thị dialog. Flutter vẫn chịu trách nhiệm hộp thoại consent và thực thi native action. Không đưa token Super App vào JavaScript WebView, URL, manifest hoặc localStorage của Mini App; token Mini App chỉ dùng gọi endpoint cho Mini App.
 
 API không thay thế native camera/GPS hay tự hiển thị dialog. Flutter vẫn chịu trách nhiệm hộp thoại consent và thực thi native action. Không đưa token Super App vào JavaScript WebView, URL, manifest hoặc localStorage của Mini App; token Mini App chỉ dùng gọi endpoint cho Mini App.
 

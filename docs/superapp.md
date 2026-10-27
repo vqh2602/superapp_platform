@@ -1,6 +1,11 @@
 # SuperApp Mobile Platform (Flutter Master Shell)
 
-> Backend đã có [API user/token/consent thật](authentication.md). Các phần mock trong tài liệu này mô tả client hiện tại; Flutter/SDK chưa tự nối sang API mới. Khi tích hợp, dùng PKCE S256 để đổi code lấy token riêng cho miniapp, giữ token Super App trong native host và lưu consent qua User Permission API. Xem [hợp đồng bridge ↔ backend](authentication.md#nối-vào-bridge-và-sdk).
+> **Tích hợp Backend hoàn chỉnh**: Toàn bộ các chức năng cốt lõi của SuperApp đã kết nối trực tiếp với Backend NestJS + PostgreSQL thật:
+> - **Đăng nhập & Đăng ký**: Màn hình đăng nhập yêu cầu nhập email, mật khẩu và ô cấu hình endpoint Backend URL động. Màn hình đăng ký tài khoản mới gọi `POST /api/v1/auth/register`.
+> - **Mini App Catalog**: Tải 100% danh sách Mini App từ Backend Catalog API (`/api/v1/catalog/apps`), không còn phụ thuộc dữ liệu mock hay fallback từ assets.
+> - **Đơn hàng & Thanh toán (Orders)**: Kết nối Backend Order API (`/api/v1/orders`), lưu trữ và đồng bộ trạng thái thanh toán trên cơ sở dữ liệu PostgreSQL.
+> - **Bảo mật & Quyền riêng tư (Consent)**: Đồng bộ quyết định cấp/từ chối quyền người dùng với Backend (`/api/v1/users/me/apps/:appId/permissions`).
+> - **Mini App PKCE Bridge**: Tích hợp luồng xin auth code và đổi token PKCE S256 cho Mini App qua Native Bridge.
 
 
 Tài liệu kỹ thuật chi tiết về kiến trúc mã nguồn, bảng tính năng hỗ trợ đa nền tảng (Platform Matrix) và các thành phần cốt lõi của ứng dụng trung tâm **SuperApp Master Platform** xây dựng trên **Flutter**.
@@ -118,23 +123,37 @@ lib/
 ## 3. Chi tiết các tính năng chính (Key Features)
 
 ### 3.1. Mini App Catalog & Khám phá ứng dụng
-- **Đồng bộ Dynamic Registry**: Kết nối trực tiếp tới Backend NestJS (`/api/v1/catalog/apps`) để tải danh sách Mini App mới nhất mà không cần cập nhật ứng dụng từ App Store/Google Play.
-- **Offline First**: Tự động lưu cache manifest cục bộ. Nếu mất mạng, người dùng vẫn có thể duyệt và mở các Mini App đã được đóng gói sẵn trong `assets/`.
+- **Dữ liệu thật từ Backend Registry**: Kết nối trực tiếp tới Backend NestJS (`/api/v1/catalog/apps`, `/api/v1/catalog/categories`, `/api/v1/catalog/apps/:id`) để tải danh sách Mini App đang hoạt động. Ứng dụng **không sử dụng mock data hay fallback từ assets**; khi Backend offline hoặc không có mạng, ứng dụng hiển thị thông báo lỗi kết nối rõ ràng kèm nút thử lại.
 - **Hỗ trợ 2 kiểu Mini App**:
   1. *Web-based Mini App*: Ứng dụng HTML5/React/Vue đóng gói dạng Single-file hoặc host qua remote URL.
   2. *No-Code Schema Mini App*: Ứng dụng dựng hoàn toàn bằng tệp JSON Schema mô tả giao diện và hành vi.
 
-### 3.2. WeChat-Style Top Capsule Navigation Bar
+### 3.2. Đăng nhập linh hoạt & Đăng ký tài khoản (Dynamic Endpoint & Auth)
+- **Cấu hình Endpoint Backend**: Màn hình đăng nhập cung cấp ô nhập URL Backend động (mặc định `http://localhost:3000`), cho phép kết nối linh hoạt tới localhost, máy chủ mạng LAN hoặc cloud. URL được chuẩn hóa và lưu trữ an toàn trong SharedPreferences.
+- **Đăng nhập chuẩn xác thực**: Yêu cầu nhập email và mật khẩu (gọi `POST /api/v1/auth/login`). Token nhận được là Bearer opaque token kèm refresh token, quản lý phiên an toàn.
+- **Đăng ký tài khoản mới**: Cung cấp màn hình Đăng ký (`/register`), người dùng nhập họ tên, email và mật khẩu để tạo tài khoản thật trên PostgreSQL qua `POST /api/v1/auth/register`.
+
+### 3.3. Đơn hàng & Quản lý thanh toán (Backend Orders & Payment)
+- **Tạo và quản lý đơn hàng thật**: Khi Mini App gọi action `payment.createOrder`, Native Host giao tiếp với Backend qua `POST /api/v1/orders` để sinh đơn hàng thật lưu trữ trong database PostgreSQL.
+- **Thanh toán thời gian thực**: Khi người dùng hoàn tất thanh toán trên Native Checkout Sheet (MoMo, ZaloPay, Thẻ ngân hàng), trạng thái đơn hàng được cập nhật tức thì lên Backend qua `PATCH /api/v1/orders/:id/status`.
+- **Lịch sử giao dịch**: Màn hình Profile Tab tích hợp mục "Lịch sử đơn hàng (Backend Orders)" cho phép xem toàn bộ danh sách đơn hàng đã thanh toán cùng trạng thái trực tiếp từ server.
+
+### 3.4. Quản lý Quyền riêng tư & Thu hồi Consent (Backend Permissions)
+- **Kiểm soát quyền 3 lớp**: Quyền hiệu lực của Mini App được xác thực qua Manifest ∩ Quyền nền tảng Registry ∩ Đồng ý của người dùng (User Consent).
+- **Đồng bộ quyết định lên Backend**: Khi người dùng đồng ý cấp quyền, quyết định được lưu trên Backend qua `PUT /api/v1/users/me/apps/:appId/permissions`.
+- **Trung tâm Quyền riêng tư**: Trong Profile Tab, người dùng có thể xem danh sách các Mini App đã từng cấp quyền và dễ dàng thu hồi quyền (DELETE / PUT) trực tiếp về Backend.
+
+### 3.5. WeChat-Style Top Capsule Navigation Bar
 - Tích hợp thanh điều khiển chuẩn hiện đại ở góc trên bên phải gồm 2 nút:
   - **Nút ba chấm (`•••`)**: Mở hộp thoại thông tin chi tiết của Mini App (ID, phiên bản, quyền truy cập, nút tải lại và nút mở Debug Logs).
   - **Nút tròn thoát (`⊙`)**: Gửi sự kiện `miniapp.close` tới Mini App và đóng runtime an toàn.
 - Giao diện tràn viền (Edge-to-Edge) tối ưu không gian hiển thị cho webview.
 
-### 3.3. Watchdog phát hiện màn hình trắng (Blank Screen Watchdog)
+### 3.6. Watchdog phát hiện màn hình trắng (Blank Screen Watchdog)
 - Tự động kiểm tra DOM sau 2.5 giây từ khi tải xong trang (`document.getElementById("root")`).
 - Nếu phát hiện webview bị trắng (chưa mount được React hoặc lỗi script), hệ thống sẽ hiển thị một Diagnostic Alert Banner cảnh báo người dùng và gợi ý mở trình kiểm tra lỗi.
 
-### 3.4. Kho lưu trữ an toàn độc lập (Isolated Secure Storage)
+### 3.7. Kho lưu trữ an toàn độc lập (Isolated Secure Storage)
 - Cung cấp cơ chế lưu trữ bảo mật dựa trên phần cứng (Hardware Keystore trên Android, Keychain trên iOS/macOS).
 - Tự động tiền tố namespace theo từng `appId` và `domain` (`sec_{appId}_{domain}_{key}`), ngăn chặn tuyệt đối tình trạng rò rỉ dữ liệu chéo giữa các Mini App.
 

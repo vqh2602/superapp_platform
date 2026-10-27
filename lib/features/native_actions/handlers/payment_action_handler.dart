@@ -35,7 +35,7 @@ class PaymentCreateOrderHandler implements NativeActionHandler {
       throw BridgeError.authRequired();
     }
 
-    final order = orderRepo.createOrder(
+    final order = await orderRepo.createOrder(
       amount: amount,
       description: description,
       appId: context.appId,

@@ -1,4 +1,6 @@
 import { AuthModule } from './modules/auth/auth.module';
+import { OrderModule } from './modules/order/order.module';
+import { OrderEntity } from './entities/order.entity';
 import { UserEntity } from './entities/user.entity';
 import { AuthSessionEntity } from './entities/auth-session.entity';
 import { UserMiniAppPermissionEntity } from './entities/user-miniapp-permission.entity';
@@ -21,11 +23,21 @@ import { SeedModule } from './modules/seed/seed.module';
       username: process.env.DB_USERNAME || process.env.USER || 'vuongquanghuy',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'superapp_registry',
-      entities: [MiniAppEntity, MiniAppVersionEntity, ReviewAuditEntity, UserEntity, AuthSessionEntity, UserMiniAppPermissionEntity, MiniAppAuthCodeEntity],
+      entities: [
+        MiniAppEntity,
+        MiniAppVersionEntity,
+        ReviewAuditEntity,
+        UserEntity,
+        AuthSessionEntity,
+        UserMiniAppPermissionEntity,
+        MiniAppAuthCodeEntity,
+        OrderEntity,
+      ],
       synchronize: true, // Development schema auto-sync
       logging: false,
     }),
     AuthModule,
+    OrderModule,
     RegistryModule,
     CatalogModule,
     SeedModule,

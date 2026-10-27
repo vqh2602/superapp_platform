@@ -197,10 +197,12 @@ class _NativeCheckoutScreenState extends ConsumerState<NativeCheckoutScreen> {
     );
   }
 
-  void _handleAction(OrderStatus status) {
+  void _handleAction(OrderStatus status) async {
     final orderRepo = ref.read(mockOrderRepositoryProvider);
-    final updated = orderRepo.updateOrderStatus(widget.orderId, status);
-    Navigator.pop(context, updated.toJson());
+    final updated = await orderRepo.updateOrderStatus(widget.orderId, status);
+    if (mounted) {
+      Navigator.pop(context, updated.toJson());
+    }
   }
 
   Widget _buildRow(String label, String value) {

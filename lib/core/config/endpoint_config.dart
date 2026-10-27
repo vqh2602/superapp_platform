@@ -28,6 +28,7 @@ class EndpointConfig {
   String get authUrl => '$apiBaseUrl/auth';
   String get miniappUrl => '$apiBaseUrl/miniapp';
   String get usersUrl => '$apiBaseUrl/users';
+  String get ordersUrl => '$apiBaseUrl/orders';
 
   @override
   bool operator ==(Object other) =>

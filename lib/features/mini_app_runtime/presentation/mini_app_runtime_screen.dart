@@ -19,6 +19,7 @@ import '../../permissions/data/mock_permission_repository.dart';
 import '../../storage/data/mock_secure_storage_repository.dart';
 import '../domain/web_log_entry.dart';
 import '../../../../core/config/debug_mode_provider.dart';
+import '../../../../core/config/endpoint_config.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
@@ -101,6 +102,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white);
 
+    final endpoint = ref.read(backendEndpointProvider);
     final actionDispatcher = NativeActionDispatcher(
       authRepo: ref.read(mockAuthRepositoryProvider),
       authCodeService: ref.read(mockAuthCodeServiceProvider),
@@ -111,6 +113,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       permissionRepo: ref.read(mockPermissionRepositoryProvider),
       debugLogRepo: ref.read(debugLogRepositoryProvider),
       secureStorageRepo: ref.read(mockSecureStorageRepositoryProvider),
+      miniappUrl: endpoint.miniappUrl,
+      authUrl: endpoint.authUrl,
       onSwitchMiniApp: (targetAppId) {
         setState(() {
           _currentAppId = targetAppId;

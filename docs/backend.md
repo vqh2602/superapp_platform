@@ -1,6 +1,6 @@
 # Backend Super App
 
-NestJS + TypeORM + PostgreSQL, phục vụ ba phần: quản lý Mini App cho demo, catalog/runtime cho Flutter, user/token/consent cho Super App và Mini App.
+NestJS + TypeORM + PostgreSQL, phục vụ bốn phần: quản lý Mini App cho demo, catalog/runtime cho Flutter, user/token/consent cho Super App và Mini App, quản lý đơn hàng & thanh toán (Orders/Payment).
 
 Đặc tả chi tiết:
 
@@ -18,11 +18,13 @@ backend/src/
 │   ├── user.entity.ts
 │   ├── auth-session.entity.ts
 │   ├── miniapp-auth-code.entity.ts
-│   └── user-miniapp-permission.entity.ts
+│   ├── user-miniapp-permission.entity.ts
+│   └── order.entity.ts
 └── modules/
     ├── auth/       # Tài khoản, phiên, PKCE code, consent, hồ sơ miniapp
     ├── registry/   # Metadata, ZIP, phiên bản, ẩn/hiện, file runtime
     ├── catalog/    # Manifest/schema của các app đang hiện
+    ├── order/      # Quản lý đơn hàng thanh toán từ Mini App
     └── seed/       # Dữ liệu miniapp mẫu, không tạo user/mật khẩu mẫu
 ```
 
@@ -32,6 +34,7 @@ flowchart LR
     SuperApp[Flutter Super App] --> Auth[User / Session API]
     SuperApp --> Consent[User Permission API]
     SuperApp --> Catalog[Catalog API]
+    SuperApp --> Orders[Order / Payment API]
     MiniApp[Mini App] --> Exchange[PKCE Code Exchange]
     MiniApp --> Profile[Mini App Profile / Permissions]
     Auth --> DB[(PostgreSQL)]
@@ -40,6 +43,7 @@ flowchart LR
     Profile --> DB
     Registry --> DB
     Catalog --> DB
+    Orders --> DB
     Registry --> Files[Package storage]
 ```
 
@@ -53,6 +57,7 @@ flowchart LR
 | `auth_sessions` | Phiên Super App/Mini App, appId/scopes/phiên cha, SHA256 token, hạn và thu hồi |
 | `miniapp_auth_codes` | SHA256 code một lần, user/app/phiên nguồn, PKCE S256, scopes, hạn 60 giây |
 | `user_miniapp_permissions` | Quyết định cấp/từ chối từng capability theo user/app, unique `(userId, appId, capability)` |
+| `orders` | Đơn hàng thanh toán Mini App: id (UUID), userId, appId, amount, currency, description, status (`pending`, `success`, `failed`, `cancelled`), paymentMethod, createdAt, completedAt |
 
 Bảng `review_audits` và một số cột/trạng thái lịch sử được giữ để tương thích dữ liệu cũ; luồng demo không có gửi duyệt/duyệt/rollback.
 
@@ -95,6 +100,33 @@ Base URL `http://localhost:3000/api/v1`. JSON body được whitelist và từ c
 
 Token Super App không được chuyển vào WebView. Mini App token không thể đọc hồ sơ tài khoản Super App, sửa consent hay phát code cho app khác. Phiên Super App cha bị logout làm code/token Mini App của phiên đó mất hiệu lực. Xem [request/response và mapping bridge](authentication.md).
 
+### Đơn hàng và Thanh toán (Orders)
+
+| Method | Path | Xác thực | Công dụng |
+| --- | --- | --- | --- |
+| POST | `/orders` | Token Super App | Tạo đơn hàng mới từ Mini App (`appId`, `amount`, `currency`, `description`) |
+| GET | `/orders/:orderId` | Token Super App | Lấy chi tiết thông tin đơn hàng theo ID |
+| PATCH | `/orders/:orderId/status` | Token Super App | Cập nhật trạng thái đơn (`status: "success" \| "failed" \| "cancelled"`, `paymentMethod`) |
+| GET | `/orders` | Token Super App | Danh sách lịch sử đơn hàng của user (hỗ trợ query filter `?appId=...`) |
+
+Payload `POST /orders`:
+```json
+{
+  "appId": "schema_runtime",
+  "amount": 50000,
+  "currency": "VND",
+  "description": "Thanh toán đơn hàng demo"
+}
+```
+
+Payload `PATCH /orders/:orderId/status`:
+```json
+{
+  "status": "success",
+  "paymentMethod": "MOMO"
+}
+```
+
 ### Quản lý và catalog
 
 | Method | Path | Công dụng |
@@ -109,7 +141,7 @@ Token Super App không được chuyển vào WebView. Mini App token không th�
 | GET | `/catalog/categories` | Danh mục đang hiện |
 | GET | `/miniapps/:id/:version/*` | File chạy của phiên bản đang hiện; icon vẫn tải được cho Manager khi app ẩn |
 
-Registry/Manager vẫn phục vụ demo không có tài khoản admin/phân vai. User API và Mini App private API có xác thực riêng. Phần Flutter/SDK mock chưa tự chuyển sang backend auth trong thay đổi này.
+Registry/Manager vẫn phục vụ demo không có tài khoản admin/phân vai. Ứng dụng Flutter SuperApp đã kết nối trực tiếp vào toàn bộ API Backend: Dynamic Catalog (không fallback asset), Quản lý User/Auth (đăng nhập, đăng ký tài khoản mới, refresh, logout), Consent / Quyền riêng tư theo người dùng, và Quản lý Đơn hàng / Lịch sử thanh toán.
 
 ## Chạy cục bộ
 
