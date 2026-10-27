@@ -1,6 +1,6 @@
 /// Global configuration for the Super App platform.
 class AppConfig {
-  static const String appName = 'Super App Platform';
+  static const String appName = 'SuperApp';
   static const String appVersion = '1.0.0';
   static const String bridgeChannelName = 'FlutterBridge';
 

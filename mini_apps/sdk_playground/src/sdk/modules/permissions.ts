@@ -10,4 +10,8 @@ export class PermissionsModule {
   public async check(capability: string): Promise<{ capability: string; granted: boolean }> {
     return this.transport.invoke('permission.check', { capability });
   }
+
+  public async getPermissions(): Promise<{ appId: string; permissions: Record<string, boolean> }> {
+    return this.transport.invoke('permission.getPermissions');
+  }
 }

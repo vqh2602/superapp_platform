@@ -77,3 +77,27 @@ class PermissionCheckHandler implements NativeActionHandler {
     };
   }
 }
+
+class PermissionGetPermissionsHandler implements NativeActionHandler {
+  final MockPermissionRepository permissionRepo;
+
+  PermissionGetPermissionsHandler({required this.permissionRepo});
+
+  @override
+  String get actionName => 'permission.getPermissions';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final permissions = permissionRepo.getPermissionsForApp(context.appId);
+    return {
+      'appId': context.appId,
+      'permissions': permissions,
+    };
+  }
+}

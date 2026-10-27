@@ -16,6 +16,7 @@ import '../../user_profile/data/mock_user_repository.dart';
 import '../../device/data/mock_device_adapter.dart';
 import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
+import '../../storage/data/mock_secure_storage_repository.dart';
 import '../domain/web_log_entry.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
@@ -112,6 +113,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       orderRepo: ref.read(mockOrderRepositoryProvider),
       permissionRepo: ref.read(mockPermissionRepositoryProvider),
       debugLogRepo: ref.read(debugLogRepositoryProvider),
+      secureStorageRepo: ref.read(mockSecureStorageRepositoryProvider),
       onSwitchMiniApp: (targetAppId) {
         setState(() {
           _currentAppId = targetAppId;

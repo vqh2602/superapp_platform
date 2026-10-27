@@ -11,14 +11,14 @@ void main() {
     );
 
     // Initial frame shows splash screen
-    expect(find.text('SUPER APP PLATFORM'), findsOneWidget);
+    expect(find.text('SUPERAPP'), findsOneWidget);
 
     // Wait for the bootstrap timer to complete (600ms)
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
 
     // Should navigate to Mock Login Screen
-    expect(find.text('Super App Mock Login'), findsOneWidget);
+    expect(find.text('SuperApp Login'), findsOneWidget);
     expect(find.text('Nguyễn Văn A'), findsOneWidget);
     expect(find.text('Trần Thị B'), findsOneWidget);
   });

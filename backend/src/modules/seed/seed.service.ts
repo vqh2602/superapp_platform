@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { MiniAppEntity } from '../../entities/mini-app.entity';
 import { MiniAppVersionEntity } from '../../entities/mini-app-version.entity';
 import { MiniAppStatus, MiniAppRuntimeType } from '../../entities/enums';
+import { sampleSchemas } from './sample-schemas';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -55,6 +56,55 @@ export class SeedService implements OnApplicationBootstrap {
           'payment.createOrder',
           'payment.openCheckout',
           'permission.request',
+          'permission.getPermissions',
+          'storage.setSecureItem',
+          'storage.getSecureItem',
+          'storage.removeSecureItem',
+          'storage.clear',
+          'storage.setCredentials',
+          'storage.getCredentials',
+          'storage.deleteCredentials',
+          'storage.secure',
+          'contacts',
+          'device.scanQr',
+          'scanQr',
+          'device.scanBarcode',
+          'scanBarcode',
+          'getPhoto',
+          'pickImages',
+          'saveImageToGallery',
+          'pickVideo',
+          'saveVideoToGallery',
+          'saveFile',
+          'pickFile',
+          'filePreview',
+          'showToast',
+          'vibrate',
+          'copyToClipboard',
+          'setBrightness',
+          'setStatusBarStyle',
+          'setStatusBarColor',
+          'setNavigationBarColor',
+          'configAppView',
+          'showMiniappMenu',
+          'closeApp',
+          'getNetworkInfo',
+          'getDeviceLanguage',
+          'getSuperAppSettings',
+          'getSystemInfo',
+          'getAppInfo',
+          'getBatteryInfo',
+          'getContacts',
+          'setSecretData',
+          'getSecretData',
+          'removeSecretData',
+          'microphone',
+          'openPhone',
+          'openSMS',
+          'openExternalBrowser',
+          'openDeepLink',
+          'speechToText',
+          'hideKeyboard',
           'debug.echo',
           'debug.simulateFailure',
         ],
@@ -113,6 +163,42 @@ export class SeedService implements OnApplicationBootstrap {
         publishedAt: new Date(),
       });
       await this.versionRepo.save(ver);
+    }
+
+    // 3. Seed Schema Mini Apps (Shopee, TikTok, Coffee House, Viettel Tammi, Free Fire, CapCut, Messenger...)
+    for (const [appId, data] of Object.entries(sampleSchemas)) {
+      const existing = await this.appRepo.findOne({ where: { id: appId } });
+      if (!existing) {
+        this.logger.log(`Seeding Schema Mini App: ${appId} (schema)...`);
+        const schemaApp = this.appRepo.create({
+          id: appId,
+          name: data.name,
+          description: data.description,
+          icon: data.icon,
+          category: data.category,
+          tenantId: 'system_core',
+          runtimeType: MiniAppRuntimeType.SCHEMA,
+          status: MiniAppStatus.PUBLISHED,
+          activePublishedVersion: '1.0.0',
+          entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+          isAsset: true,
+          capabilities: data.capabilities,
+        });
+        await this.appRepo.save(schemaApp);
+
+        const version = this.versionRepo.create({
+          appId,
+          version: '1.0.0',
+          schemaVersion: 1,
+          status: MiniAppStatus.PUBLISHED,
+          schema: data.schema,
+          entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+          capabilities: data.capabilities,
+          reviewNotes: `Seeded ${data.name} schema app`,
+          publishedAt: new Date(),
+        });
+        await this.versionRepo.save(version);
+      }
     }
 
     this.logger.log('Seeding completed successfully.');

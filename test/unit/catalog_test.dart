@@ -80,6 +80,34 @@ void main() {
       final single = repo.getAppById('sdk_playground');
       expect(single, isNotNull);
       expect(single?.name, equals('SDK Playground'));
+
+      // Verify Schema Mini Apps are correctly configured and not pointing to sample_store
+      final shopeeApp = repo.getAppById('shopee');
+      expect(shopeeApp, isNotNull);
+      expect(shopeeApp!.isSchemaApp, isTrue);
+      expect(shopeeApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
+      expect(shopeeApp.schema, isNotNull);
+      expect(shopeeApp.schema!['pages'], isNotEmpty);
+
+      final tiktokApp = repo.getAppById('tiktok');
+      expect(tiktokApp, isNotNull);
+      expect(tiktokApp!.isSchemaApp, isTrue);
+      expect(tiktokApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
+
+      final freeFireApp = repo.getAppById('free_fire');
+      expect(freeFireApp, isNotNull);
+      expect(freeFireApp!.isSchemaApp, isTrue);
+      expect(freeFireApp.entryUrl, equals('assets/mini_apps/schema_runtime/index.html'));
+
+      final viettelApp = repo.getAppById('viettel_tammi');
+      expect(viettelApp, isNotNull);
+      expect(viettelApp!.isSchemaApp, isTrue);
+
+      // Verify sample_store is distinct as Type A web app
+      final storeApp = repo.getAppById('sample_store');
+      expect(storeApp, isNotNull);
+      expect(storeApp!.isWebApp, isTrue);
+      expect(storeApp.entryUrl, equals('assets/mini_apps/sample_store/index.html'));
     });
 
     test('Fetches published apps from catalog API successfully', () async {

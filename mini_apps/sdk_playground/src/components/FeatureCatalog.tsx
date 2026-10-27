@@ -11,20 +11,424 @@ import {
   ShieldAlert,
   Terminal,
   LogOut,
-  Scan,
-  MapPin,
   ImageIcon,
   Store,
   FileText,
   UserCircle,
   RefreshCw,
+  Database,
+  Lock,
+  Unlock,
+  Trash2,
+  KeyRound,
+  ShieldCheck,
+  Wifi,
+  Globe,
+  Sun,
+  Vibrate,
+  Copy,
+  Sliders,
+  Menu,
+  Battery,
+  Camera,
+  Video,
+  Folder,
+  Contact,
+  QrCode,
+  Share2,
+  Eye,
+  Phone,
+  MessageSquare,
+  ExternalLink,
+  Link2,
+  Mic,
+  Keyboard,
 } from 'lucide-react';
 
 export const FeatureCatalog: React.FC = () => {
   const { authCode, setAuthCode, refreshToken, setRefreshToken, setAccessToken } = useSDK();
   const [createdOrderId, setCreatedOrderId] = useState<string>('');
 
-  // 1. Auth items
+  // ==========================================
+  // 2.1 SYSTEM & DEVICE INFO ITEMS
+  // ==========================================
+  const sysNetworkConfig: RunnerConfig = {
+    id: 'sys_network',
+    category: '2.1. System & Device Info',
+    title: 'getNetworkInfo',
+    description: 'Lấy thông tin mạng hiện tại (wifi/cellular, trạng thái kết nối).',
+    actionCode: 'superApp.getNetworkInfo()',
+    hasParams: false,
+    run: async () => superApp.getNetworkInfo(),
+  };
+
+  const sysLanguageConfig: RunnerConfig = {
+    id: 'sys_language',
+    category: '2.1. System & Device Info',
+    title: 'getDeviceLanguage',
+    description: 'Lấy ngôn ngữ và khu vực thiết bị (vi-VN, locale).',
+    actionCode: 'superApp.getDeviceLanguage()',
+    hasParams: false,
+    run: async () => superApp.getDeviceLanguage(),
+  };
+
+  const sysSettingsConfig: RunnerConfig = {
+    id: 'sys_settings',
+    category: '2.1. System & Device Info',
+    title: 'getSuperAppSettings',
+    description: 'Lấy cấu hình giao diện từ SuperApp (theme, ngôn ngữ, timezone, múi giờ).',
+    actionCode: 'superApp.getSuperAppSettings()',
+    hasParams: false,
+    run: async () => superApp.getSuperAppSettings(),
+  };
+
+  const sysInfoConfig: RunnerConfig = {
+    id: 'sys_info',
+    category: '2.1. System & Device Info',
+    title: 'getSystemInfo',
+    description: 'Lấy thông tin thiết bị (hệ điều hành, model, độ phân giải màn hình).',
+    actionCode: 'superApp.getSystemInfo()',
+    hasParams: false,
+    run: async () => superApp.getSystemInfo(),
+  };
+
+  const sysAppInfoConfig: RunnerConfig = {
+    id: 'sys_app_info',
+    category: '2.1. System & Device Info',
+    title: 'getAppInfo',
+    description: 'Lấy thông tin miniapp hiện tại theo manifest.',
+    actionCode: 'superApp.getAppInfo()',
+    hasParams: false,
+    run: async () => superApp.getAppInfo(),
+  };
+
+  const sysBatteryConfig: RunnerConfig = {
+    id: 'sys_battery',
+    category: '2.1. System & Device Info',
+    title: 'getBatteryInfo',
+    description: 'Lấy thông tin pin thiết bị (mức pin, trạng thái sạc).',
+    actionCode: 'superApp.getBatteryInfo()',
+    hasParams: false,
+    run: async () => superApp.getBatteryInfo(),
+  };
+
+  // ==========================================
+  // 2.2 UI & SYSTEM CONTROLS ITEMS
+  // ==========================================
+  const uiToastConfig: RunnerConfig = {
+    id: 'ui_toast',
+    category: '2.2. UI & System Controls',
+    title: 'showToast',
+    description: 'Hiển thị thông báo ngắn (toast) ở đáy màn hình.',
+    actionCode: "superApp.showToast('Giao dịch đã được ghi nhận!')",
+    hasParams: true,
+    defaultParams: { message: 'Chào mừng bạn đến với SuperApp!', duration: 2500 },
+    run: async (p) => superApp.showToast(p.message, p.duration),
+  };
+
+  const uiVibrateConfig: RunnerConfig = {
+    id: 'ui_vibrate',
+    category: '2.2. UI & System Controls',
+    title: 'vibrate',
+    description: 'Rung thiết bị (haptic feedback nhẹ/vừa/mạnh).',
+    actionCode: "superApp.vibrate('medium')",
+    hasParams: true,
+    defaultParams: { style: 'medium' },
+    run: async (p) => superApp.vibrate(p.style),
+  };
+
+  const uiClipboardConfig: RunnerConfig = {
+    id: 'ui_clipboard',
+    category: '2.2. UI & System Controls',
+    title: 'copyToClipboard',
+    description: 'Sao chép văn bản vào clipboard hệ thống.',
+    actionCode: "superApp.copyToClipboard('SUPERAPP-PROMO-2026')",
+    hasParams: true,
+    defaultParams: { text: 'SUPERAPP-PROMO-2026' },
+    run: async (p) => superApp.copyToClipboard(p.text),
+  };
+
+  const uiBrightnessConfig: RunnerConfig = {
+    id: 'ui_brightness',
+    category: '2.2. UI & System Controls',
+    title: 'setBrightness',
+    description: 'Đặt độ sáng màn hình (từ 0.0 đến 1.0).',
+    actionCode: 'superApp.setBrightness(0.8)',
+    hasParams: true,
+    defaultParams: { brightness: 0.8 },
+    run: async (p) => superApp.setBrightness(Number(p.brightness)),
+  };
+
+  const uiStatusStyleConfig: RunnerConfig = {
+    id: 'ui_status_style',
+    category: '2.2. UI & System Controls',
+    title: 'setStatusBarStyle',
+    description: 'Miniapp tự báo màu icon status bar phù hợp với nền của mình (light/dark).',
+    actionCode: "superApp.setStatusBarStyle('dark')",
+    hasParams: true,
+    defaultParams: { style: 'dark' },
+    run: async (p) => superApp.setStatusBarStyle(p.style),
+  };
+
+  const uiStatusBarColorConfig: RunnerConfig = {
+    id: 'ui_status_color',
+    category: '2.2. UI & System Controls',
+    title: 'setStatusBarColor',
+    description: 'Đổi màu status bar (khác setStatusBarStyle - API này đổi màu nền tuỳ chỉnh).',
+    actionCode: "superApp.setStatusBarColor('#1E293B')",
+    hasParams: true,
+    defaultParams: { color: '#1E293B' },
+    run: async (p) => superApp.setStatusBarColor(p.color),
+  };
+
+  const uiNavBarColorConfig: RunnerConfig = {
+    id: 'ui_navbar_color',
+    category: '2.2. UI & System Controls',
+    title: 'setNavigationBarColor',
+    description: 'Đổi màu thanh navigation bar.',
+    actionCode: "superApp.setNavigationBarColor('#0F172A')",
+    hasParams: true,
+    defaultParams: { color: '#0F172A' },
+    run: async (p) => superApp.setNavigationBarColor(p.color),
+  };
+
+  const uiConfigAppViewConfig: RunnerConfig = {
+    id: 'ui_config_view',
+    category: '2.2. UI & System Controls',
+    title: 'configAppView',
+    description: 'Cấu hình navigation bar / status bar (ẩn/hiện chế độ toàn màn hình).',
+    actionCode: 'superApp.configAppView({ hideStatusBar: false, hideNavigationBar: false })',
+    hasParams: true,
+    defaultParams: { hideStatusBar: false, hideNavigationBar: false },
+    run: async (p) => superApp.configAppView(p),
+  };
+
+  const uiMenuConfig: RunnerConfig = {
+    id: 'ui_menu',
+    category: '2.2. UI & System Controls',
+    title: 'showMiniappMenu',
+    description: 'Hiển thị menu hành động mặc định của shell.',
+    actionCode: 'superApp.showMiniappMenu()',
+    hasParams: false,
+    run: async () => superApp.showMiniappMenu(),
+  };
+
+  const uiCloseAppConfig: RunnerConfig = {
+    id: 'ui_close_app',
+    category: '2.2. UI & System Controls',
+    title: 'closeApp',
+    description: 'Đóng miniapp, quay lại Launcher.',
+    actionCode: 'superApp.closeApp()',
+    hasParams: false,
+    run: async () => superApp.closeApp(),
+  };
+
+  // ==========================================
+  // 2.4 CAMERA & MEDIA ITEMS (QR & BARCODE)
+  // ==========================================
+  const mediaScanQrConfig: RunnerConfig = {
+    id: 'media_scan_qr',
+    category: '2.4. Camera & Media',
+    title: 'scanQr',
+    description: 'Quét mã QR & Mã vạch bằng camera (hỗ trợ QR Code, EAN-13, Code-128, tải ảnh hoặc chọn mẫu thử).',
+    actionCode: 'superApp.scanQr()',
+    hasParams: false,
+    run: async () => superApp.scanQr(),
+  };
+
+  const mediaGetPhotoConfig: RunnerConfig = {
+    id: 'media_get_photo',
+    category: '2.4. Camera & Media',
+    title: 'getPhoto',
+    description: 'Chụp ảnh từ camera hoặc chọn 1 ảnh từ thư viện.',
+    actionCode: "superApp.getPhoto({ source: 'camera' })",
+    hasParams: true,
+    defaultParams: { source: 'camera' },
+    run: async (p) => superApp.getPhoto(p),
+  };
+
+  const mediaPickImagesConfig: RunnerConfig = {
+    id: 'media_pick_images',
+    category: '2.4. Camera & Media',
+    title: 'pickImages',
+    description: 'Chọn nhiều ảnh từ thư viện thiết bị.',
+    actionCode: 'superApp.pickImages({ maxCount: 3 })',
+    hasParams: true,
+    defaultParams: { maxCount: 3 },
+    run: async (p) => superApp.pickImages({ maxCount: Number(p.maxCount) }),
+  };
+
+  const mediaSaveImageConfig: RunnerConfig = {
+    id: 'media_save_image',
+    category: '2.4. Camera & Media',
+    title: 'saveImageToGallery',
+    description: 'Lưu 1 ảnh vào thư viện ảnh máy.',
+    actionCode: "superApp.saveImageToGallery('content://media/photos/sample.jpg')",
+    hasParams: true,
+    defaultParams: { uri: 'content://media/photos/sample_image.jpg' },
+    run: async (p) => superApp.saveImageToGallery(p.uri),
+  };
+
+  const mediaPickVideoConfig: RunnerConfig = {
+    id: 'media_pick_video',
+    category: '2.4. Camera & Media',
+    title: 'pickVideo',
+    description: 'Chọn 1 video từ thư viện thiết bị.',
+    actionCode: 'superApp.pickVideo()',
+    hasParams: false,
+    run: async () => superApp.pickVideo(),
+  };
+
+  const mediaSaveVideoConfig: RunnerConfig = {
+    id: 'media_save_video',
+    category: '2.4. Camera & Media',
+    title: 'saveVideoToGallery',
+    description: 'Lưu video vào thư viện máy.',
+    actionCode: "superApp.saveVideoToGallery('content://videos/sample.mp4')",
+    hasParams: true,
+    defaultParams: { uri: 'content://videos/sample_video.mp4' },
+    run: async (p) => superApp.saveVideoToGallery(p.uri),
+  };
+
+  // ==========================================
+  // 2.5 FILE MANAGEMENT ITEMS
+  // ==========================================
+  const fileSaveFileConfig: RunnerConfig = {
+    id: 'file_save',
+    category: '2.5. File',
+    title: 'saveFile',
+    description: 'Mở Share Sheet để lưu hoặc chia sẻ 1 file.',
+    actionCode: "superApp.saveFile({ fileName: 'bao_cao_quy_1.pdf' })",
+    hasParams: true,
+    defaultParams: { fileName: 'bao_cao_quy_1_2026.pdf', mimeType: 'application/pdf' },
+    run: async (p) => superApp.saveFile(p),
+  };
+
+  const filePickFileConfig: RunnerConfig = {
+    id: 'file_pick',
+    category: '2.5. File',
+    title: 'pickFile',
+    description: 'Mở trình quản lý file hệ thống để chọn 1 (hoặc nhiều) file.',
+    actionCode: 'superApp.pickFile({ allowMultiple: true })',
+    hasParams: true,
+    defaultParams: { allowMultiple: true },
+    run: async (p) => superApp.pickFile(p),
+  };
+
+  const filePreviewConfig: RunnerConfig = {
+    id: 'file_preview',
+    category: '2.5. File',
+    title: 'filePreview',
+    description: 'Mở màn hình xem trước 1 file (PDF, ảnh...) trong SuperApp.',
+    actionCode: "superApp.filePreview({ fileUrl, fileName })",
+    hasParams: true,
+    defaultParams: { fileUrl: 'https://superapp.com/files/bao_cao.pdf', fileName: 'Báo Cáo Tài Chính 2026.pdf' },
+    run: async (p) => superApp.filePreview(p),
+  };
+
+  // ==========================================
+  // 2.8 KEYCHAIN & KEYSTORE (SECRET DATA)
+  // ==========================================
+  const secSetSecretDataConfig: RunnerConfig = {
+    id: 'sec_set_secret',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'setSecretData',
+    description: 'Lưu dữ liệu nhạy cảm vào Keychain/Keystore theo domain.',
+    actionCode: 'superApp.setSecretData(key, value, domain)',
+    hasParams: true,
+    defaultParams: {
+      key: 'auth_jwt_token',
+      value: 'jwt_secure_key_998127391_enc',
+      domain: 'superapp.auth',
+    },
+    run: async (p) => superApp.setSecretData(p.key, p.value, p.domain),
+  };
+
+  const secGetSecretDataConfig: RunnerConfig = {
+    id: 'sec_get_secret',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'getSecretData',
+    description: 'Đọc dữ liệu bảo mật đã lưu từ Keychain/Keystore.',
+    actionCode: 'superApp.getSecretData(key, domain)',
+    hasParams: true,
+    defaultParams: {
+      key: 'auth_jwt_token',
+      domain: 'superapp.auth',
+    },
+    run: async (p) => superApp.getSecretData(p.key, p.domain),
+  };
+
+  const secRemoveSecretDataConfig: RunnerConfig = {
+    id: 'sec_remove_secret',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'removeSecretData',
+    description: 'Xoá 1 khoá dữ liệu bảo mật khỏi Keychain/Keystore.',
+    actionCode: 'superApp.removeSecretData(key, domain)',
+    hasParams: true,
+    defaultParams: {
+      key: 'auth_jwt_token',
+      domain: 'superapp.auth',
+    },
+    run: async (p) => superApp.removeSecretData(p.key, p.domain),
+  };
+
+  const credentialsSetConfig: RunnerConfig = {
+    id: 'cred_set',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'setCredentials',
+    description: 'Lưu username/password an toàn (Keychain/Keystore) theo domain.',
+    actionCode: 'superApp.storage.setCredentials(domain, username, password)',
+    hasParams: true,
+    defaultParams: {
+      domain: 'superapp.finance.vn',
+      username: 'nguyenvana_vip',
+      password: 'SuperSecretPassword@2026',
+    },
+    run: async (p) => superApp.storage.setCredentials(p.domain, p.username, p.password),
+  };
+
+  const credentialsGetConfig: RunnerConfig = {
+    id: 'cred_get',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'getCredentials',
+    description: 'Lấy lại username/password đã lưu an toàn theo domain.',
+    actionCode: 'superApp.storage.getCredentials(domain)',
+    hasParams: true,
+    defaultParams: {
+      domain: 'superapp.finance.vn',
+    },
+    run: async (p) => superApp.storage.getCredentials(p.domain),
+  };
+
+  const credentialsDeleteConfig: RunnerConfig = {
+    id: 'cred_del',
+    category: '2.8. Secret Data (Keychain/Keystore)',
+    title: 'deleteCredentials',
+    description: 'Xoá username/password đã lưu an toàn theo domain.',
+    actionCode: 'superApp.storage.deleteCredentials(domain)',
+    hasParams: true,
+    defaultParams: {
+      domain: 'superapp.finance.vn',
+    },
+    run: async (p) => superApp.storage.deleteCredentials(p.domain),
+  };
+
+  // ==========================================
+  // 2.9 DANH BẠ (CONTACTS)
+  // ==========================================
+  const contactsGetConfig: RunnerConfig = {
+    id: 'contacts_get',
+    category: '2.9. Danh bạ',
+    title: 'getContacts',
+    description: "Lấy danh sách danh bạ máy (cần quyền 'contacts').",
+    actionCode: 'superApp.getContacts()',
+    hasParams: false,
+    run: async () => superApp.getContacts(),
+  };
+
+  // ==========================================
+  // AUTH & USER & PAYMENT & PERMISSIONS
+  // ==========================================
   const authRequestCodeConfig: RunnerConfig = {
     id: 'auth_req_code',
     category: 'A. Authentication',
@@ -81,12 +485,9 @@ export const FeatureCatalog: React.FC = () => {
     description: 'Đăng xuất tài khoản Master App và vô hiệu hoá session',
     actionCode: 'superApp.auth.logout()',
     hasParams: false,
-    run: async () => {
-      return superApp.auth.logout();
-    },
+    run: async () => superApp.auth.logout(),
   };
 
-  // 2. User Profile items
   const userGetProfileConfig: RunnerConfig = {
     id: 'user_profile',
     category: 'B. User & Profile',
@@ -107,7 +508,6 @@ export const FeatureCatalog: React.FC = () => {
     run: async () => superApp.user.getBasicInfo(),
   };
 
-  // 3. Navigation items
   const navProfilePageConfig: RunnerConfig = {
     id: 'nav_profile',
     category: 'C. Native Navigation',
@@ -116,27 +516,6 @@ export const FeatureCatalog: React.FC = () => {
     actionCode: "superApp.navigation.openNativePage('profile')",
     hasParams: false,
     run: async () => superApp.navigation.openNativePage('profile'),
-  };
-
-  const navFormPageConfig: RunnerConfig = {
-    id: 'nav_form',
-    category: 'C. Native Navigation',
-    title: 'Open Native Form Screen',
-    description: 'Mở màn hình Form Flutter thu thập dữ liệu và trả kết quả về React',
-    actionCode: "superApp.navigation.openNativePage('form', params)",
-    hasParams: true,
-    defaultParams: { title: 'Feedback từ Mini App', category: 'Support' },
-    run: async (p) => superApp.navigation.openNativePage('form', p),
-  };
-
-  const navCloseConfig: RunnerConfig = {
-    id: 'nav_close',
-    category: 'C. Native Navigation',
-    title: 'Close Mini App',
-    description: 'Đóng Mini App runtime và trở về danh mục Master App',
-    actionCode: 'superApp.navigation.close()',
-    hasParams: false,
-    run: async () => superApp.navigation.close(),
   };
 
   const navSwitchAppConfig: RunnerConfig = {
@@ -149,38 +528,6 @@ export const FeatureCatalog: React.FC = () => {
     run: async () => superApp.navigation.openMiniApp('sample_store'),
   };
 
-  // 4. Device items
-  const deviceScanQrConfig: RunnerConfig = {
-    id: 'device_qr',
-    category: 'D. Device APIs',
-    title: 'Scan QR Code',
-    description: 'Quét mã QR qua Mock Device Adapter (hỗ trợ bật Real Device Mode)',
-    actionCode: 'superApp.device.scanQRCode()',
-    hasParams: false,
-    run: async () => superApp.device.scanQRCode(),
-  };
-
-  const deviceLocationConfig: RunnerConfig = {
-    id: 'device_location',
-    category: 'D. Device APIs',
-    title: 'Get GPS Location',
-    description: 'Truy vấn tọa độ địa lý mẫu (TP. Hồ Chí Minh) qua Mock Adapter',
-    actionCode: 'superApp.device.getLocation()',
-    hasParams: false,
-    run: async () => superApp.device.getLocation(),
-  };
-
-  const deviceImageConfig: RunnerConfig = {
-    id: 'device_image',
-    category: 'D. Device APIs',
-    title: 'Pick Image',
-    description: 'Chọn ảnh từ thư viện thiết bị (trả metadata ảnh)',
-    actionCode: 'superApp.device.pickImage()',
-    hasParams: false,
-    run: async () => superApp.device.pickImage(),
-  };
-
-  // 5. Payment items
   const paymentCreateOrderConfig: RunnerConfig = {
     id: 'pay_create_order',
     category: 'E. Payment & Business Flows',
@@ -213,7 +560,16 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => superApp.payment.openCheckout(p.orderId),
   };
 
-  // 6. Permissions items
+  const permissionGetPermissionsConfig: RunnerConfig = {
+    id: 'perm_get_all',
+    category: 'F. Permissions',
+    title: 'getPermissions',
+    description: 'Lấy danh sách quyền đã được cấp cho Mini App từ MockPermissionRepository',
+    actionCode: 'superApp.permission.getPermissions()',
+    hasParams: false,
+    run: async () => superApp.permission.getPermissions(),
+  };
+
   const permissionRequestConfig: RunnerConfig = {
     id: 'perm_req',
     category: 'F. Permissions',
@@ -236,7 +592,6 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => superApp.permission.check(p.capability),
   };
 
-  // 7. Debug items
   const debugEchoConfig: RunnerConfig = {
     id: 'dbg_echo',
     category: 'H. Debug & Testing',
@@ -248,9 +603,201 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => superApp.debug.echo(p),
   };
 
+  // ==========================================
+  // 2.11 ĐIỆN THOẠI & LIÊN KẾT NGOÀI
+  // ==========================================
+  const phoneOpenPhoneConfig: RunnerConfig = {
+    id: 'phone_open_phone',
+    category: '2.11. Điện thoại & Liên kết ngoài',
+    title: 'openPhone',
+    description: 'Mở màn hình quay số điện thoại Native (tel:).',
+    actionCode: "superApp.openPhone('0987654321')",
+    hasParams: true,
+    defaultParams: { phoneNumber: '0987654321' },
+    run: async (p) => superApp.openPhone(p.phoneNumber),
+  };
+
+  const phoneOpenSmsConfig: RunnerConfig = {
+    id: 'phone_open_sms',
+    category: '2.11. Điện thoại & Liên kết ngoài',
+    title: 'openSMS',
+    description: 'Mở app nhắn tin SMS với số điện thoại & nội dung soạn sẵn.',
+    actionCode: "superApp.openSMS('0987654321', 'Xin chào từ SuperApp!')",
+    hasParams: true,
+    defaultParams: {
+      phoneNumber: '0987654321',
+      body: 'Xin chào từ SuperApp!',
+    },
+    run: async (p) => superApp.openSMS(p.phoneNumber, p.body),
+  };
+
+  const phoneOpenExternalBrowserConfig: RunnerConfig = {
+    id: 'phone_open_ext_browser',
+    category: '2.11. Điện thoại & Liên kết ngoài',
+    title: 'openExternalBrowser',
+    description: 'Mở URL bằng trình duyệt ngoài (Safari/Chrome), rời khỏi ứng dụng.',
+    actionCode: "superApp.openExternalBrowser('https://flutter.dev')",
+    hasParams: true,
+    defaultParams: { url: 'https://flutter.dev' },
+    run: async (p) => superApp.openExternalBrowser(p.url),
+  };
+
+  const phoneOpenDeepLinkConfig: RunnerConfig = {
+    id: 'phone_open_deep_link',
+    category: '2.11. Điện thoại & Liên kết ngoài',
+    title: 'openDeepLink',
+    description: 'Mở deep link / URL trong trình duyệt in-app của SuperApp.',
+    actionCode: "superApp.openDeepLink('https://dart.dev')",
+    hasParams: true,
+    defaultParams: { url: 'https://dart.dev' },
+    run: async (p) => superApp.openDeepLink(p.url),
+  };
+
+  // ==========================================
+  // 2.12 NHẬP LIỆU & TIỆN ÍCH
+  // ==========================================
+  const utilSpeechToTextConfig: RunnerConfig = {
+    id: 'util_speech_to_text',
+    category: '2.12. Nhập liệu & Tiện ích',
+    title: 'speechToText',
+    description: 'Mở dialog ghi âm thực tế và chuyển giọng nói thành văn bản (cần quyền microphone).',
+    actionCode: "superApp.speechToText({ lang: 'vi-VN' })",
+    hasParams: true,
+    defaultParams: { lang: 'vi-VN' },
+    run: async (p) => superApp.speechToText(p),
+  };
+
+  const utilHideKeyboardConfig: RunnerConfig = {
+    id: 'util_hide_keyboard',
+    category: '2.12. Nhập liệu & Tiện ích',
+    title: 'hideKeyboard',
+    description: 'Ẩn bàn phím ảo đang hiển thị trên màn hình.',
+    actionCode: 'superApp.hideKeyboard()',
+    hasParams: false,
+    run: async () => superApp.hideKeyboard(),
+  };
+
   return (
     <div className="catalog-wrapper">
-      {/* Category A */}
+      {/* 2.4 CAMERA & MEDIA (QR & BARCODE) */}
+      <section className="category-section">
+        <div className="category-header">
+          <QrCode className="category-icon" size={18} />
+          <h2 className="category-title">2.4. Camera & Media (6 actions — QR & Mã Vạch Thực)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<QrCode size={20} />} config={mediaScanQrConfig} statusText="QR & Barcode" />
+          <FeatureItem icon={<Camera size={20} />} config={mediaGetPhotoConfig} statusText="Camera/Gallery" />
+          <FeatureItem icon={<ImageIcon size={20} />} config={mediaPickImagesConfig} statusText="Multi Pick" />
+          <FeatureItem icon={<ImageIcon size={20} />} config={mediaSaveImageConfig} statusText="Save Photo" />
+          <FeatureItem icon={<Video size={20} />} config={mediaPickVideoConfig} statusText="Video Pick" />
+          <FeatureItem icon={<Video size={20} />} config={mediaSaveVideoConfig} statusText="Save Video" />
+        </div>
+      </section>
+
+      {/* 2.1 SYSTEM & DEVICE INFO */}
+      <section className="category-section">
+        <div className="category-header">
+          <Smartphone className="category-icon" size={18} />
+          <h2 className="category-title">2.1. System & Device Info</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Wifi size={20} />} config={sysNetworkConfig} statusText="Network State" />
+          <FeatureItem icon={<Globe size={20} />} config={sysLanguageConfig} statusText="Locale/Lang" />
+          <FeatureItem icon={<Sliders size={20} />} config={sysSettingsConfig} statusText="SuperApp Settings" />
+          <FeatureItem icon={<Smartphone size={20} />} config={sysInfoConfig} statusText="Hardware/OS" />
+          <FeatureItem icon={<FileText size={20} />} config={sysAppInfoConfig} statusText="App Manifest" />
+          <FeatureItem icon={<Battery size={20} />} config={sysBatteryConfig} statusText="Battery Level" />
+        </div>
+      </section>
+
+      {/* 2.2 UI & SYSTEM CONTROLS */}
+      <section className="category-section">
+        <div className="category-header">
+          <Sliders className="category-icon" size={18} />
+          <h2 className="category-title">2.2. UI & System Controls (10 actions)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Terminal size={20} />} config={uiToastConfig} statusText="Bottom Toast" />
+          <FeatureItem icon={<Vibrate size={20} />} config={uiVibrateConfig} statusText="Haptic Vibrate" />
+          <FeatureItem icon={<Copy size={20} />} config={uiClipboardConfig} statusText="Copy Text" />
+          <FeatureItem icon={<Sun size={20} />} config={uiBrightnessConfig} statusText="Brightness" />
+          <FeatureItem icon={<Sliders size={20} />} config={uiStatusStyleConfig} statusText="Style Light/Dark" />
+          <FeatureItem icon={<Sliders size={20} />} config={uiStatusBarColorConfig} statusText="Custom Color" />
+          <FeatureItem icon={<Sliders size={20} />} config={uiNavBarColorConfig} statusText="NavBar Color" />
+          <FeatureItem icon={<Compass size={20} />} config={uiConfigAppViewConfig} statusText="Fullscreen Mode" />
+          <FeatureItem icon={<Menu size={20} />} config={uiMenuConfig} statusText="Shell Menu" />
+          <FeatureItem icon={<LogOut size={20} />} config={uiCloseAppConfig} statusText="Close App" isDanger />
+        </div>
+      </section>
+
+      {/* 2.5 FILE MANAGEMENT */}
+      <section className="category-section">
+        <div className="category-header">
+          <Folder className="category-icon" size={18} />
+          <h2 className="category-title">2.5. File Management (3 actions)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Share2 size={20} />} config={fileSaveFileConfig} statusText="Share Sheet" />
+          <FeatureItem icon={<Folder size={20} />} config={filePickFileConfig} statusText="System File" />
+          <FeatureItem icon={<Eye size={20} />} config={filePreviewConfig} statusText="PDF/Image View" />
+        </div>
+      </section>
+
+      {/* 2.8 KEYCHAIN & KEYSTORE */}
+      <section className="category-section">
+        <div className="category-header">
+          <Database className="category-icon" size={18} />
+          <h2 className="category-title">2.8. Keychain & Keystore (Secret Data & Credentials)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Lock size={20} />} config={secSetSecretDataConfig} statusText="Keychain/Keystore" />
+          <FeatureItem icon={<Unlock size={20} />} config={secGetSecretDataConfig} statusText="Decrypted Read" />
+          <FeatureItem icon={<Trash2 size={20} />} config={secRemoveSecretDataConfig} statusText="Remove Key" />
+          <FeatureItem icon={<KeyRound size={20} />} config={credentialsSetConfig} statusText="Domain Vault" />
+          <FeatureItem icon={<KeyRound size={20} />} config={credentialsGetConfig} statusText="Retrieve Vault" />
+          <FeatureItem icon={<Trash2 size={20} />} config={credentialsDeleteConfig} statusText="Delete Vault" isDanger />
+        </div>
+      </section>
+
+      {/* 2.9 DANH BẠ */}
+      <section className="category-section">
+        <div className="category-header">
+          <Contact className="category-icon" size={18} />
+          <h2 className="category-title">2.9. Danh bạ (Contacts)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Contact size={20} />} config={contactsGetConfig} statusText="Requires 'contacts'" />
+        </div>
+      </section>
+
+      {/* 2.11 ĐIỆN THOẠI & LIÊN KẾT NGOÀI */}
+      <section className="category-section">
+        <div className="category-header">
+          <Phone className="category-icon" size={18} />
+          <h2 className="category-title">2.11. Điện thoại & Liên kết ngoài (4 actions)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Phone size={20} />} config={phoneOpenPhoneConfig} statusText="Dialer tel:" />
+          <FeatureItem icon={<MessageSquare size={20} />} config={phoneOpenSmsConfig} statusText="Native SMS" />
+          <FeatureItem icon={<ExternalLink size={20} />} config={phoneOpenExternalBrowserConfig} statusText="Safari/Chrome" />
+          <FeatureItem icon={<Link2 size={20} />} config={phoneOpenDeepLinkConfig} statusText="In-App View" />
+        </div>
+      </section>
+
+      {/* 2.12 NHẬP LIỆU & TIỆN ÍCH */}
+      <section className="category-section">
+        <div className="category-header">
+          <Mic className="category-icon" size={18} />
+          <h2 className="category-title">2.12. Nhập liệu & Tiện ích (2 actions)</h2>
+        </div>
+        <div className="feature-grid">
+          <FeatureItem icon={<Mic size={20} />} config={utilSpeechToTextConfig} statusText="Voice Record" />
+          <FeatureItem icon={<Keyboard size={20} />} config={utilHideKeyboardConfig} statusText="Dismiss Focus" />
+        </div>
+      </section>
+
+      {/* CATEGORY A: AUTH */}
       <section className="category-section">
         <div className="category-header">
           <Key className="category-icon" size={18} />
@@ -264,7 +811,7 @@ export const FeatureCatalog: React.FC = () => {
         </div>
       </section>
 
-      {/* Category B */}
+      {/* CATEGORY B: USER & PROFILE */}
       <section className="category-section">
         <div className="category-header">
           <User className="category-icon" size={18} />
@@ -276,34 +823,7 @@ export const FeatureCatalog: React.FC = () => {
         </div>
       </section>
 
-      {/* Category C */}
-      <section className="category-section">
-        <div className="category-header">
-          <Compass className="category-icon" size={18} />
-          <h2 className="category-title">C. Native Navigation</h2>
-        </div>
-        <div className="feature-grid">
-          <FeatureItem icon={<UserCircle size={20} />} config={navProfilePageConfig} statusText="Flutter Page" />
-          <FeatureItem icon={<FileText size={20} />} config={navFormPageConfig} statusText="Native Form" />
-          <FeatureItem icon={<Store size={20} />} config={navSwitchAppConfig} statusText="Switch Mini App" />
-          <FeatureItem icon={<LogOut size={20} />} config={navCloseConfig} statusText="Exit Mini App" />
-        </div>
-      </section>
-
-      {/* Category D */}
-      <section className="category-section">
-        <div className="category-header">
-          <Smartphone className="category-icon" size={18} />
-          <h2 className="category-title">D. Device APIs</h2>
-        </div>
-        <div className="feature-grid">
-          <FeatureItem icon={<Scan size={20} />} config={deviceScanQrConfig} statusText="Mock QR" />
-          <FeatureItem icon={<MapPin size={20} />} config={deviceLocationConfig} statusText="Mock GPS" />
-          <FeatureItem icon={<ImageIcon size={20} />} config={deviceImageConfig} statusText="Mock Image" />
-        </div>
-      </section>
-
-      {/* Category E */}
+      {/* CATEGORY E: PAYMENT */}
       <section className="category-section">
         <div className="category-header">
           <CreditCard className="category-icon" size={18} />
@@ -315,19 +835,20 @@ export const FeatureCatalog: React.FC = () => {
         </div>
       </section>
 
-      {/* Category F */}
+      {/* CATEGORY F: CAPABILITY & PERMISSIONS */}
       <section className="category-section">
         <div className="category-header">
           <ShieldAlert className="category-icon" size={18} />
           <h2 className="category-title">F. Capability & Permissions</h2>
         </div>
         <div className="feature-grid">
+          <FeatureItem icon={<ShieldCheck size={20} />} config={permissionGetPermissionsConfig} statusText="Active Grants" />
           <FeatureItem icon={<ShieldAlert size={20} />} config={permissionRequestConfig} statusText="Native Dialog" />
           <FeatureItem icon={<ShieldAlert size={20} />} config={permissionCheckConfig} statusText="Check Status" />
         </div>
       </section>
 
-      {/* Category H */}
+      {/* CATEGORY H: DEBUG */}
       <section className="category-section">
         <div className="category-header">
           <Terminal className="category-icon" size={18} />
@@ -335,6 +856,8 @@ export const FeatureCatalog: React.FC = () => {
         </div>
         <div className="feature-grid">
           <FeatureItem icon={<Terminal size={20} />} config={debugEchoConfig} statusText="Bridge Ping" />
+          <FeatureItem icon={<Store size={20} />} config={navSwitchAppConfig} statusText="Switch App" />
+          <FeatureItem icon={<UserCircle size={20} />} config={navProfilePageConfig} statusText="Native Page" />
         </div>
       </section>
     </div>

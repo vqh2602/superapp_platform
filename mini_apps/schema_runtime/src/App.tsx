@@ -1,150 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { MiniAppSchema } from './types';
 import { SchemaRenderer } from './SchemaRenderer';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { sampleMiniAppSchemas, coffeeShopSchema } from './sampleSchemas';
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 
 declare global {
   interface Window {
     __MINIAPP_SCHEMA__?: MiniAppSchema;
     __MINIAPP_APP_ID__?: string;
+    FlutterBridge?: {
+      postMessage: (msg: string) => void;
+    };
   }
 }
-
-const defaultCoffeeShopSchema: MiniAppSchema = {
-  schemaVersion: 1,
-  theme: {
-    primaryColor: '#D97706',
-    backgroundColor: '#F8FAFC',
-  },
-  pages: [
-    {
-      id: 'home',
-      title: '☕ The Coffee House',
-      components: [
-        {
-          id: 'banner',
-          type: 'image',
-          props: {
-            src: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
-            alt: 'Coffee House Banner',
-            height: 160,
-            borderRadius: 14,
-          },
-        },
-        {
-          id: 'welcome',
-          type: 'text',
-          props: {
-            value: 'Chào mừng quý khách đến với The Coffee House!',
-            variant: 'h2',
-            color: '#1E293B',
-          },
-        },
-        {
-          id: 'sub_text',
-          type: 'text',
-          props: {
-            value: 'Thưởng thức hương vị cà phê rang xay nguyên chất mỗi ngày.',
-            variant: 'subtitle',
-          },
-        },
-        {
-          id: 'menu_header',
-          type: 'text',
-          props: {
-            value: 'MENU NỔI BẬT HÔM NAY',
-            variant: 'h3',
-            color: '#D97706',
-          },
-        },
-        {
-          id: 'products',
-          type: 'product_list',
-          props: {
-            items: [
-              {
-                id: 'cf_01',
-                title: 'Cà Phê Sữa Đá Đậm Đà',
-                price: 35000,
-                desc: 'Cà phê Robusta Đắk Lắk hảo hạng',
-                image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=150&q=80',
-              },
-              {
-                id: 'cf_02',
-                title: 'Bạc Xỉu Sữa Tươi 3 Tầng',
-                price: 42000,
-                desc: 'Hương vị ngọt ngào quyến rũ',
-                image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=150&q=80',
-              },
-              {
-                id: 'cf_03',
-                title: 'Trà Oolong Sen Vàng',
-                price: 49000,
-                desc: 'Trà olong thanh mát hạt sen giòn',
-                image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=150&q=80',
-              },
-            ],
-          },
-        },
-        {
-          id: 'btn_group',
-          type: 'container',
-          props: {
-            padding: 12,
-            backgroundColor: '#FFFFFF',
-            borderRadius: 12,
-          },
-          children: [
-            {
-              id: 'scan_btn',
-              type: 'button',
-              props: {
-                label: 'Quét mã QR bàn thanh toán',
-                variant: 'outline',
-                icon: 'qr',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'device.scanQRCode',
-                },
-              },
-            },
-            {
-              id: 'checkout_btn',
-              type: 'button',
-              props: {
-                label: 'Đặt Combo Nhanh (75.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 75000,
-                    description: 'Combo Cà Phê + Bánh Ngọt Sáng',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-  ],
-};
 
 export const App: React.FC = () => {
   const [schema, setSchema] = useState<MiniAppSchema | null>(null);
   const [appId, setAppId] = useState<string>('coffee_shop');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNativeBridge, setIsNativeBridge] = useState<boolean>(false);
 
   useEffect(() => {
-    // 1. Check window.__MINIAPP_SCHEMA__
+    const hasBridge = typeof window !== 'undefined' && !!(window.FlutterBridge && window.FlutterBridge.postMessage);
+    setIsNativeBridge(hasBridge);
+
+    // 1. Check window.__MINIAPP_SCHEMA__ injected directly by SuperApp WebViewController
     if (typeof window !== 'undefined' && window.__MINIAPP_SCHEMA__) {
       setSchema(window.__MINIAPP_SCHEMA__);
       if (window.__MINIAPP_APP_ID__) setAppId(window.__MINIAPP_APP_ID__);
@@ -162,12 +43,14 @@ export const App: React.FC = () => {
     };
     window.addEventListener('miniapp.schema_loaded', onSchemaEvent);
 
-    // 3. Check URL search param and fallback fetch
+    // 3. Check URL search param and sample schemas fallback
     const params = new URLSearchParams(window.location.search);
-    const targetAppId = params.get('appId') || 'coffee_shop';
+    const targetAppId = params.get('appId') || window.__MINIAPP_APP_ID__ || 'coffee_shop';
     setAppId(targetAppId);
 
-    // Fetch schema from Catalog API
+    const fallbackSample = sampleMiniAppSchemas[targetAppId] || sampleMiniAppSchemas.coffee_shop || coffeeShopSchema;
+
+    // Fetch schema from Catalog API if available, otherwise use local sample
     const catalogBaseUrl = 'http://localhost:3000/api/v1/catalog';
     fetch(`${catalogBaseUrl}/apps/${targetAppId}`)
       .then(async (res) => {
@@ -178,17 +61,27 @@ export const App: React.FC = () => {
         if (data.schema) {
           setSchema(data.schema);
         } else {
-          setSchema(defaultCoffeeShopSchema);
+          setSchema(fallbackSample);
         }
       })
       .catch((err) => {
-        console.warn(`[SchemaRuntime] Failed to fetch remote schema, fallback to default: ${err.message}`);
-        setSchema(defaultCoffeeShopSchema);
+        console.warn(`[SchemaRuntime] Using built-in sample schema for "${targetAppId}": ${err.message}`);
+        setSchema(fallbackSample);
       })
       .finally(() => {
         setLoading(false);
       });
+
+    return () => {
+      window.removeEventListener('miniapp.schema_loaded', onSchemaEvent);
+    };
   }, []);
+
+  const handleSelectSampleApp = (selectedId: string) => {
+    setAppId(selectedId);
+    const selectedSchema = sampleMiniAppSchemas[selectedId] || coffeeShopSchema;
+    setSchema(selectedSchema);
+  };
 
   if (loading) {
     return (
@@ -229,5 +122,59 @@ export const App: React.FC = () => {
     );
   }
 
-  return <SchemaRenderer schema={schema} appId={appId} />;
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* Floating Demo MiniApp Switcher for standalone browser preview mode */}
+      {!isNativeBridge && (
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 99999,
+            backgroundColor: '#0F172A',
+            color: '#F8FAFC',
+            padding: '8px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            fontSize: '12px',
+            borderBottom: '1px solid #334155',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
+            <Sparkles size={14} color="#38BDF8" />
+            <span>Schema Demo:</span>
+          </div>
+          <select
+            value={appId}
+            onChange={(e) => handleSelectSampleApp(e.target.value)}
+            style={{
+              backgroundColor: '#1E293B',
+              color: '#FFFFFF',
+              border: '1px solid #475569',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="shopee">🛍️ Shopee Super Mall</option>
+            <option value="tiktok">🎵 TikTok Hub & Creator</option>
+            <option value="coffee_shop">☕ The Coffee House</option>
+            <option value="youtube">🎬 YouTube Streaming</option>
+            <option value="viettel_tammi">📶 Viettel Tammi Data</option>
+            <option value="free_fire">🎮 Free Fire MAX Top-up</option>
+            <option value="capcut">✂️ CapCut Video Studio</option>
+            <option value="messenger">💬 Messenger Community</option>
+          </select>
+        </div>
+      )}
+
+      <SchemaRenderer schema={schema} appId={appId} />
+    </div>
+  );
 };

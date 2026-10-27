@@ -6,7 +6,10 @@ enum AppCapability {
   deviceScanQr('device.scanQRCode', 'Quét mã QR', 'Cho phép dùng camera/mô phỏng quét mã QR'),
   deviceGetLocation('device.getLocation', 'Truy cập vị trí GPS', 'Cho phép truy cập tọa độ thiết bị'),
   devicePickImage('device.pickImage', 'Chọn ảnh thư viện', 'Cho phép chọn ảnh từ thư viện thiết bị'),
-  paymentCheckout('payment.openCheckout', 'Thanh toán đơn hàng', 'Cho phép mở cổng thanh toán bảo mật');
+  paymentCheckout('payment.openCheckout', 'Thanh toán đơn hàng', 'Cho phép mở cổng thanh toán bảo mật'),
+  storageSecure('storage.secure', 'Lưu trữ bảo mật', 'Cho phép lưu và đọc khóa giá trị an toàn trong Keychain/Keystore'),
+  permissionGetPermissions('permission.getPermissions', 'Lấy danh sách quyền', 'Lấy danh sách quyền đã được cấp cho Mini App'),
+  microphone('microphone', 'Truy cập micro ghi âm', 'Cho phép chuyển giọng nói thành văn bản');
 
   final String key;
   final String title;

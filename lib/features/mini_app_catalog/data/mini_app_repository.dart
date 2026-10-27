@@ -4,16 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/config/app_config.dart';
 import '../domain/mini_app_manifest.dart';
+import 'sample_mini_app_schemas.dart';
 
 class MiniAppRepository {
-  final http.Client? _httpClient;
+  final http.Client? httpClient;
   final String _catalogUrl;
 
   MiniAppRepository({
-    http.Client? httpClient,
+    this.httpClient,
     String? catalogUrl,
-  })  : _httpClient = httpClient,
-        _catalogUrl = catalogUrl ?? AppConfig.catalogApiUrl;
+  })  : _catalogUrl = catalogUrl ?? AppConfig.catalogApiUrl;
 
   /// Seed / Static fallback apps for offline resilience and backward compatibility
   static const List<MiniAppManifest> _seedApps = [
@@ -41,6 +41,55 @@ class MiniAppRepository {
         'payment.createOrder',
         'payment.openCheckout',
         'permission.request',
+        'permission.getPermissions',
+        'storage.setSecureItem',
+        'storage.getSecureItem',
+        'storage.removeSecureItem',
+        'storage.clear',
+        'storage.setCredentials',
+        'storage.getCredentials',
+        'storage.deleteCredentials',
+        'storage.secure',
+        'contacts',
+        'device.scanQr',
+        'scanQr',
+        'device.scanBarcode',
+        'scanBarcode',
+        'getPhoto',
+        'pickImages',
+        'saveImageToGallery',
+        'pickVideo',
+        'saveVideoToGallery',
+        'saveFile',
+        'pickFile',
+        'filePreview',
+        'showToast',
+        'vibrate',
+        'copyToClipboard',
+        'setBrightness',
+        'setStatusBarStyle',
+        'setStatusBarColor',
+        'setNavigationBarColor',
+        'configAppView',
+        'showMiniappMenu',
+        'closeApp',
+        'getNetworkInfo',
+        'getDeviceLanguage',
+        'getSuperAppSettings',
+        'getSystemInfo',
+        'getAppInfo',
+        'getBatteryInfo',
+        'getContacts',
+        'setSecretData',
+        'getSecretData',
+        'removeSecretData',
+        'microphone',
+        'openPhone',
+        'openSMS',
+        'openExternalBrowser',
+        'openDeepLink',
+        'speechToText',
+        'hideKeyboard',
         'debug.echo',
         'debug.simulateFailure',
       ],
@@ -64,17 +113,45 @@ class MiniAppRepository {
       ],
     ),
     MiniAppManifest(
+      id: 'shopee',
+      name: 'Shopee: Mua Sắm Online',
+      description: 'Sàn thương mại điện tử hàng đầu với triệu ưu đãi',
+      version: '3.1.2',
+      icon: 'shopping',
+      category: 'Shopping',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
+      status: 'PUBLISHED',
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+      ],
+      schema: SampleMiniAppSchemas.shopeeSchema,
+    ),
+    MiniAppManifest(
       id: 'tiktok',
       name: 'TikTok-Global Video Community',
       description: 'Short-Form Video Platform & Creative Community',
       version: '2.4.1',
       icon: 'video',
       category: 'Photo & Video',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
       isAsset: true,
       status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+        'navigation.openNativePage',
+      ],
+      schema: SampleMiniAppSchemas.tiktokSchema,
     ),
     MiniAppManifest(
       id: 'youtube',
@@ -83,63 +160,17 @@ class MiniAppRepository {
       version: '18.2.0',
       icon: 'entertainment',
       category: 'Entertainment',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
       isAsset: true,
       status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
-    ),
-    MiniAppManifest(
-      id: 'messenger',
-      name: 'Messenger',
-      description: 'Text, audio and video calls with friends and groups',
-      version: '4.1.0',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
-    ),
-    MiniAppManifest(
-      id: 'facebook',
-      name: 'Facebook',
-      description: 'Explore the things you love and connect with community',
-      version: '3.9.5',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
-    ),
-    MiniAppManifest(
-      id: 'zalo',
-      name: 'Zalo',
-      description: 'Fast. Stable. Private. Nhắn tin và gọi điện tiện lợi',
-      version: '2.8.2',
-      icon: 'social',
-      category: 'Social Network',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
-    ),
-    MiniAppManifest(
-      id: 'shopee',
-      name: 'Shopee: Mua Sắm Online',
-      description: 'Sàn thương mại điện tử hàng đầu với triệu ưu đãi',
-      version: '3.1.2',
-      icon: 'shopping',
-      category: 'Shopping',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close', 'payment.createOrder', 'payment.openCheckout'],
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+      ],
+      schema: SampleMiniAppSchemas.youtubeSchema,
     ),
     MiniAppManifest(
       id: 'viettel_tammi',
@@ -148,11 +179,19 @@ class MiniAppRepository {
       version: '1.5.0',
       icon: 'utilities',
       category: 'Utilities',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
       isAsset: true,
       status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
+      capabilities: [
+        'user.getBasicInfo',
+        'user.getProfile',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+      ],
+      schema: SampleMiniAppSchemas.viettelTammiSchema,
     ),
     MiniAppManifest(
       id: 'free_fire',
@@ -161,24 +200,18 @@ class MiniAppRepository {
       version: '2.9.0',
       icon: 'games',
       category: 'Games',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
       isAsset: true,
       status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
-    ),
-    MiniAppManifest(
-      id: 'fc_mobile',
-      name: 'FC Mobile VN',
-      description: 'Trải nghiệm bóng đá đỉnh cao chân thực và sôi động',
-      version: '1.8.4',
-      icon: 'games',
-      category: 'Games',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
-      isAsset: true,
-      status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+      ],
+      schema: SampleMiniAppSchemas.freeFireSchema,
     ),
     MiniAppManifest(
       id: 'capcut',
@@ -187,11 +220,98 @@ class MiniAppRepository {
       version: '2.1.0',
       icon: 'video',
       category: 'Photo & Video',
-      appRuntimeType: 'web',
-      entryUrl: 'assets/mini_apps/sample_store/index.html',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
       isAsset: true,
       status: 'PUBLISHED',
-      capabilities: ['user.getBasicInfo', 'navigation.close'],
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.pickImage',
+      ],
+      schema: SampleMiniAppSchemas.capcutSchema,
+    ),
+    MiniAppManifest(
+      id: 'messenger',
+      name: 'Messenger',
+      description: 'Text, audio and video calls with friends and groups',
+      version: '4.1.0',
+      icon: 'social',
+      category: 'Social Network',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
+      status: 'PUBLISHED',
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'navigation.openNativePage',
+      ],
+      schema: SampleMiniAppSchemas.messengerSchema,
+    ),
+    MiniAppManifest(
+      id: 'facebook',
+      name: 'Facebook',
+      description: 'Explore the things you love and connect with community',
+      version: '3.9.5',
+      icon: 'social',
+      category: 'Social Network',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
+      status: 'PUBLISHED',
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'navigation.openNativePage',
+      ],
+      schema: SampleMiniAppSchemas.facebookSchema,
+    ),
+    MiniAppManifest(
+      id: 'zalo',
+      name: 'Zalo',
+      description: 'Fast. Stable. Private. Nhắn tin và gọi điện tiện lợi',
+      version: '2.8.2',
+      icon: 'social',
+      category: 'Social Network',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
+      status: 'PUBLISHED',
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+      ],
+      schema: SampleMiniAppSchemas.zaloSchema,
+    ),
+    MiniAppManifest(
+      id: 'fc_mobile',
+      name: 'FC Mobile VN',
+      description: 'Trải nghiệm bóng đá đỉnh cao chân thực và sôi động',
+      version: '1.8.4',
+      icon: 'games',
+      category: 'Games',
+      appRuntimeType: 'schema',
+      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
+      status: 'PUBLISHED',
+      capabilities: [
+        'user.getBasicInfo',
+        'navigation.close',
+        'payment.createOrder',
+        'payment.openCheckout',
+        'device.scanQRCode',
+      ],
+      schema: SampleMiniAppSchemas.fcMobileSchema,
     ),
   ];
 
@@ -224,7 +344,7 @@ class MiniAppRepository {
   /// Fetch single app details & schema from remote catalog API
   Future<MiniAppManifest?> fetchRemoteManifest(String id) async {
     try {
-      final client = _httpClient ?? http.Client();
+      final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/apps/$id');
       final res = await client.get(uri).timeout(const Duration(seconds: 4));
 
@@ -271,7 +391,7 @@ class MiniAppRepository {
   /// Query distinct categories
   Future<List<String>> getCategories() async {
     try {
-      final client = _httpClient ?? http.Client();
+      final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/categories');
       final res = await client.get(uri).timeout(const Duration(seconds: 3));
 
@@ -292,7 +412,7 @@ class MiniAppRepository {
 
   Future<void> _fetchFromApi() async {
     try {
-      final client = _httpClient ?? http.Client();
+      final client = httpClient ?? http.Client();
       final uri = Uri.parse('$_catalogUrl/apps');
       final res = await client.get(uri).timeout(const Duration(seconds: 4));
 

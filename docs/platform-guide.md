@@ -54,7 +54,7 @@ Hệ thống hỗ trợ song song 2 loại Mini App:
 
 | Tiêu chí | Loại A: Existing Web Mini Apps | Loại B: No-Code Schema Mini Apps |
 | :--- | :--- | :--- |
-| **Đại diện** | `sdk_playground`, `sample_store` | `coffee_shop` (The Coffee House) |
+| **Đại diện** | `sdk_playground`, `sample_store` | `shopee`, `tiktok`, `youtube`, `viettel_tammi`, `free_fire`, `capcut`, `messenger`, `coffee_shop` |
 | **Runtime Engine** | React 18 + TypeScript + Vite | Universal Schema Engine (`schema_runtime`) |
 | **`runtimeType`** | `'web'` | `'schema'` |
 | **Nạp tài nguyên** | `assets/mini_apps/.../index.html` hoặc Remote URL | `assets/mini_apps/schema_runtime/index.html` + dynamic injection |

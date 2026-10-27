@@ -32,9 +32,7 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                 // Header Icon
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -44,16 +42,29 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.lock_person_rounded,
-                      size: 44,
-                      color: Colors.white,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          padding: const EdgeInsets.all(18),
+                          color: AppTheme.primary,
+                          child: const Icon(
+                            Icons.lock_person_rounded,
+                            size: 44,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'Super App Mock Login',
+                  'SuperApp Login',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 24,

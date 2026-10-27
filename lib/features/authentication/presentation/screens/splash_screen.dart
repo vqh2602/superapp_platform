@@ -39,9 +39,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -51,25 +49,38 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.apps_rounded,
-                size: 54,
-                color: Colors.white,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/images/app_logo.png',
+                  width: 96,
+                  height: 96,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    padding: const EdgeInsets.all(20),
+                    color: AppTheme.primary,
+                    child: const Icon(
+                      Icons.apps_rounded,
+                      size: 54,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
             const Text(
-              'SUPER APP PLATFORM',
+              'SUPERAPP',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
+                letterSpacing: 2.0,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Mini App SDK Playground & Bridge Runtime',
+              'Multi-Service Platform & Mini App Runtime',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 13,

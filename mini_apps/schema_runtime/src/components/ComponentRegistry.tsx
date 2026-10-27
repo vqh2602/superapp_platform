@@ -1,6 +1,22 @@
 import React from 'react';
 import { ComponentDefinition } from '../types';
-import { ShoppingBag, ArrowRight, CheckCircle2, QrCode, LogOut } from 'lucide-react';
+import {
+  ShoppingBag,
+  ArrowRight,
+  CheckCircle2,
+  QrCode,
+  LogOut,
+  Play,
+  MessageSquare,
+  Sparkles,
+  Gamepad2,
+  Phone,
+  User,
+  Video,
+  ShieldCheck,
+  Heart,
+  Send,
+} from 'lucide-react';
 
 interface ComponentProps {
   definition: ComponentDefinition;
@@ -48,7 +64,8 @@ export const ImageComponent: React.FC<ComponentProps> = ({ definition }) => {
 };
 
 export const ButtonComponent: React.FC<ComponentProps> = ({ definition, onAction }) => {
-  const { label = 'Button', variant = 'primary', icon, fullWidth = true } = definition.props;
+  const { label, text, variant = 'primary', icon, fullWidth = true, backgroundColor, color: customColor } = definition.props;
+  const displayLabel = label || text || 'Button';
 
   let bg = '#2563EB';
   let color = '#FFFFFF';
@@ -69,11 +86,24 @@ export const ButtonComponent: React.FC<ComponentProps> = ({ definition, onAction
     color = '#FFFFFF';
   }
 
+  if (backgroundColor) bg = backgroundColor;
+  if (customColor) color = customColor;
+
   const renderIcon = () => {
     if (icon === 'cart') return <ShoppingBag size={16} />;
     if (icon === 'arrow') return <ArrowRight size={16} />;
     if (icon === 'qr') return <QrCode size={16} />;
     if (icon === 'close') return <LogOut size={16} />;
+    if (icon === 'play') return <Play size={16} />;
+    if (icon === 'message') return <MessageSquare size={16} />;
+    if (icon === 'sparkles') return <Sparkles size={16} />;
+    if (icon === 'gamepad') return <Gamepad2 size={16} />;
+    if (icon === 'phone') return <Phone size={16} />;
+    if (icon === 'user') return <User size={16} />;
+    if (icon === 'video') return <Video size={16} />;
+    if (icon === 'shield') return <ShieldCheck size={16} />;
+    if (icon === 'heart') return <Heart size={16} />;
+    if (icon === 'send') return <Send size={16} />;
     return null;
   };
 
@@ -99,7 +129,7 @@ export const ButtonComponent: React.FC<ComponentProps> = ({ definition, onAction
       }}
     >
       {renderIcon()}
-      <span>{label}</span>
+      <span>{displayLabel}</span>
     </button>
   );
 };
