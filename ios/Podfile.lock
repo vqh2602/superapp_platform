@@ -1,22 +1,28 @@
 PODS:
   - Flutter (1.0.0)
-  - webview_flutter_wkwebview (0.0.1):
+  - pointer_interceptor_ios (0.0.1):
+    - Flutter
+  - webview_all_wkwebview (0.0.1):
     - Flutter
     - FlutterMacOS
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
+  - pointer_interceptor_ios (from `.symlinks/plugins/pointer_interceptor_ios/ios`)
+  - webview_all_wkwebview (from `.symlinks/plugins/webview_all_wkwebview/darwin`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  webview_flutter_wkwebview:
-    :path: ".symlinks/plugins/webview_flutter_wkwebview/darwin"
+  pointer_interceptor_ios:
+    :path: ".symlinks/plugins/pointer_interceptor_ios/ios"
+  webview_all_wkwebview:
+    :path: ".symlinks/plugins/webview_all_wkwebview/darwin"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
+  pointer_interceptor_ios: da06a662d5bfd329602b45b2ab41bc0fb5fdb0f0
+  webview_all_wkwebview: 552f6bf5ee38936a1b51c2195ac66b085aeb152f
 
 PODFILE CHECKSUM: 2ab93a804129486a0e4bfdb24b2bfadb54e047a3
 
