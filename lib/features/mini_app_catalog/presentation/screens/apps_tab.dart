@@ -45,7 +45,8 @@ class _AppsTabState extends ConsumerState<AppsTab>
 
   @override
   Widget build(BuildContext context) {
-    final allApps = ref.watch(miniAppRepositoryProvider).getAllApps();
+    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
+        ref.watch(miniAppRepositoryProvider).getAllApps();
 
     return Scaffold(
       backgroundColor: Colors.white,

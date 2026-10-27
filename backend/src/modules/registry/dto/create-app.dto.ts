@@ -1,38 +1,52 @@
-import { IsString, IsNotEmpty, IsOptional, Matches, IsEnum, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, ValidateIf, Matches, IsEnum, IsArray, IsObject, IsBoolean, MaxLength, ArrayUnique } from 'class-validator';
 import { MiniAppRuntimeType } from '../../../entities/enums';
 
 export class CreateMiniAppDto {
   @IsString()
-  @IsNotEmpty()
-  @Matches(/^[a-z0-9_]{3,32}$/, {
-    message: 'App ID must be 3-32 lowercase alphanumeric characters or underscore (e.g. coffee_shop)',
-  })
+  @Matches(/^[a-z0-9_]{3,32}$/)
   id: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
+  @MaxLength(128)
   name: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
   description?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
+  @MaxLength(64)
   icon?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
+  @MaxLength(64)
   category?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsEnum(MiniAppRuntimeType)
-  @IsOptional()
   runtimeType?: MiniAppRuntimeType;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
-  @IsOptional()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @Matches(/^[a-zA-Z][a-zA-Z0-9_.]*$/, { each: true })
+  @ArrayUnique()
   capabilities?: string[];
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
   draftSchema?: Record<string, any>;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(255)
+  entryUrl?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  isAsset?: boolean;
 }

@@ -1,242 +1,163 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, ConflictException, NotFoundException, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConflictException, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import * as request from 'supertest';
 import { RegistryService } from './registry.service';
+import { RegistryController } from './registry.controller';
 import { MiniAppEntity } from '../../entities/mini-app.entity';
 import { MiniAppVersionEntity } from '../../entities/mini-app-version.entity';
-import { ReviewAuditEntity } from '../../entities/review-audit.entity';
 import { MiniAppStatus, MiniAppRuntimeType } from '../../entities/enums';
-import { ReviewDecision } from './dto/review-action.dto';
 
-describe('RegistryService Tests', () => {
+const schema = { schemaVersion: 1, pages: [{ id: 'home', components: [] }] };
+
+describe('Demo registry', () => {
   let service: RegistryService;
-  let mockAppRepo: any;
-  let mockVersionRepo: any;
-  let mockAuditRepo: any;
-
-  beforeEach(async () => {
-    mockAppRepo = {
-      findOne: jest.fn(),
-      create: jest.fn((dto) => ({ ...dto })),
-      save: jest.fn((entity) => Promise.resolve({ ...entity, updatedAt: new Date() })),
-      find: jest.fn(),
-      createQueryBuilder: jest.fn(),
+  let app: any;
+  let repo: any;
+  let manager: any;
+  beforeEach(() => {
+    app = {
+      id: 'coffee_shop', name: 'Coffee', runtimeType: MiniAppRuntimeType.SCHEMA,
+      status: MiniAppStatus.UNPUBLISHED, draftSchema: schema,
+      capabilities: ['navigation.close'], entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      isAsset: true,
     };
-
-    mockVersionRepo = {
-      findOne: jest.fn(),
-      create: jest.fn((dto) => ({ ...dto, id: 'mock_ver_id' })),
-      save: jest.fn((entity) => Promise.resolve({ ...entity })),
-      find: jest.fn(),
+    manager = {
+      findOne: jest.fn(async () => app),
+      findOneBy: jest.fn(async () => null),
+      create: jest.fn((_, data) => data),
+      save: jest.fn(async (_, data) => data),
     };
-
-    mockAuditRepo = {
-      create: jest.fn((dto) => ({ ...dto, id: 'mock_audit_id' })),
-      save: jest.fn((entity) => Promise.resolve(entity)),
+    repo = {
+      manager: { transaction: jest.fn(callback => callback(manager)) },
+      findOneBy: jest.fn(async () => null),
+      create: jest.fn(data => data),
+      save: jest.fn(async data => data),
+      find: jest.fn(async () => [app]),
     };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        RegistryService,
-        { provide: getRepositoryToken(MiniAppEntity), useValue: mockAppRepo },
-        { provide: getRepositoryToken(MiniAppVersionEntity), useValue: mockVersionRepo },
-        { provide: getRepositoryToken(ReviewAuditEntity), useValue: mockAuditRepo },
-      ],
-    }).compile();
-
-    service = module.get<RegistryService>(RegistryService);
+    service = new RegistryService(repo);
   });
 
-  describe('createDraft', () => {
-    it('creates a new draft app successfully', async () => {
-      mockAppRepo.findOne.mockResolvedValue(null);
-
-      const result = await service.createDraft('tenant_123', {
-        id: 'coffee_shop',
-        name: 'Coffee Shop',
-        category: 'Food & Beverage',
-      });
-
-      expect(result.id).toBe('coffee_shop');
-      expect(result.tenantId).toBe('tenant_123');
-      expect(result.status).toBe(MiniAppStatus.DRAFT);
-      expect(mockAppRepo.save).toHaveBeenCalled();
-    });
-
-    it('throws ConflictException if app ID already exists', async () => {
-      mockAppRepo.findOne.mockResolvedValue({ id: 'coffee_shop' });
-
-      await expect(
-        service.createDraft('tenant_123', {
-          id: 'coffee_shop',
-          name: 'Coffee Shop',
-        }),
-      ).rejects.toThrow(ConflictException);
-    });
+  it('creates hidden apps with the bundled schema runtime', async () => {
+    const saved = await service.createApp({ id: 'new_app', name: 'New App' });
+    expect(saved.status).toBe(MiniAppStatus.UNPUBLISHED);
+    expect(saved.isAsset).toBe(true);
+    expect(saved.entryUrl).toBe('assets/mini_apps/schema_runtime/index.html');
   });
 
-  describe('updateDraft', () => {
-    it('updates draft when tenant matches', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        tenantId: 'tenant_123',
-        name: 'Old Name',
-      });
-
-      const updated = await service.updateDraft('coffee_shop', 'tenant_123', {
-        name: 'New Name',
-      });
-
-      expect(updated.name).toBe('New Name');
-    });
-
-    it('rejects update if tenant does not match (tenant isolation)', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        tenantId: 'tenant_other',
-      });
-
-      await expect(
-        service.updateDraft('coffee_shop', 'tenant_attacker', { name: 'Hacked' }),
-      ).rejects.toThrow(ForbiddenException);
-    });
+  it('rejects duplicate IDs', async () => {
+    repo.findOneBy.mockResolvedValue(app);
+    await expect(service.createApp({ id: app.id, name: 'Duplicate' })).rejects.toThrow(ConflictException);
   });
 
-  describe('submitForReview', () => {
-    it('creates immutable version snapshot and updates app status', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        tenantId: 'tenant_123',
-        runtimeType: MiniAppRuntimeType.SCHEMA,
-        draftSchema: { pages: [{ id: 'home' }] },
-        capabilities: ['payment.createOrder'],
-      });
-      mockVersionRepo.findOne.mockResolvedValue(null);
-
-      const version = await service.submitForReview(
-        'coffee_shop',
-        'tenant_123',
-        'customer_001',
-        { version: '1.0.0', notes: 'Initial submission' },
-      );
-
-      expect(version.version).toBe('1.0.0');
-      expect(version.status).toBe(MiniAppStatus.SUBMITTED);
-      expect(mockAuditRepo.save).toHaveBeenCalled();
-    });
-
-    it('rejects if version already exists', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        tenantId: 'tenant_123',
-        draftSchema: { pages: [{ id: 'home' }] },
-      });
-      mockVersionRepo.findOne.mockResolvedValue({ version: '1.0.0' });
-
-      await expect(
-        service.submitForReview('coffee_shop', 'tenant_123', 'customer_001', {
-          version: '1.0.0',
-        }),
-      ).rejects.toThrow(ConflictException);
-    });
+  it('uploads and activates directly without review while keeping hidden apps hidden', async () => {
+    const saved = await service.uploadVersion(app.id, { version: '1.0.0' });
+    expect(saved.activePublishedVersion).toBe('1.0.0');
+    expect(saved.status).toBe(MiniAppStatus.UNPUBLISHED);
+    expect(manager.save).toHaveBeenCalledWith(MiniAppVersionEntity, expect.objectContaining({
+      version: '1.0.0', schema, status: MiniAppStatus.PUBLISHED,
+    }));
+    expect(repo.manager.transaction).toHaveBeenCalledTimes(1);
   });
 
-  describe('reviewVersion', () => {
-    it('approves submitted version', async () => {
-      mockVersionRepo.findOne.mockResolvedValue({
-        appId: 'coffee_shop',
-        version: '1.0.0',
-        status: MiniAppStatus.SUBMITTED,
-      });
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        status: MiniAppStatus.SUBMITTED,
-      });
-
-      const res = await service.reviewVersion('coffee_shop', 'admin_001', {
-        version: '1.0.0',
-        decision: ReviewDecision.APPROVE,
-        notes: 'Looks great',
-      });
-
-      expect(res.status).toBe(MiniAppStatus.APPROVED);
-    });
-
-    it('rejects submitted version with feedback', async () => {
-      mockVersionRepo.findOne.mockResolvedValue({
-        appId: 'coffee_shop',
-        version: '1.0.0',
-        status: MiniAppStatus.SUBMITTED,
-      });
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        status: MiniAppStatus.SUBMITTED,
-      });
-
-      const res = await service.reviewVersion('coffee_shop', 'admin_001', {
-        version: '1.0.0',
-        decision: ReviewDecision.REJECT,
-        notes: 'Missing logo',
-      });
-
-      expect(res.status).toBe(MiniAppStatus.REJECTED);
-    });
+  it('updates legacy schema apps that have no runtime URL', async () => {
+    app.entryUrl = null;
+    app.isAsset = false;
+    const saved = await service.uploadVersion(app.id, { version: '1.0.0' });
+    expect(saved.entryUrl).toBe('assets/mini_apps/schema_runtime/index.html');
+    expect(saved.isAsset).toBe(true);
   });
 
-  describe('publishVersion', () => {
-    it('publishes approved version and sets activePublishedVersion atomically', async () => {
-      mockVersionRepo.findOne.mockResolvedValue({
-        appId: 'coffee_shop',
-        version: '1.0.0',
-        status: MiniAppStatus.APPROVED,
-      });
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        status: MiniAppStatus.APPROVED,
-      });
-
-      const app = await service.publishVersion('coffee_shop', '1.0.0', 'admin_001');
-
-      expect(app.activePublishedVersion).toBe('1.0.0');
-      expect(app.status).toBe(MiniAppStatus.PUBLISHED);
-    });
-
-    it('rejects publishing if version is not approved', async () => {
-      mockVersionRepo.findOne.mockResolvedValue({
-        appId: 'coffee_shop',
-        version: '1.0.0',
-        status: MiniAppStatus.SUBMITTED,
-      });
-
-      await expect(
-        service.publishVersion('coffee_shop', '1.0.0', 'admin_001'),
-      ).rejects.toThrow(BadRequestException);
-    });
+  it('keeps a visible app visible when updating its version', async () => {
+    app.status = MiniAppStatus.PUBLISHED;
+    const next = { schemaVersion: 2, pages: [{ id: 'new', components: [] }] };
+    const saved = await service.uploadVersion(app.id, { version: '2.0.0', schema: next });
+    expect(saved.status).toBe(MiniAppStatus.PUBLISHED);
+    expect(saved.activePublishedVersion).toBe('2.0.0');
+    expect(saved.draftSchema).toEqual(next);
   });
 
-  describe('unpublishApp and suspendApp', () => {
-    it('unpublishes app', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        status: MiniAppStatus.PUBLISHED,
-        activePublishedVersion: '1.0.0',
-      });
+  it('rejects duplicate versions without changing the active version', async () => {
+    app.activePublishedVersion = '1.0.0';
+    manager.findOneBy.mockResolvedValue({ version: '2.0.0' });
+    await expect(service.uploadVersion(app.id, { version: '2.0.0' })).rejects.toThrow(ConflictException);
+    expect(app.activePublishedVersion).toBe('1.0.0');
+    expect(manager.save).not.toHaveBeenCalled();
+  });
 
-      const app = await service.unpublishApp('coffee_shop', 'admin_001', 'End of promotion');
-      expect(app.status).toBe(MiniAppStatus.UNPUBLISHED);
-      expect(mockAuditRepo.save).toHaveBeenCalled();
+  it('rejects missing apps', async () => {
+    manager.findOne.mockResolvedValue(null);
+    await expect(service.uploadVersion('missing', { version: '1.0.0' })).rejects.toThrow(NotFoundException);
+  });
+
+  it.each([{}, { pages: [] }, { pages: [{ id: 'home' }] }, { ...schema, schemaVersion: 'bad' }])('rejects invalid schema %p', async invalid => {
+    await expect(service.uploadVersion(app.id, { version: '1.0.0', schema: invalid })).rejects.toThrow(BadRequestException);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('accepts hosted web entry URLs', async () => {
+    app.runtimeType = MiniAppRuntimeType.WEB;
+    const saved = await service.uploadVersion(app.id, { version: '1.0.0', entryUrl: 'https://example.com/app/', isAsset: false });
+    expect(saved.entryUrl).toBe('https://example.com/app/');
+    expect(saved.isAsset).toBe(false);
+  });
+
+  it.each(['javascript:alert(1)', 'https://', 'file:///tmp/app.html'])('rejects unsafe/invalid URL %s', async entryUrl => {
+    await expect(service.uploadVersion(app.id, { version: '1.0.0', entryUrl, isAsset: false })).rejects.toThrow(BadRequestException);
+  });
+
+  it('requires an uploaded version before showing an app', async () => {
+    await expect(service.setVisibility(app.id, true)).rejects.toThrow(BadRequestException);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('can show and hide an app without changing the selected version', async () => {
+    app.activePublishedVersion = '1.0.0';
+    expect((await service.setVisibility(app.id, true)).status).toBe(MiniAppStatus.PUBLISHED);
+    expect((await service.setVisibility(app.id, false)).status).toBe(MiniAppStatus.UNPUBLISHED);
+    expect(app.activePublishedVersion).toBe('1.0.0');
+  });
+
+  it('updates grants directly without editing historical version snapshots', async () => {
+    app.activePublishedVersion = '1.0.0';
+    const saved = await service.updateApp(app.id, { capabilities: [] });
+    expect(saved.capabilities).toEqual([]);
+    expect(saved.activePublishedVersion).toBe('1.0.0');
+    expect(manager.save).toHaveBeenCalledTimes(1);
+    expect(manager.save).toHaveBeenCalledWith(MiniAppEntity, app);
+  });
+
+  describe('HTTP validation', () => {
+    let server: any;
+    beforeEach(async () => {
+      const module = await Test.createTestingModule({
+        controllers: [RegistryController],
+        providers: [RegistryService, { provide: getRepositoryToken(MiniAppEntity), useValue: repo }],
+      }).compile();
+      server = module.createNestApplication();
+      server.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
+      await server.init();
+    });
+    afterEach(async () => { await server.close(); });
+
+    it('serves the simplified create/upload/show/update/hide flow', async () => {
+      await request(server.getHttpServer()).post('/api/v1/registry/apps').send({ id: app.id, name: app.name }).expect(201);
+      await request(server.getHttpServer()).post(`/api/v1/registry/apps/${app.id}/versions`).send({ version: '1.0.0', schema }).expect(201);
+      await request(server.getHttpServer()).patch(`/api/v1/registry/apps/${app.id}/visibility`).send({ visible: true }).expect(200);
+      await request(server.getHttpServer()).put(`/api/v1/registry/apps/${app.id}`).send({ capabilities: [] }).expect(200);
+      await request(server.getHttpServer()).patch(`/api/v1/registry/apps/${app.id}/visibility`).send({ visible: false }).expect(200);
     });
 
-    it('suspends app', async () => {
-      mockAppRepo.findOne.mockResolvedValue({
-        id: 'coffee_shop',
-        status: MiniAppStatus.PUBLISHED,
-        activePublishedVersion: '1.0.0',
-      });
-
-      const app = await service.suspendApp('coffee_shop', 'admin_001', 'Security audit');
-      expect(app.status).toBe(MiniAppStatus.SUSPENDED);
-      expect(mockAuditRepo.save).toHaveBeenCalled();
+    it.each([
+      ['visibility', 'patch', { visible: 'true' }],
+      ['versions', 'post', { version: 'bad' }],
+      ['versions', 'post', { version: '1.0.0', schema: null }],
+      ['', 'put', { capabilities: [123] }],
+      ['', 'put', { capabilities: ['bad,capability'] }],
+      ['', 'put', { capabilities: null }],
+      ['', 'put', { status: 'PUBLISHED' }],
+    ])('rejects malformed %s payload %p', async (suffix, method, body) => {
+      await request(server.getHttpServer())[method](`/api/v1/registry/apps/${app.id}${suffix ? '/' + suffix : ''}`).send(body).expect(400);
     });
   });
 });

@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần quyền sử dụng Camera để quét mã QR, mã vạch và chụp ảnh tài liệu.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ứng dụng cần quyền Microphone để nhận diện giọng nói và chuyển thành văn bản.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh vào Thư viện ảnh của bạn.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập Thư viện ảnh để bạn có thể chọn và tải ảnh lên.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Ứng dụng cần quyền Nhận diện giọng nói để xử lý câu lệnh của bạn.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -66,15 +76,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần quyền sử dụng Camera để quét mã QR, mã vạch và chụp ảnh tài liệu.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Ứng dụng cần truy cập Thư viện ảnh để bạn có thể chọn và tải ảnh lên.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Ứng dụng cần quyền lưu ảnh vào Thư viện ảnh của bạn.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Ứng dụng cần quyền Microphone để nhận diện giọng nói và chuyển thành văn bản.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Ứng dụng cần quyền Nhận diện giọng nói để xử lý câu lệnh của bạn.</string>
 </dict>
 </plist>

@@ -27,17 +27,17 @@ interface BuilderViewProps {
   currentApp: MiniAppEntity;
   onAppChange: (app: MiniAppEntity) => void;
   onSaveDraft: (app: MiniAppEntity) => Promise<void>;
-  onSubmitReview: (appId: string, version: string, notes: string) => Promise<void>;
+  onUploadVersion: (appId: string, version: string, notes: string) => Promise<void>;
 }
 
 export const BuilderView: React.FC<BuilderViewProps> = ({
   currentApp,
   onAppChange,
   onSaveDraft,
-  onSubmitReview,
+  onUploadVersion,
 }) => {
   const [activePageId, setActivePageId] = useState<string>(
-    currentApp.draftSchema?.pages[0]?.id || 'home'
+    currentApp.draftSchema?.pages?.[0]?.id || 'home'
   );
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -263,12 +263,13 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
     try {
       setIsSubmitting(true);
       setErrorBanner(null);
-      await onSubmitReview(currentApp.id, submitVersion, submitNotes);
+      await onSaveDraft(currentApp);
+      await onUploadVersion(currentApp.id, submitVersion, submitNotes);
       setShowSubmitModal(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
-      setErrorBanner(err.message || 'Lỗi khi gửi xét duyệt');
+      setErrorBanner(err.message || 'Lỗi khi upload phiên bản');
     } finally {
       setIsSubmitting(false);
     }
@@ -335,11 +336,15 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
           </button>
 
           <button
-            onClick={() => setShowSubmitModal(true)}
+            onClick={() => {
+              const parts = (currentApp.activePublishedVersion || '0.0.0').split('.').map(Number);
+              setSubmitVersion(currentApp.activePublishedVersion ? `${parts[0]}.${parts[1]}.${parts[2] + 1}` : '1.0.0');
+              setShowSubmitModal(true);
+            }}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Gửi Xét Duyệt</span>
+            <span>Upload phiên bản</span>
           </button>
         </div>
       </div>
@@ -608,8 +613,8 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
                 <Send className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-100">Gửi Xét Duyệt Mini App</h3>
-                <p className="text-slate-400 text-[11px]">Tạo bản snapshot đóng băng để Admin kiểm duyệt</p>
+                <h3 className="text-base font-bold text-slate-100">Upload phiên bản Mini App</h3>
+                <p className="text-slate-400 text-[11px]">Lưu nội dung hiện tại thành phiên bản mới</p>
               </div>
             </div>
 
@@ -637,7 +642,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
               </div>
 
               <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-300 text-[11px] leading-relaxed">
-                ℹ️ Sau khi gửi, Mini App sẽ chuyển trạng thái sang <b>SUBMITTED</b>. Admin sẽ duyệt và xuất bản trực tiếp lên Master App.
+                Phiên bản được dùng ngay và giữ nguyên trạng thái ẩn/hiện. Bật hiển thị trong trang Quản lý Mini App.
               </div>
             </div>
 
@@ -653,7 +658,7 @@ export const BuilderView: React.FC<BuilderViewProps> = ({
                 disabled={isSubmitting}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold hover:from-amber-400 shadow-lg"
               >
-                {isSubmitting ? 'Đang gửi...' : 'Xác Nhận Gửi Xét Duyệt'}
+                {isSubmitting ? 'Đang gửi...' : 'Xác nhận upload'}
               </button>
             </div>
           </div>

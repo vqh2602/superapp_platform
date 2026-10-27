@@ -96,6 +96,22 @@ describe('CatalogService Tests', () => {
       expect(res.schema?.pages).toBeDefined();
     });
 
+    it('uses current grants even when the version snapshot contains revoked permissions', async () => {
+      mockAppRepo.findOne.mockResolvedValue({
+        id: 'coffee_shop', status: MiniAppStatus.PUBLISHED,
+        activePublishedVersion: '1.0.0', capabilities: [], updatedAt: new Date(),
+      });
+      mockVersionRepo.findOne.mockResolvedValue({ capabilities: ['payment.createOrder'] });
+      expect((await service.getPublishedAppById('coffee_shop')).capabilities).toEqual([]);
+    });
+
+    it('blocks hidden apps from direct launch', async () => {
+      mockAppRepo.findOne.mockResolvedValue({
+        id: 'coffee_shop', status: MiniAppStatus.UNPUBLISHED, activePublishedVersion: '1.0.0',
+      });
+      await expect(service.getPublishedAppById('coffee_shop')).rejects.toThrow(ForbiddenException);
+    });
+
     it('blocks launch if app is SUSPENDED (throws ForbiddenException)', async () => {
       mockAppRepo.findOne.mockResolvedValue({
         id: 'bad_app',

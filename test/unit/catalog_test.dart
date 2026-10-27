@@ -110,6 +110,44 @@ void main() {
       expect(storeApp.entryUrl, equals('assets/mini_apps/sample_store/index.html'));
     });
 
+    test('Empty remote catalog stays empty instead of restoring seed apps', () async {
+      final repo = MiniAppRepository(
+        httpClient: MockClient((_) async => http.Response('{"items":[]}', 200)),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+      expect(await repo.getPublishedMiniApps(), isEmpty);
+      expect(repo.getAllApps(), isEmpty);
+      expect(repo.getAppById('sdk_playground'), isNull);
+    });
+
+    for (final status in [403, 404]) {
+      test('Remote $status blocks launch even for a bundled seed app', () async {
+        final repo = MiniAppRepository(
+          httpClient: MockClient((_) async => http.Response('{}', status)),
+          catalogUrl: 'http://mock.catalog.local',
+        );
+        expect(await repo.fetchRemoteManifest('sdk_playground'), isNull);
+      });
+    }
+
+    test('Refreshing an empty catalog removes previously visible apps', () async {
+      var hidden = false;
+      final repo = MiniAppRepository(
+        httpClient: MockClient((_) async => http.Response(jsonEncode({
+          'items': hidden ? [] : [{
+            'id': 'sdk_playground', 'name': 'SDK Playground', 'version': '1.0.0',
+            'description': '', 'icon': 'code', 'entryUrl': 'assets/index.html',
+            'isAsset': true, 'capabilities': [],
+          }],
+        }), 200)),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+      expect(await repo.getPublishedMiniApps(), hasLength(1));
+      hidden = true;
+      expect(await repo.getPublishedMiniApps(forceRefresh: true), isEmpty);
+      expect(repo.getAppById('sdk_playground'), isNull);
+    });
+
     test('Fetches published apps from catalog API successfully', () async {
       final mockPayload = {
         'items': [

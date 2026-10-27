@@ -18,14 +18,20 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final user = authState.currentUser;
-    final allApps = ref.watch(miniAppRepositoryProvider).getAllApps();
+    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
+        ref.watch(miniAppRepositoryProvider).getAllApps();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            await ref.read(miniAppRepositoryProvider).getPublishedMiniApps(
+              forceRefresh: true,
+            );
             ref.invalidate(dynamicCatalogProvider);
+            ref.invalidate(catalogCategoriesProvider);
+            await ref.read(dynamicCatalogProvider.future);
           },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 24),

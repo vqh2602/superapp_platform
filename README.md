@@ -1,226 +1,199 @@
 # SuperApp Platform
 
-Nền tảng **SuperApp Mobile Platform** xây dựng trên **Flutter** hỗ trợ nạp, khởi chạy và quản lý các **Mini Apps** (viết bằng Web/HTML/React/TypeScript) thông qua cơ chế **JavaScript Bridge 2 chiều** (Flutter WebViewController ↔ Web JavaScript SDK), kiểm soát quyền (Permission Gatekeeper), Navigation, Authentication & Payment mock.
+Hệ sinh thái nền tảng **SuperApp Multi-Platform** xây dựng trên **Flutter**, hỗ trợ nạp, khởi chạy và quản lý các **Mini Apps** (Web/HTML/React/TypeScript và Dynamic No-Code Schema) thông qua cơ chế **JavaScript Bridge 2 chiều**, kiểm soát quyền phân tầng (Capabilities Gatekeeper), xác thực SSO, cổng thanh toán và hệ thống máy chủ Registry tập trung.
 
 ---
 
-## 📑 Mục Lục
-- [Tổng quan kiến trúc](#-tổng-quan-kiến-trúc)
-- [Cấu trúc thư mục dự án](#-cấu-trúc-thư-mục-dự-án)
-- [Cơ chế Bridge Protocol](#-cơ-chế-bridge-protocol)
-- [Các tính năng chính](#-các-tính-năng-chính)
-- [Danh sách Mini Apps](#-danh-sách-mini-apps)
-- [Yêu cầu môi trường & Cài đặt](#-yêu-cầu-môi-trường--cài-đặt)
-- [Hướng dẫn build & chạy dự án](#-hướng-dẫn-build--chạy-dự-án)
-  - [Chạy SuperApp Platform (Flutter)](#1-chạy-superapp-platform-flutter)
-  - [Build Mini App Web Assets](#2-build-mini-app-web-assets)
-- [Tạo mới Mini App hoặc mở rộng SDK](#-tạo-mới-mini-app-hoặc-mở-rộng-sdk)
+## 📚 Bộ 3 Tài Liệu Chuyên Sâu (Core Subsystems Documentation)
+
+Tài liệu dự án được phân tách thành 3 phần chuyên biệt phục vụ từng vai trò trong hệ thống:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          SUPERAPP PLATFORM ECOSYSTEM                         │
+├──────────────────────────────┬──────────────────────────────┬───────────────┤
+│ 📱 1. FLUTTER SUPERAPP SHELL │ 🧰 2. DEVELOPER SDK & WEB    │ ⚙️ 3. BACKEND │
+│    [ docs/superapp.md ]      │    [ docs/sdk.md ]           │ [docs/backend]│
+│                              │                              │               │
+│ • Bảng hỗ trợ đa nền tảng    │ • Tính năng SDK (Auth, Pay,  │ • NestJS 10   │
+│   (Android, iOS, macOS,      │   Device, Storage, Nav)      │ • TypeORM     │
+│   Linux, Windows, Web)       │ • Hướng dẫn & Code mẫu       │ • PostgreSQL  │
+│ • Kiến trúc code Flutter     │ • Kiến trúc BridgeTransport  │ • Đặc tả APIs │
+│ • Tính năng & Capsule Bar    │ • Cơ chế Auto-Fallback web   │ • Hướng dẫn   │
+│ • Bridge Dispatcher & Quyền  │ • Đóng gói Single-file HTML  │   Deploy Full │
+└──────────────────────────────┴──────────────────────────────┴───────────────┘
+```
+
+👉 **Bấm vào từng tài liệu chi tiết bên dưới:**
+
+1. 📱 **[Tài liệu SuperApp Flutter Shell (docs/superapp.md)](docs/superapp.md)**:
+   - **Bảng ma trận hỗ trợ nền tảng**: Chi tiết tính tương thích trên **Android, iOS, macOS, Windows, Linux, Web**.
+   - **Kiến trúc mã nguồn**: Clean Architecture, Riverpod 2.x, GoRouter, Bridge Channel, Action Handlers.
+   - **Tính năng nổi bật**: Thanh điều hướng WeChat-style Capsule Bar `[ ••• | ⊙ ]`, Watchdog phát hiện màn hình trắng, Kho lưu trữ bảo mật phần cứng cách ly (Keychain/Keystore).
+
+2. 🧰 **[Tài liệu Mini App Developer SDK (docs/sdk.md)](docs/sdk.md)** (Tham khảo thêm [`mini_app_sdk/`](mini_app_sdk/README.md)):
+   - **Danh mục tính năng SDK**: SSO Auth Code (60s TTL), Hồ sơ người dùng, Camera QR Scanner, GPS Geolocation, Thư viện ảnh, Tạo đơn & Checkout BottomSheet, Quản lý quyền, Lưu trữ mã hóa.
+   - **Hướng dẫn sử dụng & Code mẫu**: Gọi hàm Async/Await, xử lý mã lỗi `BridgeError`, lắng nghe sự kiện vòng đời (`onReady`, `onShow`, `session.changed`).
+   - **Kiến trúc SDK**: Cấu trúc `BridgeTransport`, đối tượng `window.SuperAppBridge`, tự động fallback dữ liệu thật khi chạy trên Trình duyệt web.
+   - **Quy trình đóng gói**: Cấu hình Vite xuất bản Single-file inlined bundle (`index.html`).
+
+3. ⚙️ **[Tài liệu Backend Registry & Hướng dẫn Deploy (docs/backend.md)](docs/backend.md)** (Xem nhanh [`backend/README.md`](backend/README.md)):
+   - **Đặc tả hệ thống**: NestJS 10, TypeORM, PostgreSQL 14+, Dynamic Registry & No-Code Schema.
+   - **Đầy đủ thông số REST APIs**: Nhóm API `/catalog` (cho Flutter) và `/registry` (cho Admin Builder).
+   - **Hướng dẫn triển khai chi tiết (Deployment Guide)**:
+     - Chạy phát triển cục bộ (Local Development).
+     - Triển khai trọn gói bằng Docker & Docker Compose (`docker compose up -d`).
+     - Triển khai máy chủ Production với PM2, Nginx Reverse Proxy, cấu hình SSL/HTTPS và sao lưu dữ liệu (`pg_dump`).
 
 ---
 
-## 🏛 Tổng quan kiến trúc
+## 🏛️ Sơ đồ Kiến trúc Tổng thể Toàn Hệ sinh thái
 
-Hệ thống được tổ chức thành 2 tầng rõ ràng:
+```mermaid
+flowchart TB
+    subgraph ClientDevices["1. Thiết Bị & Khách Hàng (Multi-Platform Client)"]
+        MobileApp["Mobile (Android, iOS)"]
+        DesktopApp["Desktop (macOS, Windows, Linux)"]
+        WebApp["Web Browser (Chrome, Safari)"]
+    end
 
-1. **Host App (Flutter SuperApp Shell)**:
-   - **Framework**: Flutter (Dart ^3.11 / SDK 3.x), State Management: `flutter_riverpod`, Routing: `go_router`.
-   - **Mini App Runtime**: Sử dụng `webview_flutter` kết hợp với `JavascriptChannel` để load local asset / remote URL.
-   - **Bridge Dispatcher**: Tiếp nhận message JSON từ Webview, kiểm tra tính hợp lệ (`BridgeRequest`), kiểm tra quyền thực thi (Capabilities Gatekeeper), phân giải tới handler phù hợp và trả response (`BridgeResponse`).
-   - **Native Handlers**: Xác thực (`AuthActionHandler`), Thiết bị (`DeviceActionHandler`), Điều hướng (`NavigationActionHandler`), Thanh toán (`PaymentActionHandler`), Quyền (`PermissionActionHandler`), User (`UserActionHandler`), Debug (`DebugActionHandler`).
-   - **Debug Center**: Giao diện Native kiểm tra lịch sử logs gọi bridge (thời gian, status, payload sanitize).
+    subgraph FlutterShell["2. SuperApp Master Platform (Flutter)"]
+        CatalogModule["Catalog & Discovery Engine"]
+        CapsuleBar["WeChat Capsule Bar [ ••• | ⊙ ]"]
+        WebViewRuntime["WebView Runtime Engine (webview_all)"]
+        SchemaEngine["No-Code Schema Renderer"]
+        BridgeDispatcher["Bridge Dispatcher & Perm Gatekeeper"]
+        NativeHandlers["Native Handlers (Device, GPS, QR, Auth, Pay, Store)"]
+    end
 
-2. **Mini App Environment (Web / React / TypeScript)**:
-   - **Runtime**: Webview (HTML5, JS/TS).
-   - **SDK Client (`superapp-sdk`)**: Thư viện client đóng gói `window.FlutterBridge`, hỗ trợ Promise-based APIs (`invokeBridge`), Event emitter/listener và TypeScript typings.
-   - **UI Showcase**: React 18, Vite, Lucide Icons test bed trực quan các tính năng của SDK.
+    subgraph MiniAppSandbox["3. Mini App Runtime (Web / React / Schema)"]
+        SDK["@superapp/mini-app-sdk"]
+        Transport["BridgeTransport (Auto Resolver)"]
+        MiniAppView["Giao diện Mini App (UI Components)"]
+    end
+
+    subgraph BackendServices["4. Backend & CMS Services"]
+        NestServer["NestJS Registry & Catalog API (:3000)"]
+        PostgresDB[("PostgreSQL Database (superapp_registry)")]
+        BuilderCMS["No-Code Builder Admin Portal (:5174)"]
+    end
+
+    ClientDevices --> FlutterShell
+    WebViewRuntime <--> MiniAppSandbox
+    SDK --> Transport
+    Transport <--> BridgeDispatcher
+    BridgeDispatcher --> NativeHandlers
+
+    CatalogModule <-->|REST API /catalog| NestServer
+    BuilderCMS <-->|REST API /registry| NestServer
+    NestServer <--> PostgresDB
+```
 
 ---
 
-## 📂 Cấu trúc thư mục dự án
+## 📊 Bảng Tóm tắt Hỗ trợ Đa Nền tảng (Platform Support Summary)
+
+| Nền tảng | WebView Runtime | Bridge Protocol | Phần cứng & Device APIs | No-Code Schema | Mức độ hỗ trợ |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| 🤖 **Android** (API 21+) | Android System WebView | ✅ 2 chiều | GPS, Camera QR, File, Keystore, Pin | ✅ Đầy đủ | **Sẵn sàng Sản xuất (Tier 1)** |
+| 🍏 **iOS** (iOS 15.0+) | WebKit WKWebView | ✅ 2 chiều | GPS, Camera QR, File, Keychain, Pin | ✅ Đầy đủ | **Sẵn sàng Sản xuất (Tier 1)** |
+| 💻 **macOS** (10.15+) | WKWebView Desktop | ✅ 2 chiều | File Picker, Keychain, Network, Logs | ✅ Đầy đủ | **Hỗ trợ Đầy đủ (Tier 1)** |
+| 🪟 **Windows** (10/11) | Microsoft Edge WebView2 | ✅ 2 chiều | File Picker, DPAPI Storage, Network | ✅ Đầy đủ | **Hỗ trợ Đầy đủ (Tier 2)** |
+| 🐧 **Linux** (Ubuntu/Debian) | WebKitGTK | ✅ 2 chiều | File Picker, libsecret, Network | ✅ Đầy đủ | **Hỗ trợ Đầy đủ (Tier 2)** |
+| 🌐 **Web** (Chrome, Safari) | HTML5 Iframe Wrapper | ✅ 2 chiều | HTML5 GPS, Camera Detector, File | ✅ Đầy đủ | **Hỗ trợ Đầy đủ (Tier 1)** |
+
+*(Xem phân tích chi tiết từng API tại [Tài liệu SuperApp Flutter Shell](docs/superapp.md#1-bảng-hỗ-trợ-nền-tảng-platform-support-matrix))*
+
+---
+
+## ⚡ Hướng dẫn Khởi chạy Nhanh (Quickstart in 3 Steps)
+
+### Bước 1: Khởi động Backend & Cơ sở dữ liệu
+Cần Node.js (18/20) và PostgreSQL đang chạy:
+```bash
+# Tạo cơ sở dữ liệu
+createdb superapp_registry
+
+# Chạy Backend NestJS
+cd backend
+npm install
+npm run start:dev
+```
+*Backend sẽ lắng nghe tại `http://localhost:3000/api/v1` và tự động nạp dữ liệu mẫu ban đầu.*
+
+### Bước 2: Biên dịch Mini Apps (Web Assets)
+Tại thư mục gốc dự án:
+```bash
+# Biên dịch Mini App SDK Playground thành Single-file HTML
+cd mini_apps/sdk_playground
+npm install
+npm run build
+cd ../..
+```
+*(Bản dựng inlined sẽ tự động xuất vào thư mục `assets/mini_apps/sdk_playground/index.html` của Flutter)*.
+
+### Bước 3: Khởi chạy SuperApp Platform (Flutter)
+```bash
+# Cài đặt Flutter dependencies
+flutter pub get
+
+# Kiểm tra chất lượng code
+flutter analyze
+
+# Chạy ứng dụng trên nền tảng mong muốn:
+flutter run -d macos     # Chạy trên macOS Desktop
+flutter run -d chrome    # Chạy trên Web Browser
+flutter run -d android   # Chạy trên Android Device / Emulator
+flutter run -d ios       # Chạy trên iOS Device / Simulator
+```
+
+---
+
+## 📂 Cấu trúc Thư mục Monorepo
 
 ```text
 superapp_platform/
-├── assets/
-│   └── mini_apps/               # Thư mục chứa bundle html/js sau khi build của mini apps
-│       ├── sdk_playground/
-│       └── sample_store/
-├── lib/
-│   ├── app/
-│   │   ├── bootstrap/           # Khởi tạo App & Theme (app_bootstrap.dart)
-│   │   └── router/              # Định tuyến GoRouter (app_router.dart)
-│   ├── core/
-│   │   ├── bridge_protocol/     # Chuẩn hóa Bridge Envelope, Request, Response, Event
-│   │   ├── errors/              # Định nghĩa BridgeError & mã lỗi
-│   │   └── config/              # Cấu hình chung
-│   ├── features/
-│   │   ├── authentication/      # Quản lý đăng nhập, cấp token & auth code cho Mini App
-│   │   ├── debug_center/        # Native Debug Screen xem nhật ký Bridge logs
-│   │   ├── device/              # Các hành động device (QR Code, Camera, Location)
-│   │   ├── mini_app_bridge/     # BridgeChannel, BridgeDispatcher, BridgeEventEmitter
-│   │   ├── mini_app_catalog/    # Danh sách Mini App, hiển thị Catalog/Store
-│   │   ├── mini_app_runtime/    # Màn hình Webview chứa Mini App container
-│   │   ├── native_actions/      # Action Dispatcher & các Action Handlers
-│   │   ├── payment/             # Quản lý mock thanh toán, tạo đơn & checkout
-│   │   ├── permissions/         # Kiểm soát phân quyền Mini App (Manifest capabilities)
-│   │   └── user_profile/        # Màn hình Profile native & trả dữ liệu User
-│   └── main.dart                # Điểm khởi chạy của ứng dụng Flutter
-├── mini_apps/                   # Mã nguồn các Mini App (Web frontend)
-│   ├── sdk_playground/          # Ứng dụng React 18 + Vite + TS làm sandbox test SDK
-│   │   ├── src/
-│   │   │   ├── sdk/             # Mã nguồn JavaScript Bridge SDK
-│   │   │   └── components/      # UI tương tác các chức năng
-│   │   ├── package.json
-│   │   └── vite.config.ts
-│   └── sample_store/            # Mini App mẫu minh họa
-├── .vscode/
-│   └── launch.json              # Cấu hình Run & Debug (Debug, Profile, Release)
-└── pubspec.yaml                 # Quản lý dependencies & assets Flutter
+├── docs/                        # 📚 THƯ MỤC TÀI LIỆU TOÀN DIỆN
+│   ├── superapp.md              # 1. Chi tiết SuperApp Flutter (Platform Matrix, Kiến trúc, Tính năng)
+│   ├── sdk.md                   # 2. Chi tiết Mini App SDK (APIs, Code mẫu, Kiến trúc, Fallback)
+│   ├── backend.md               # 3. Chi tiết Backend NestJS & Hướng dẫn Deploy Production
+│   └── platform-guide.md        # Hướng dẫn quy trình quản trị Mini App
+├── lib/                         # 📱 MÃ NGUỒN FLUTTER SUPERAPP MASTER SHELL
+│   ├── app/                     # Bootstrap, App Routing (GoRouter)
+│   ├── core/                    # Bridge Protocol Envelopes, Error codes, AppConfig, AppTheme
+│   └── features/
+│       ├── authentication/      # Quản lý phiên, cấp mã authCode, token
+│       ├── debug_center/        # Màn hình Native Debug Center & RPC Inspector
+│       ├── device/              # Adapter phần cứng thiết bị (GPS, Camera QR, File Picker)
+│       ├── mini_app_bridge/     # BridgeChannel, BridgeDispatcher, BridgeEventEmitter
+│       ├── mini_app_catalog/    # Hiển thị Catalog, tải Remote Registry, Cache offline
+│       ├── mini_app_runtime/    # WebView container, WeChat Capsule Bar [ ••• | ⊙ ]
+│       ├── native_actions/      # Action Dispatcher & các Action Handlers
+│       ├── payment/             # Đơn hàng, BottomSheet Checkout đa phương thức
+│       ├── permissions/         # Capabilities Gatekeeper, Dialog xin quyền
+│       ├── storage/             # Isolated Secure Storage (Keychain / Keystore)
+│       └── user_profile/        # Màn hình hồ sơ Native & đồng bộ dữ liệu
+├── backend/                     # ⚙️ MÃ NGUỒN BACKEND REGISTRY & CATALOG (NestJS + TypeORM)
+│   ├── src/                     # CatalogModule, RegistryModule, SeedModule
+│   ├── Dockerfile               # File đóng gói container Docker cho Backend
+│   ├── package.json
+│   └── README.md                # Tóm tắt nhanh & hướng dẫn Backend
+├── mini_apps/                   # 🧰 MÃ NGUỒN CÁC MINI APP WEB MẪU
+│   ├── sdk_playground/          # Ứng dụng React 18 + TS + Vite kiểm thử toàn bộ tính năng SDK
+│   ├── sample_store/            # Mini App bán hàng mẫu
+│   └── schema_runtime/          # Runtime HTML5 thực thi No-Code Schema động
+├── mini_app_sdk/                # 📦 HỆ SINH THÁI NPM PACKAGES CHO DEVELOPER
+│   ├── packages/                # sdk-core, sdk-transport, sdk-mock-engine, mini-app-cli, simulator
+│   └── README.md                # Tài liệu chi tiết bộ công cụ Monorepo SDK
+├── assets/                      # 📦 CÁC ASSETS ĐÓNG GÓI SẴN TRONG FLUTTER
+│   └── mini_apps/               # Thư mục chứa bundle HTML/JS offline của Mini Apps
+├── builder/                     # 🛠️ NO-CODE SCHEMA BUILDER CMS (React + Vite :5174)
+├── pubspec.yaml                 # Cấu hình dependencies & assets của Flutter
+└── docker-compose.yml           # Khởi chạy toàn bộ hệ thống bằng Docker Compose
 ```
 
 ---
 
-## 🔌 Cơ chế Bridge Protocol
+## 🤝 Đóng góp & Phát triển
 
-Giao thức truyền thông hai chiều giữa Mini App (Web) và Flutter Platform tuân thủ cấu trúc JSON:
-
-### 1. Request từ Mini App tới Flutter
-```json
-{
-  "id": "uuid-v4-request-id",
-  "action": "user.getProfile",
-  "payload": {},
-  "origin": "assets/mini_apps/sdk_playground/index.html"
-}
-```
-
-### 2. Response từ Flutter trả về Mini App
-```json
-{
-  "id": "uuid-v4-request-id",
-  "success": true,
-  "data": {
-    "userId": "usr_123456",
-    "name": "Alex Mercer",
-    "email": "alex@example.com"
-  },
-  "executionTimeMs": 12
-}
-```
-*(Nếu thất bại, `success: false` và có object `error: { "code": "PERMISSION_DENIED", "message": "..." }`)*
-
-### 3. Events từ Flutter gửi tới Mini App (Push)
-Flutter có thể phát sự kiện native về cho Webview (như đổi theme, mạng thay đổi, lifecycle):
-```json
-{
-  "event": "superapp:lifecycle",
-  "payload": {
-    "state": "resumed"
-  }
-}
-```
-
----
-
-## ⚡ Các tính năng chính
-
-| Action Name | Handler | Mô tả |
-| :--- | :--- | :--- |
-| `auth.requestCode` | `AuthActionHandler` | Cấp mã Authorization Code cho Mini App theo session người dùng |
-| `user.getProfile` | `UserActionHandler` | Trả về thông tin chi tiết người dùng (cần quyền `user.getProfile`) |
-| `user.getBasicInfo` | `UserActionHandler` | Trả thông tin cơ bản công khai của người dùng |
-| `device.scanQRCode` | `DeviceActionHandler` | Mở quét mã QR code (mock quét thành công mã kiểm thử) |
-| `device.getLocation` | `DeviceActionHandler` | Lấy tọa độ GPS thiết bị hiện tại |
-| `device.pickImage` | `DeviceActionHandler` | Chọn hình ảnh từ thư viện/camera thiết bị |
-| `payment.createOrder` | `PaymentActionHandler` | Tạo đơn hàng thanh toán trên SuperApp |
-| `payment.openCheckout` | `PaymentActionHandler` | Mở flow xác thực thanh toán tiền |
-| `navigation.openNativePage` | `NavigationActionHandler` | Điều hướng từ Mini App ra màn hình Native (`/profile`, `/debug`, `/form`) |
-| `navigation.openMiniApp` | `NavigationActionHandler` | Mở một Mini App khác trực tiếp từ Mini App hiện tại |
-| `navigation.close` | `NavigationActionHandler` | Đóng Mini App runtime và quay về trang Home Catalog |
-| `permission.request` | `PermissionActionHandler` | Yêu cầu cấp quyền người dùng động |
-| `debug.echo` | `DebugActionHandler` | Phản hồi lại payload truyền lên (dùng để test latency) |
-| `debug.simulateFailure` | `DebugActionHandler` | Giả lập lỗi để test luồng xử lý ngoại lệ trên Mini App |
-
----
-
-## 📱 Danh sách Mini Apps
-
-1. **SDK Playground (`sdk_playground`)**:
-   - Giao diện React + TypeScript cho phép lập trình viên trực tiếp click gọi từng hàm của SDK, xem payload JSON trả về và test các kịch bản thực tế.
-2. **Sample Store (`sample_store`)**:
-   - Mini App bán hàng mẫu minh họa luồng giỏ hàng, thanh toán và chuyển đổi giữa các Mini App.
-
----
-
-## 🛠 Yêu cầu môi trường & Cài đặt
-
-- **Flutter**: Phiên bản `>= 3.24.0` (Khuyên dùng bản quản lý qua FVM: `3.41.9` như cấu hình trong `.fvmrc`).
-- **Dart**: `>= 3.11.5`.
-- **Node.js**: Phiên bản `>= 18.x` (để build code trong thư mục `mini_apps/`).
-
-### Cài đặt dependencies:
-```bash
-# 1. Cài đặt thư viện Flutter
-flutter pub get
-# (hoặc với FVM: fvm flutter pub get)
-
-# 2. Cài đặt thư viện Web Mini App
-cd mini_apps/sdk_playground
-npm install
-cd ../..
-```
-
----
-
-## 🚀 Hướng dẫn build & chạy dự án
-
-### 1. Chạy SuperApp Platform (Flutter)
-
-#### Cách 1: Sử dụng VS Code (F5)
-Mở tab **Run & Debug** (`Cmd + Shift + D` trên Mac hoặc `Ctrl + Shift + D` trên Windows) và chọn một trong các cấu hình trong file [launch.json](.vscode/launch.json):
-- **SuperApp Platform (Debug)**: Chạy bản Debug.
-- **SuperApp Platform (Profile mode)**: Chạy bản Profile để đo benchmark.
-- **SuperApp Platform (Release mode)**: Chạy bản Release tối ưu.
-
-#### Cách 2: Sử dụng dòng lệnh Terminal
-```bash
-# Chạy trên thiết bị mặc định
-flutter run
-
-# Chỉ định chạy trên macOS Desktop
-flutter run -d macos
-
-# Chỉ định chạy trên iOS Simulator
-flutter run -d ios
-
-# Chỉ định chạy trên Chrome
-flutter run -d chrome
-```
-
----
-
-### 2. Build Mini App Web Assets
-
-Mỗi khi bạn chỉnh sửa code bên trong thư mục `mini_apps/sdk_playground`:
-```bash
-cd mini_apps/sdk_playground
-
-# Chạy test độc lập trên trình duyệt ở chế độ dev
-npm run dev
-
-# Build bundle để xuất ra assets nạp vào Flutter SuperApp
-npm run build
-```
-*Lưu ý: Đảm bảo thư mục đầu ra của build được copy hoặc cấu hình vào đúng đường dẫn `assets/mini_apps/sdk_playground/` để Flutter load vào WebView.*
-
----
-
-## ➕ Tạo mới Mini App hoặc mở rộng SDK
-
-1. **Đăng ký Manifest**:
-   - Khai báo Mini App mới trong [mini_app_repository.dart](lib/features/mini_app_catalog/data/mini_app_repository.dart) bao gồm `id`, `name`, `entryUrl`, và các `capabilities` được phép gọi.
-2. **Thêm Handler Native**:
-   - Tạo class Handler mới trong `lib/features/native_actions/handlers/` kế thừa `ActionHandler`.
-   - Đăng ký handler mới vào `NativeActionDispatcher`.
-3. **Mở rộng SDK**:
-   - Thêm module tương ứng trong `mini_apps/sdk_playground/src/sdk/modules/`.
-   - Cung cấp Typed Interface cho các Mini App khác dễ dàng tích hợp.
+Mọi đóng góp, báo cáo lỗi hoặc đề xuất cải tiến vui lòng mở Issue hoặc tạo Pull Request tuân thủ theo các quy chuẩn kiến trúc đã được đặc tả trong bộ tài liệu tại thư mục `docs/`.

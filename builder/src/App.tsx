@@ -6,29 +6,30 @@ import { defaultCoffeeShopApp } from './templates/coffeeShopTemplate';
 import { LayoutDashboard, ShieldCheck, Sparkles, Plus, Loader2 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'BUILDER' | 'ADMIN'>('BUILDER');
+  const [activeTab, setActiveTab] = useState<'BUILDER' | 'ADMIN'>('ADMIN');
   const [apps, setApps] = useState<MiniAppEntity[]>([]);
   const [currentApp, setCurrentApp] = useState<MiniAppEntity | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const [loadError, setLoadError] = useState('');
 
   // Fetch all apps from Registry API
   const fetchApps = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/registry/apps?all=true', {
-        headers: { 'x-tenant-id': 'tenant_001' },
-      });
+      setLoadError('');
+      const res = await fetch('/api/v1/registry/apps');
+      if (!res.ok) throw new Error('Không tải được danh sách Mini App');
       if (res.ok) {
         const data: MiniAppEntity[] = await res.json();
-        setApps(data);
-        if (data.length > 0 && !currentApp) {
-          // Select coffee_shop or first app
-          const found = data.find((a) => a.id === 'coffee_shop') || data[0];
-          setCurrentApp(found);
+        for (const app of data) {
+          app.draftSchema ||= app.versions?.find(v => v.version === app.activePublishedVersion)?.schema;
         }
+        setApps(data);
+        setCurrentApp(previous => data.find(a => a.id === previous?.id) || data[0] || null);
       }
     } catch (err) {
-      console.warn('Failed to load apps from registry:', err);
+      setLoadError(err instanceof Error ? err.message : 'Không kết nối được backend');
     } finally {
       setLoading(false);
     }
@@ -49,7 +50,6 @@ export const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': 'tenant_001',
         },
         body: JSON.stringify({
           id: appToSave.id,
@@ -77,7 +77,6 @@ export const App: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': 'tenant_001',
         },
         body: JSON.stringify({
           name: appToSave.name,
@@ -100,33 +99,16 @@ export const App: React.FC = () => {
     }
   };
 
-  // Submit for Review
-  const handleSubmitReview = async (appId: string, version: string, notes: string) => {
-    const res = await fetch(`/api/v1/registry/apps/${appId}/submit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-tenant-id': 'tenant_001',
-        'x-user-id': 'customer_001',
-      },
-      body: JSON.stringify({
-        version,
-        notes,
-      }),
+  const handleUploadVersion = async (appId: string, version: string, notes: string) => {
+    const res = await fetch(`/api/v1/registry/apps/${appId}/versions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version, notes }),
     });
-
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.message || 'Lỗi khi gửi xét duyệt');
+      throw new Error(err.message || 'Lỗi khi upload phiên bản');
     }
-
     await fetchApps();
-    // Refresh current app state
-    const detailRes = await fetch(`/api/v1/registry/apps/${appId}`);
-    if (detailRes.ok) {
-      const detailed = await detailRes.json();
-      setCurrentApp(detailed);
-    }
   };
 
   // Create new blank or coffee shop draft
@@ -164,6 +146,7 @@ export const App: React.FC = () => {
     };
 
     setCurrentApp(newApp);
+    setActiveTab('BUILDER');
   };
 
   // Fallback initial app if none exist
@@ -180,23 +163,23 @@ export const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Top Application Header */}
-      <header className="h-14 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between flex-shrink-0 z-20">
+      <header className="min-h-14 bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap gap-3 items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-slate-950 text-base shadow-lg shadow-amber-500/20">
             S
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-              Super App Mini App Studio
+              Mini App Demo
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                v2.0 Platform
+                Demo
               </span>
             </h1>
           </div>
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800">
+        <div className="flex items-center bg-slate-950 p-1 rounded-2xl whitespace-nowrap border border-slate-800">
           <button
             onClick={() => setActiveTab('BUILDER')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all ${
@@ -206,7 +189,7 @@ export const App: React.FC = () => {
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>No-Code Builder (Developer)</span>
+            <span>Thiết kế Schema</span>
           </button>
 
           <button
@@ -218,12 +201,12 @@ export const App: React.FC = () => {
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Admin Review & Publish</span>
+            <span>Quản lý Mini App</span>
           </button>
         </div>
 
         {/* Quick App Select dropdown */}
-        <div className="flex items-center gap-2">
+        <div className={`items-center gap-2 ${activeTab === 'BUILDER' ? 'flex' : 'hidden'}`}>
           {apps.length > 0 && (
             <select
               value={activeApp.id}
@@ -231,7 +214,7 @@ export const App: React.FC = () => {
                 const found = apps.find((a) => a.id === e.target.value);
                 if (found) setCurrentApp(found);
               }}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 outline-none"
+              className="max-w-60 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 outline-none"
             >
               {apps.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -252,6 +235,7 @@ export const App: React.FC = () => {
         </div>
       </header>
 
+      {loadError && <div role="alert" className="p-3 text-red-300 bg-red-500/10">{loadError}. Kiểm tra backend ở cổng 3000. <button onClick={() => void fetchApps()} className="underline">Thử lại</button></div>}
       {/* Main Body */}
       {loading && apps.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
@@ -260,10 +244,11 @@ export const App: React.FC = () => {
         </div>
       ) : activeTab === 'BUILDER' ? (
         <BuilderView
+          key={activeApp.id}
           currentApp={activeApp}
           onAppChange={(updated) => setCurrentApp(updated)}
           onSaveDraft={handleSaveDraft}
-          onSubmitReview={handleSubmitReview}
+          onUploadVersion={handleUploadVersion}
         />
       ) : (
         <AdminPortalView onRefreshApps={fetchApps} apps={apps} />

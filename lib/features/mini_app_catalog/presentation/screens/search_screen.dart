@@ -49,7 +49,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allApps = ref.watch(miniAppRepositoryProvider).getAllApps();
+    final allApps = ref.watch(dynamicCatalogProvider).valueOrNull ??
+        ref.watch(miniAppRepositoryProvider).getAllApps();
 
     final filteredApps = _currentQuery.trim().isEmpty
         ? <MiniAppManifest>[]

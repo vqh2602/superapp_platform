@@ -79,15 +79,11 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       _hasBlankScreenWarning = false;
     });
 
-    MiniAppManifest? manifest = ref
+    // Revalidate visibility, active version and current grants on every launch.
+    final manifest = await ref
         .read(miniAppRepositoryProvider)
-        .getAppById(_currentAppId);
-
-    if (manifest == null || (manifest.isSchemaApp && manifest.schema == null)) {
-      manifest = await ref
-          .read(miniAppRepositoryProvider)
-          .fetchRemoteManifest(_currentAppId);
-    }
+        .fetchRemoteManifest(_currentAppId);
+    if (!mounted) return;
 
     if (manifest == null) {
       if (!mounted) return;

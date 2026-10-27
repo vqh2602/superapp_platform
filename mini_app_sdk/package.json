@@ -1,0 +1,26 @@
+{
+  "name": "superapp-sdk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SuperApp Mini App Developer SDK Ecosystem: Core SDK, Transport Bridge, Mock Engine, CLI, and Browser Simulator",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=@superapp/sdk-transport && npm run build --workspace=@superapp/sdk-mock-engine && npm run build --workspace=@superapp/mini-app-sdk && npm run build --workspace=@superapp/mini-app-cli && npm run build --workspace=@superapp/browser-simulator",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "simulator": "npm run dev --workspace=@superapp/browser-simulator",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
+  },
+  "keywords": [
+    "superapp",
+    "mini-app",
+    "sdk",
+    "transport",
+    "mock-engine",
+    "cli",
+    "simulator"
+  ],
+  "author": "SuperApp Platform Team",
+  "license": "MIT"
+}

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, In } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { MiniAppEntity } from '../../entities/mini-app.entity';
 import { MiniAppVersionEntity } from '../../entities/mini-app-version.entity';
 import { MiniAppStatus } from '../../entities/enums';
@@ -119,7 +119,7 @@ export class CatalogService {
       version: app.activePublishedVersion,
       entryUrl: version?.entryUrl || app.entryUrl,
       isAsset: app.isAsset,
-      capabilities: version?.capabilities || app.capabilities || [],
+      capabilities: app.capabilities || [],
       schemaVersion: version?.schemaVersion || 1,
       schema: version?.schema || null,
       updatedAt: app.updatedAt.toISOString(),
@@ -131,7 +131,7 @@ export class CatalogService {
    */
   async getCategories(): Promise<string[]> {
     const apps = await this.appRepo.find({
-      where: { status: MiniAppStatus.PUBLISHED },
+      where: { status: MiniAppStatus.PUBLISHED, activePublishedVersion: Not(IsNull()) },
       select: ['category'],
     });
 

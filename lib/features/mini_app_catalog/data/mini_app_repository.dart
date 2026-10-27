@@ -321,7 +321,7 @@ class MiniAppRepository {
 
   /// Returns all available apps (dynamic if fetched, otherwise seed apps)
   List<MiniAppManifest> getAllApps() {
-    if (_dynamicApps.isNotEmpty) {
+    if (_hasFetched || _dynamicApps.isNotEmpty) {
       return List.unmodifiable(_dynamicApps);
     }
     return List.unmodifiable(_seedApps);
@@ -333,6 +333,7 @@ class MiniAppRepository {
       final foundDynamic = _dynamicApps.firstWhere((app) => app.id == id);
       return foundDynamic;
     } catch (_) {
+      if (_hasFetched) return null;
       try {
         return _seedApps.firstWhere((app) => app.id == id);
       } catch (_) {
@@ -356,6 +357,10 @@ class MiniAppRepository {
         _dynamicApps.add(manifest);
         return manifest;
       }
+      if (res.statusCode == 403 || res.statusCode == 404) {
+        _dynamicApps.removeWhere((app) => app.id == id);
+        return null;
+      }
     } catch (e) {
       debugPrint('[MiniAppRepository] Remote fetch for $id failed: $e');
     }
@@ -373,7 +378,7 @@ class MiniAppRepository {
       await _fetchFromApi();
     }
 
-    Iterable<MiniAppManifest> source = _dynamicApps.isNotEmpty ? _dynamicApps : _seedApps;
+    Iterable<MiniAppManifest> source = _hasFetched ? _dynamicApps : _seedApps;
 
     if (category != null && category.isNotEmpty && category != 'All') {
       source = source.where((a) => a.category.toLowerCase() == category.toLowerCase());
@@ -403,7 +408,7 @@ class MiniAppRepository {
 
     // Fallback to local categories
     final set = <String>{'All'};
-    final list = _dynamicApps.isNotEmpty ? _dynamicApps : _seedApps;
+    final list = _hasFetched ? _dynamicApps : _seedApps;
     for (final app in list) {
       set.add(app.category);
     }
@@ -425,6 +430,8 @@ class MiniAppRepository {
           _dynamicApps.add(MiniAppManifest.fromJson(item as Map<String, dynamic>));
         }
         _hasFetched = true;
+      } else {
+        throw StateError('Catalog API returned ${res.statusCode}');
       }
     } catch (e) {
       debugPrint('[MiniAppRepository] API fetch failed, using offline seed apps: $e');

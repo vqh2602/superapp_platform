@@ -1,26 +1,35 @@
-import { IsString, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, ValidateIf, Matches, IsArray, IsObject, MaxLength, ArrayUnique } from 'class-validator';
 
 export class UpdateDraftDto {
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
+  @Matches(/\S/)
+  @MaxLength(128)
   name?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
   description?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
+  @MaxLength(64)
   icon?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
+  @MaxLength(64)
   category?: string;
 
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
-  @IsOptional()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @Matches(/^[a-zA-Z][a-zA-Z0-9_.]*$/, { each: true })
+  @ArrayUnique()
   capabilities?: string[];
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
   draftSchema?: Record<string, any>;
 }

@@ -1,0 +1,32 @@
+{
+  "name": "@superapp/mini-app-cli",
+  "version": "1.0.0",
+  "description": "Developer CLI for SuperApp Mini Apps: Create, Dev, Build, and Upload",
+  "type": "module",
+  "bin": {
+    "miniapp": "./bin/miniapp.js",
+    "superapp": "./bin/miniapp.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b && chmod +x ./bin/miniapp.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "keywords": [
+    "superapp",
+    "mini-app",
+    "cli",
+    "build",
+    "deploy"
+  ],
+  "author": "SuperApp Platform Team",
+  "license": "MIT"
+}
