@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../domain/web_log_entry.dart';
 
@@ -30,14 +31,17 @@ class WebViewDebugBottomSheet extends StatefulWidget {
   }) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => WebViewDebugBottomSheet(
-        controller: controller,
-        logs: logs,
-        onClearLogs: onClearLogs,
-        appId: appId,
-        appTitle: appTitle,
+      builder: (ctx) => PointerInterceptor(
+        child: WebViewDebugBottomSheet(
+          controller: controller,
+          logs: logs,
+          onClearLogs: onClearLogs,
+          appId: appId,
+          appTitle: appTitle,
+        ),
       ),
     );
   }

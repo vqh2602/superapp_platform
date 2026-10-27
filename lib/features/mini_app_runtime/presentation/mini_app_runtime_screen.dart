@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,6 +63,15 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       _eventEmitter!.emit('miniapp.show');
     } else if (state == AppLifecycleState.paused) {
       _eventEmitter!.emit('miniapp.hide');
+    }
+  }
+
+  Future<void> _safeRunScript(WebViewController? controller, String script) async {
+    if (controller == null) return;
+    try {
+      await controller.runJavaScript(script);
+    } catch (e) {
+      debugPrint('[MiniApp Runtime] Ignored runJavaScript limitation (e.g. iframe cross-origin / not ready): $e');
     }
   }
 
@@ -164,26 +174,31 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (url) {
-          // Inject debug polyfill first to intercept early errors
-          controller.runJavaScript(BridgeChannel.webDebugPolyfillScript);
-          controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
-          if (validManifest.isSchemaApp && validManifest.schema != null) {
-            final schemaJson = jsonEncode(validManifest.schema);
-            controller.runJavaScript(
-              '''try {
-                window.__MINIAPP_SCHEMA__ = $schemaJson;
-                window.__MINIAPP_APP_ID__ = "${validManifest.id}";
-                window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
-              } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
-            );
+          // On Web, the iframe content window is not accessible at onPageStarted.
+          // Directly calling runJavaScript on Web at onPageStarted throws an UnsupportedError.
+          if (!kIsWeb) {
+            _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
+            _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
+            if (validManifest.isSchemaApp && validManifest.schema != null) {
+              final schemaJson = jsonEncode(validManifest.schema);
+              _safeRunScript(
+                controller,
+                '''try {
+                  window.__MINIAPP_SCHEMA__ = $schemaJson;
+                  window.__MINIAPP_APP_ID__ = "${validManifest.id}";
+                  window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
+                } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
+              );
+            }
           }
         },
-        onPageFinished: (url) {
-          controller.runJavaScript(BridgeChannel.webDebugPolyfillScript);
-          controller.runJavaScript(BridgeChannel.bridgePolyfillScript);
+        onPageFinished: (url) async {
+          await _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
+          await _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
           if (validManifest.isSchemaApp && validManifest.schema != null) {
             final schemaJson = jsonEncode(validManifest.schema);
-            controller.runJavaScript(
+            await _safeRunScript(
+              controller,
               '''try {
                 if (!window.__MINIAPP_SCHEMA__) {
                   window.__MINIAPP_SCHEMA__ = $schemaJson;
@@ -193,9 +208,11 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
             );
           }
-          setState(() {
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
           emitter.emit('miniapp.ready', {
             'appId': validManifest.id,
             'version': validManifest.version,
@@ -227,8 +244,15 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       ),
     );
 
-    _webViewController = controller;
-    _eventEmitter = emitter;
+    if (mounted) {
+      setState(() {
+        _webViewController = controller;
+        _eventEmitter = emitter;
+      });
+    } else {
+      _webViewController = controller;
+      _eventEmitter = emitter;
+    }
 
     // Load entry point based on runtime type
     if (validManifest.isSchemaApp) {
@@ -238,6 +262,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     } else {
       controller.loadRequest(Uri.parse(validManifest.entryUrl));
     }
+
+    // Safety fallback for Web & slow asset load:
+    // Trên Flutter Web, iframe asset onLoad có thể hoàn tất trước hoặc không bắn onPageFinished
+    // dẫn đến màn hình CircularProgressIndicator bị treo nếu không reload.
+    Future.delayed(const Duration(milliseconds: kIsWeb ? 1200 : 3000), () {
+      if (mounted && _isLoading && _loadError == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        emitter.emit('miniapp.ready', {
+          'appId': validManifest.id,
+          'version': validManifest.version,
+        });
+        emitter.emit('miniapp.show');
+      }
+    });
   }
 
   void _openWebDebugModal(MiniAppManifest? manifest) {

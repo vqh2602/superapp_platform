@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/authentication/presentation/screens/splash_screen.dart';
 import '../../features/authentication/presentation/screens/mock_login_screen.dart';
@@ -7,7 +8,10 @@ import '../../features/debug_center/presentation/native_debug_screen.dart';
 import '../../features/debug_center/presentation/native_form_screen.dart';
 import '../../features/user_profile/presentation/native_profile_screen.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
     GoRoute(

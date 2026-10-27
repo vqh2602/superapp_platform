@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/config/app_theme.dart';
 import '../domain/app_capability.dart';
 
@@ -19,10 +20,13 @@ class PermissionPromptDialog extends StatelessWidget {
   }) async {
     final result = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: false,
-      builder: (ctx) => PermissionPromptDialog(
-        appName: appName,
-        capabilityKey: capabilityKey,
+      builder: (ctx) => PointerInterceptor(
+        child: PermissionPromptDialog(
+          appName: appName,
+          capabilityKey: capabilityKey,
+        ),
       ),
     );
     return result ?? false;
