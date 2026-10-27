@@ -7,6 +7,7 @@
 
 import 'dart:io'; // flutter_ignore: dart_io_import.
 import 'package:webview_all_android/webview_all_android.dart' as webview_all_android;
+import 'package:pointer_interceptor_ios/pointer_interceptor_ios.dart' as pointer_interceptor_ios;
 import 'package:webview_all_wkwebview/webview_all_wkwebview.dart' as webview_all_wkwebview;
 import 'package:webview_all_linux/webview_all_linux.dart' as webview_all_linux;
 import 'package:webview_all_wkwebview/webview_all_wkwebview.dart' as webview_all_wkwebview;
@@ -28,6 +29,15 @@ class _PluginRegistrant {
       }
 
     } else if (Platform.isIOS) {
+      try {
+        pointer_interceptor_ios.PointerInterceptorIOS.registerWith();
+      } catch (err) {
+        print(
+          '`pointer_interceptor_ios` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
       try {
         webview_all_wkwebview.WebKitWebViewPlatform.registerWith();
       } catch (err) {

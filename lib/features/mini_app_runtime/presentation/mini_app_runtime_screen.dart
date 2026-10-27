@@ -17,8 +17,6 @@ import '../../device/data/mock_device_adapter.dart';
 import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../domain/web_log_entry.dart';
-import 'widgets/webview_debug_bottom_sheet.dart';
-import '../../../../core/config/app_theme.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
@@ -71,7 +69,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     try {
       await controller.runJavaScript(script);
     } catch (e) {
-      debugPrint('[MiniApp Runtime] Ignored runJavaScript limitation (e.g. iframe cross-origin / not ready): $e');
+      debugPrint('[MiniApp Runtime] Ignored runJavaScript limitation: $e');
     }
   }
 
@@ -174,8 +172,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (url) {
-          // On Web, the iframe content window is not accessible at onPageStarted.
-          // Directly calling runJavaScript on Web at onPageStarted throws an UnsupportedError.
           if (!kIsWeb) {
             _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
             _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
@@ -187,7 +183,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                   window.__MINIAPP_SCHEMA__ = $schemaJson;
                   window.__MINIAPP_APP_ID__ = "${validManifest.id}";
                   window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
-                } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
+                } catch(e) { console.error("[Schema Inject Error]", e.message || e); }''',
               );
             }
           }
@@ -205,7 +201,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                   window.__MINIAPP_APP_ID__ = "${validManifest.id}";
                 }
                 window.dispatchEvent(new CustomEvent("miniapp.schema_loaded", { detail: { schema: $schemaJson, appId: "${validManifest.id}" } }));
-              } catch(e) { console.error("[Schema Inject Error]", e.message || e, e.stack || ''); }''',
+              } catch(e) { console.error("[Schema Inject Error]", e.message || e); }''',
             );
           }
           if (mounted) {
@@ -219,7 +215,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           });
           emitter.emit('miniapp.show');
 
-          // Check if root element mounted after 2.5 seconds
+          // Check if root element mounted
           Future.delayed(const Duration(milliseconds: 2500), () async {
             if (!mounted || _webViewController == null) return;
             try {
@@ -263,9 +259,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       controller.loadRequest(Uri.parse(validManifest.entryUrl));
     }
 
-    // Safety fallback for Web & slow asset load:
-    // Trên Flutter Web, iframe asset onLoad có thể hoàn tất trước hoặc không bắn onPageFinished
-    // dẫn đến màn hình CircularProgressIndicator bị treo nếu không reload.
     Future.delayed(const Duration(milliseconds: kIsWeb ? 1200 : 3000), () {
       if (mounted && _isLoading && _loadError == null) {
         setState(() {
@@ -280,14 +273,101 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     });
   }
 
-  void _openWebDebugModal(MiniAppManifest? manifest) {
-    WebViewDebugBottomSheet.show(
-      context,
-      controller: _webViewController,
-      logs: _webLogs,
-      onClearLogs: () => setState(() => _webLogs.clear()),
-      appId: _currentAppId,
-      appTitle: manifest?.name ?? 'Mini App',
+  void _showMiniAppInfoDialog(MiniAppManifest? manifest) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00BA52).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.info_outline_rounded, color: Color(0xFF00BA52), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  manifest?.name ?? 'Thông tin Mini App',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildInfoRow('Mã ứng dụng (ID)', manifest?.id ?? _currentAppId),
+                _buildInfoRow('Phiên bản', 'v${manifest?.version ?? "1.0.0"}'),
+                _buildInfoRow('Loại Runtime', manifest?.isSchemaApp == true ? 'No-Code Schema' : 'Web View App'),
+                _buildInfoRow('Danh mục', manifest?.category ?? 'Chung'),
+                const SizedBox(height: 8),
+                const Text('Mô tả:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
+                const SizedBox(height: 2),
+                Text(
+                  manifest?.description ?? 'Chưa có mô tả chi tiết.',
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 12),
+                const Text('Quyền truy cập (Capabilities):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: (manifest?.capabilities ?? ['navigation.close']).map((c) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(c, style: const TextStyle(fontSize: 10, color: Color(0xFF334155), fontFamily: 'monospace')),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _isLoading = true;
+                  _hasBlankScreenWarning = false;
+                });
+                _webViewController?.reload();
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Tải lại'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/debug');
+              },
+              child: const Text('Debug Logs'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00BA52),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -297,227 +377,238 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         .watch(miniAppRepositoryProvider)
         .getAppById(_currentAppId);
 
-    // Listen to session changes to notify Mini App if logged out
     ref.listen(authStateProvider, (prev, next) {
       if (!next.isAuthenticated && _eventEmitter != null) {
         _eventEmitter!.emitSessionChanged(state: 'logged_out');
       }
     });
 
-    final errorCount = _webLogs.where((l) => l.isError).length;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
           children: [
-            Text(
-              manifest?.name ?? 'Mini App Runtime',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.accent,
-                    shape: BoxShape.circle,
-                  ),
+            // WeChat-style Mini Program Top Navigation Bar (Circled in red in Image 4)
+            Container(
+              height: 48,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFEEEEEE), width: 0.8),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'Runtime Bridge Connected',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.black.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          // WebView Debug Inspector button with error counter badge
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                tooltip: 'WebView Debug Inspector',
-                icon: Icon(
-                  Icons.bug_report_rounded,
-                  color: errorCount > 0 ? Colors.red : const Color(0xFF2563EB),
-                ),
-                onPressed: () => _openWebDebugModal(manifest),
               ),
-              if (errorCount > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withValues(alpha: 0.4),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Center(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Center Title
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 90),
                       child: Text(
-                        errorCount > 99 ? '99+' : '$errorCount',
+                        manifest?.name ?? 'Mini App',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          IconButton(
-            tooltip: 'Tải lại Mini App',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              setState(() {
-                _isLoading = true;
-                _hasBlankScreenWarning = false;
-              });
-              _webViewController?.reload();
-            },
-          ),
-          IconButton(
-            tooltip: 'Bridge Logs',
-            icon: const Icon(Icons.developer_mode_rounded),
-            onPressed: () {
-              context.push('/debug');
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (_webViewController != null && _loadError == null)
-            WebViewWidget(controller: _webViewController!),
 
-          // Diagnostic Alert Banner for blank screen or unhandled errors
-          if (_hasBlankScreenWarning && !_isLoading && _loadError == null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 20,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(12),
-                color: const Color(0xFF1E293B),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Cảnh báo WebView',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                  // Right Capsule Bar: [ ••• | ⊙ ]
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFD1D5DB), width: 0.8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Nút thông tin miniapp (•••)
+                          InkWell(
+                            onTap: () => _showMiniAppInfoDialog(manifest),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              child: Icon(
+                                Icons.more_horiz_rounded,
+                                size: 20,
+                                color: Color(0xFF0F172A),
                               ),
                             ),
+                          ),
+                          // Capsule Divider
+                          Container(
+                            width: 0.8,
+                            height: 16,
+                            color: const Color(0xFFE5E7EB),
+                          ),
+                          // Nút đóng miniapp (⊙)
+                          InkWell(
+                            onTap: () {
+                              _eventEmitter?.emit('miniapp.close');
+                              Navigator.of(context).pop();
+                            },
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              child: Icon(
+                                Icons.adjust_rounded,
+                                size: 18,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Mini App Content: Full Screen, Edge-to-Edge (No white margins on left/right)
+            Expanded(
+              child: Stack(
+                children: [
+                  if (_webViewController != null && _loadError == null)
+                    SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: WebViewWidget(controller: _webViewController!),
+                    ),
+
+                  // Diagnostic Alert Banner for blank screen
+                  if (_hasBlankScreenWarning && !_isLoading && _loadError == null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 20,
+                      child: Material(
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF1E293B),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
+                                  style: TextStyle(color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (_isLoading)
+                    Container(
+                      color: Colors.white,
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                              color: Color(0xFF00BA52),
+                            ),
+                            SizedBox(height: 16),
                             Text(
-                              'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                              'Đang khởi tạo Mini App...',
+                              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                             ),
                           ],
                         ),
                       ),
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF38BDF8),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+
+                  if (_loadError != null)
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              size: 48,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _loadError!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLoading = true;
+                                  _loadError = null;
+                                });
+                                _initMiniApp();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00BA52),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
                         ),
-                        onPressed: () => _openWebDebugModal(manifest),
-                        child: const Text('DEBUG NGAY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54, size: 16),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => setState(() => _hasBlankScreenWarning = false),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          if (_isLoading)
-            Container(
-              color: Colors.white,
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text(
-                      'Đang khởi tạo Mini App Runtime...',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          if (_loadError != null)
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _loadError!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _isLoading = true;
-                          _loadError = null;
-                        });
-                        _initMiniApp();
-                      },
-                      child: const Text('Thử lại'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF0F172A))),
         ],
       ),
     );
