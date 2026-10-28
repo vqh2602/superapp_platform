@@ -2,7 +2,6 @@ import { BridgeRequest, BridgeResponse } from '@superapp/sdk-transport';
 import { AuthMockHandler } from './handlers/auth.handler.js';
 import { DeviceMockHandler } from './handlers/device.handler.js';
 import { MediaMockHandler } from './handlers/media.handler.js';
-import { PaymentMockHandler } from './handlers/payment.handler.js';
 import { StorageMockHandler } from './handlers/storage.handler.js';
 import { UIMockHandler } from './handlers/ui.handler.js';
 import { MockStateStore } from './store.js';
@@ -24,7 +23,6 @@ export type LogListener = (entry: MockLogEntry) => void;
 export class SDKMockEngine {
   public readonly store: MockStateStore;
   public readonly auth: AuthMockHandler;
-  public readonly payment: PaymentMockHandler;
   public readonly device: DeviceMockHandler;
   public readonly storage: StorageMockHandler;
   public readonly ui: UIMockHandler;
@@ -39,7 +37,6 @@ export class SDKMockEngine {
     this.latencyMs = options.simulatedLatencyMs ?? 40;
 
     this.auth = new AuthMockHandler(this.store);
-    this.payment = new PaymentMockHandler(this.store, options.autoApprovePayment ?? true);
     this.device = new DeviceMockHandler(this.store);
     this.storage = new StorageMockHandler(this.store);
     this.ui = new UIMockHandler();
@@ -157,13 +154,6 @@ export class SDKMockEngine {
         return this.auth.refreshToken(p);
       case 'auth.logout':
         return this.auth.logout();
-
-      // Payment
-      case 'payment.requestPayment':
-      case 'requestPayment':
-        return this.payment.requestPayment(p);
-      case 'payment.checkTransaction':
-        return this.payment.checkTransaction(p);
 
       // Device & System
       case 'device.getBatteryInfo':

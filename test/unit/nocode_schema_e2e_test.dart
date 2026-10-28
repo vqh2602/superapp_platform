@@ -12,7 +12,6 @@ import 'package:superapp_platform/features/mini_app_catalog/data/mini_app_reposi
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
-import 'package:superapp_platform/features/payment/data/mock_order_repository.dart';
 import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
 import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
 
@@ -23,7 +22,6 @@ void main() {
     late MockTokenService tokenService;
     late MockUserRepository userRepo;
     late MockDeviceAdapter deviceAdapter;
-    late MockOrderRepository orderRepo;
     late MockPermissionRepository permissionRepo;
     late DebugLogRepository debugLogRepo;
     late NativeActionDispatcher dispatcher;
@@ -39,8 +37,7 @@ void main() {
       entryUrl: '',
       isAsset: false,
       capabilities: [
-        'payment.createOrder',
-        'payment.openCheckout',
+        'ui.showToast',
         'device.scanQRCode',
         'navigation.close',
         'user.getProfile',
@@ -61,7 +58,6 @@ void main() {
       tokenService = MockTokenService(authCodeService: authCodeService);
       userRepo = MockUserRepository(authRepository: authRepo);
       deviceAdapter = MockDeviceAdapter();
-      orderRepo = MockOrderRepository();
       permissionRepo = MockPermissionRepository();
       debugLogRepo = DebugLogRepository();
 
@@ -71,7 +67,6 @@ void main() {
         tokenService: tokenService,
         userRepo: userRepo,
         deviceAdapter: deviceAdapter,
-        orderRepo: orderRepo,
         permissionRepo: permissionRepo,
         debugLogRepo: debugLogRepo,
       );
@@ -146,7 +141,7 @@ void main() {
             'version': '1.0.0',
             'entryUrl': null,
             'isAsset': false,
-            'capabilities': ['payment.createOrder', 'payment.openCheckout'],
+            'capabilities': ['ui.showToast', 'device.scanQRCode'],
             'updatedAt': DateTime.now().toIso8601String(),
           },
           {
@@ -190,30 +185,18 @@ void main() {
       expect(playgroundApp.isWebApp, isTrue);
     });
 
-    test('Scenario 6: Native payment order creation invoked by Schema App executes end-to-end', () async {
-      permissionRepo.setPermission('coffee_shop', 'payment.createOrder', true);
+    test('Scenario 6: Native action ui.showToast invoked by Schema App executes end-to-end', () async {
       final context = ActionContext(appId: 'coffee_shop', manifest: coffeeShopManifest);
 
       final result = await dispatcher.dispatch(
-        'payment.createOrder',
+        'ui.showToast',
         {
-          'amount': 75000,
-          'description': 'Combo Cà Phê + Bánh Croissant Sáng',
-          'currency': 'VND',
+          'message': 'Đã chọn Combo Cà Phê thành công!',
         },
         context,
       );
 
-      expect(result['status'], equals('PENDING'));
-      expect(result['amount'], equals(75000));
-      expect(result['orderId'], isNotEmpty);
-
-      // Verify order exists in repository
-      final orderId = result['orderId'] as String;
-      final savedOrder = orderRepo.getOrder(orderId);
-      expect(savedOrder, isNotNull);
-      expect(savedOrder?.amount, equals(75000));
-      expect(savedOrder?.description, equals('Combo Cà Phê + Bánh Croissant Sáng'));
+      expect(result['success'], isTrue);
     });
 
     test('Scenario 6 (Cont.): Device QR Code scan invoked by Schema App returns payload', () async {

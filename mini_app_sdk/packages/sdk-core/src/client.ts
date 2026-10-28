@@ -1,7 +1,6 @@
 import { ITransport, MockBridgeTransport, TransportResolver, TransportType } from '@superapp/sdk-transport';
 import { SDKMockEngine } from '@superapp/sdk-mock-engine';
 import { AuthModule } from './modules/auth.js';
-import { PaymentModule } from './modules/payment.js';
 import { DeviceModule } from './modules/device.js';
 import { StorageModule } from './modules/storage.js';
 import { UIModule } from './modules/ui.js';
@@ -11,8 +10,6 @@ import { LifecycleModule } from './modules/lifecycle.js';
 import {
   AuthLoginOptions,
   AuthLoginResult,
-  PaymentOptions,
-  PaymentResult,
   SDKInitOptions,
   ToastOptions,
   UserProfile,
@@ -25,7 +22,6 @@ export class SuperAppSDK {
 
   // Domain modules
   public readonly auth: AuthModule;
-  public readonly payment: PaymentModule;
   public readonly device: DeviceModule;
   public readonly storage: StorageModule;
   public readonly ui: UIModule;
@@ -62,7 +58,6 @@ export class SuperAppSDK {
     }
 
     this.auth = new AuthModule(this.transport);
-    this.payment = new PaymentModule(this.transport);
     this.device = new DeviceModule(this.transport);
     this.storage = new StorageModule(this.transport);
     this.ui = new UIModule(this.transport);
@@ -78,10 +73,6 @@ export class SuperAppSDK {
 
   public getUserProfile(): Promise<UserProfile> {
     return this.auth.getUserProfile();
-  }
-
-  public requestPayment(options: PaymentOptions): Promise<PaymentResult> {
-    return this.payment.requestPayment(options);
   }
 
   public showToast(options: ToastOptions | string): Promise<void> {

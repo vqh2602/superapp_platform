@@ -14,7 +14,6 @@ import '../../mini_app_bridge/bridge_event_emitter.dart';
 import '../../native_actions/application/native_action_dispatcher.dart';
 import '../../user_profile/data/mock_user_repository.dart';
 import '../../device/data/mock_device_adapter.dart';
-import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../../storage/data/mock_secure_storage_repository.dart';
 import '../domain/web_log_entry.dart';
@@ -131,7 +130,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       tokenService: ref.read(mockTokenServiceProvider),
       userRepo: ref.read(mockUserRepositoryProvider),
       deviceAdapter: ref.read(deviceAdapterProvider),
-      orderRepo: ref.read(mockOrderRepositoryProvider),
       permissionRepo: ref.read(mockPermissionRepositoryProvider),
       debugLogRepo: ref.read(debugLogRepositoryProvider),
       secureStorageRepo: ref.read(mockSecureStorageRepositoryProvider),

@@ -71,31 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  Future<void> _pay() async {
-    try {
-      final order = await bridge.invoke<Map<String, dynamic>>('payment.createOrder', {
-        'amount': 50000,
-        'description': 'Gói dịch vụ Flutter Web Demo',
-      });
-      final payRes = await bridge.invoke<Map<String, dynamic>>('payment.openCheckout', {
-        'orderId': order['orderId'],
-      });
-      if (payRes['status'] == 'SUCCESS') {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Thanh toán thành công!'),
-            content: Text('Mã GD: ${payRes['transactionId']}'),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi thanh toán: $e')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,12 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.login),
                 label: const Text('Đăng nhập SSO'),
                 onPressed: _login,
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                icon: const Icon(Icons.payment),
-                label: const Text('Thanh toán 50.000 đ'),
-                onPressed: _pay,
               ),
             ],
           ),

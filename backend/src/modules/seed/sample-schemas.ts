@@ -15,8 +15,6 @@ export const sampleSchemas: Record<
     icon: 'coffee',
     category: 'Food & Beverage',
     capabilities: [
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.scanQRCode',
       'navigation.close',
       'user.getProfile',
@@ -88,7 +86,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 75000, description: 'Combo Cà Phê Sáng' },
                     },
                   },
@@ -108,8 +105,6 @@ export const sampleSchemas: Record<
     capabilities: [
       'user.getBasicInfo',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.scanQRCode',
     ],
     schema: {
@@ -187,7 +182,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 490000, description: 'Shopee Mall - Sạc nhanh GaN 65W' },
                     },
                   },
@@ -207,8 +201,6 @@ export const sampleSchemas: Record<
     capabilities: [
       'user.getBasicInfo',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.scanQRCode',
       'navigation.openNativePage',
     ],
@@ -262,7 +254,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 50000, description: 'TikTok Live - Quà tặng Kim Cương' },
                     },
                   },
@@ -289,8 +280,6 @@ export const sampleSchemas: Record<
       'user.getBasicInfo',
       'user.getProfile',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.scanQRCode',
     ],
     schema: {
@@ -346,7 +335,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 150000, description: 'Viettel - Gói Data ST150K' },
                     },
                   },
@@ -366,8 +354,6 @@ export const sampleSchemas: Record<
     capabilities: [
       'user.getBasicInfo',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.scanQRCode',
     ],
     schema: {
@@ -405,7 +391,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 100000, description: 'Free Fire - Nạp 530 Kim Cương' },
                     },
                   },
@@ -431,8 +416,6 @@ export const sampleSchemas: Record<
     capabilities: [
       'user.getBasicInfo',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'device.pickImage',
     ],
     schema: {
@@ -476,7 +459,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 599000, description: 'CapCut Pro 1 Năm' },
                     },
                   },
@@ -496,8 +478,6 @@ export const sampleSchemas: Record<
     capabilities: [
       'user.getBasicInfo',
       'navigation.close',
-      'payment.createOrder',
-      'payment.openCheckout',
       'navigation.openNativePage',
     ],
     schema: {
@@ -535,7 +515,6 @@ export const sampleSchemas: Record<
                   events: {
                     onClick: {
                       type: 'native_action',
-                      action: 'payment.openCheckout',
                       params: { amount: 50000, description: 'Messenger - Lì xì bạn bè' },
                     },
                   },

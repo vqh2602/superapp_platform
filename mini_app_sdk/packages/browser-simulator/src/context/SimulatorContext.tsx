@@ -77,21 +77,10 @@ export const SimulatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setLogs((prev) => [entry, ...prev.slice(0, 150)]);
     });
 
-    // Setup manual payment resolver on mock engine
-    mockEngine.payment.setManualDecisionResolver(async (order: MockPaymentOrder) => {
-      if (!manualPaymentMode) {
-        return true;
-      }
-      return new Promise<boolean>((resolve) => {
-        manualResolverRef.current = resolve;
-        setPendingPayment({ order, resolve });
-      });
-    });
-
     return () => {
       unsubscribeLogs();
     };
-  }, [mockEngine, manualPaymentMode]);
+  }, [mockEngine]);
 
   // Handle postMessage from child iframe
   useEffect(() => {

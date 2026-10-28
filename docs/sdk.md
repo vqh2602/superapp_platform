@@ -86,7 +86,7 @@ Mọi thông điệp trao đổi giữa Mini App và SuperApp đều tuân theo 
 ```typescript
 interface BridgeRequest {
   id: string;          // Khóa duy nhất đại diện cho request (vd: "req_1719500000_1")
-  action: string;      // Tên hành động cần thực thi (vd: "payment.openCheckout", "device.getLocation")
+  action: string;      // Tên hành động cần thực thi (vd: "device.scanQRCode", "device.getLocation")
   payload: Record<string, any>; // Dữ liệu tham số truyền vào
   appId: string;       // App ID được cấp phép
   origin?: string;     // URL nguồn gọi request
@@ -140,16 +140,16 @@ sequenceDiagram
     participant JSBridge as WebView JS Bridge (window.FlutterBridge)
     participant Host as SuperApp Host (Flutter Native)
 
-    User->>FWeb: Nhấn "Thanh toán đơn hàng"
+    User->>FWeb: Nhấn "Quét mã QR bàn"
     FWeb->>FWeb: Sinh id = "req_101", đóng gói JSON
     FWeb->>JSBridge: postMessage(JSON.stringify(req))
     JSBridge->>Host: BridgeDispatcher.handleMessage()
-    Host->>Host: Kiểm tra quyền 'payment.createOrder'
-    Host->>User: Mở Native BottomSheet Checkout
-    User->>Host: Xác nhận thanh toán vân tay/mã PIN
+    Host->>Host: Kiểm tra quyền 'device.scanQRCode'
+    Host->>User: Mở Native Camera QR Scanner Screen
+    User->>Host: Đưa camera quét mã QR
     Host-->>JSBridge: runJavaScript("window.SuperAppBridge.dispatchResponse(...)")
     JSBridge-->>FWeb: Completer giải quyết kết quả Promise
-    FWeb-->>User: Hiển thị Dialog chúc mừng hoàn tất!
+    FWeb-->>User: Hiển thị thông tin quét được lên màn hình!
 ```
 
 ---
@@ -341,9 +341,6 @@ class SuperAppBridgeClient {
         case 'user.getProfile':
           completer.complete({'id': 'dev_user', 'name': 'Lập trình viên Flutter', 'role': 'DEVELOPER'});
           break;
-        case 'payment.openCheckout':
-          completer.complete({'status': 'SUCCESS', 'orderId': payload['orderId'], 'transactionId': 'TX_MOCK_123'});
-          break;
         default:
           completer.complete({'status': 'OK', 'mock': true});
       }
@@ -440,35 +437,11 @@ class _CoffeeShopScreenState extends State<CoffeeShopScreen> {
     }
   }
 
-  Future<void> _orderAndPay() async {
+  Future<void> _showNotification() async {
     try {
-      // 1. Tạo đơn hàng
-      final order = await bridge.invoke<Map<String, dynamic>>('payment.createOrder', {
-        'amount': 85000,
-        'description': '1 Cà phê Muối + 1 Croissant',
-        'currency': 'VND',
-      });
-
-      // 2. Mở BottomSheet Checkout thanh toán qua SuperApp Pay
-      final paymentResult = await bridge.invoke<Map<String, dynamic>>('payment.openCheckout', {
-        'orderId': order['orderId'],
-      });
-
-      if (paymentResult['status'] == 'SUCCESS') {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Thanh toán thành công!'),
-            content: Text('Mã giao dịch: ${paymentResult['transactionId']}'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đồng ý')),
-            ],
-          ),
-        );
-      }
+      await bridge.invoke('ui.showToast', {'message': 'Đã gửi phản hồi thành công!'});
     } catch (e) {
-      _showErrorDialog('Thanh toán thất bại', e.toString());
+      _showErrorDialog('Lỗi', e.toString());
     }
   }
 
@@ -520,14 +493,14 @@ class _CoffeeShopScreenState extends State<CoffeeShopScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              icon: const Icon(Icons.payment),
-              label: const Text('Đặt món & Thanh toán 85.000 đ'),
+              icon: const Icon(Icons.notifications_active),
+              label: const Text('Gửi thông báo Toast'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: const Color(0xFF6366F1),
                 foregroundColor: Colors.white,
               ),
-              onPressed: _orderAndPay,
+              onPressed: _showNotification,
             ),
           ],
         ),
@@ -635,30 +608,17 @@ async function handlePickImage() {
 }
 ```
 
-#### 3. Quy trình Thanh toán SuperApp Pay:
+#### 3. Quy trình Lưu trữ & Thông báo UI:
 ```typescript
-async function handlePayment() {
+async function handleStorageAndToast() {
   try {
-    // Bật BottomSheet Checkout native của SuperApp
-    const result = await superApp.payment.requestPayment({
-      orderId: 'ORDER_' + Date.now(),
-      amount: 120000,
-      description: 'Combo 2 Trà Sữa Size L',
-    });
+    // Lưu cấu hình người dùng vào Keychain / Keystore mã hóa
+    await superApp.storage.setItem('user_theme_pref', 'dark');
 
-    if (result.status === 'SUCCESS') {
-      await superApp.ui.showAlert({
-        title: 'Thành công',
-        message: `Thanh toán thành công qua ${result.paymentMethod}!`,
-      });
-    }
+    // Hiển thị thông báo Toast native
+    await superApp.ui.showToast('Đã lưu tùy chọn giao diện!');
   } catch (error: any) {
-    if (error.code === 'INSUFFICIENT_FUNDS') {
-      await superApp.ui.showAlert({
-        title: 'Lỗi',
-        message: 'Số dư ví SuperApp Pay không đủ để hoàn tất đơn hàng.',
-      });
-    }
+    console.error('Lỗi lưu trữ:', error);
   }
 }
 ```
@@ -776,12 +736,11 @@ my_vanilla_app/
         },
         {
           "type": "button",
-          "label": "Mua ngay 250.000 đ",
+          "label": "Gửi lời chúc mừng",
           "action": {
-            "type": "payment.createOrder",
+            "type": "ui.showToast",
             "payload": {
-              "amount": 250000,
-              "description": "Bó hoa Tulip Mùa Xuân"
+              "message": "Cảm ơn bạn đã quan tâm đến chúng tôi!"
             }
           }
         }
@@ -805,8 +764,6 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 | | `auth.logout` | *Không cần* | `{}` | `{ success: true }` |
 | **Người dùng** | `user.getProfile` | `user.getProfile` | `{}` | `{ id, name, phone, email, avatarUrl, role }` |
 | | `user.getBasicInfo` | *Không cần* | `{}` | `{ id, name, avatarUrl }` |
-| **Thanh toán** | `payment.createOrder` | `payment.createOrder` | `{ amount, description, currency? }` | `{ orderId, amount, status, createdAt }` |
-| | `payment.openCheckout` | `payment.createOrder` | `{ orderId: string }` | `{ transactionId, orderId, status, paymentMethod }` |
 | **Phần cứng** | `device.scanQRCode` | `device.scanQRCode` | `{}` | `{ content: string, format: string }` |
 | | `device.getLocation` | `device.getLocation` | `{ highAccuracy?: boolean }` | `{ latitude, longitude, address, city }` |
 | | `device.pickImage` | `device.pickImage` | `{}` | `{ uri: "data:image/png;base64,...", fileName, sizeBytes }` |
@@ -898,8 +855,7 @@ my_miniapp-1.0.0.zip
   "permissions": [
     "navigation.close",
     "user.getProfile",
-    "device.getLocation",
-    "payment.createOrder"
+    "device.getLocation"
   ],
   "developerName": "Highland Team",
   "supportEmail": "dev@highland.vn",

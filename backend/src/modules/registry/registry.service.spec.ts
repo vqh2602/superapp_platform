@@ -87,7 +87,7 @@ describe('Mini App management', () => {
   it('only grants requested permissions for a packaged app', async () => {
     app.activePublishedVersion = '1.0.0'; app.requestedPermissions = ['navigation.close'];
     manager.findOneBy.mockResolvedValue({ manifest: testManifest });
-    await expect(service.updateApp(app.id, { capabilities: ['payment.createOrder'] })).rejects.toThrow(BadRequestException);
+    await expect(service.updateApp(app.id, { capabilities: ['user.getProfile'] })).rejects.toThrow(BadRequestException);
     expect((await service.updateApp(app.id, { capabilities: [] })).capabilities).toEqual([]);
   });
   describe('HTTP contract', () => {

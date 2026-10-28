@@ -225,7 +225,7 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         script = '''
           (function() {
             setTimeout(function() {
-              Promise.reject(new Error("Timeout khi gọi API /payment/createOrder sau 4000ms (Mô phỏng lỗi mạng)"));
+              Promise.reject(new Error("Timeout khi gọi API /api/v1/sync sau 4000ms (Mô phỏng lỗi mạng)"));
             }, 50);
           })();
         ''';

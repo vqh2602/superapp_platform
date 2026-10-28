@@ -124,12 +124,6 @@ class SuperAppBridgeClient {
         case 'user.getProfile':
           completer.complete({'id': 'dev_01', 'name': 'Demo User', 'role': 'DEVELOPER'});
           break;
-        case 'payment.createOrder':
-          completer.complete({'orderId': 'ORD_123', 'amount': payload['amount'] ?? 50000, 'status': 'CREATED'});
-          break;
-        case 'payment.openCheckout':
-          completer.complete({'status': 'SUCCESS', 'orderId': payload['orderId'], 'transactionId': 'TX_MOCK_123'});
-          break;
         default:
           completer.complete({'status': 'OK', 'mock': true});
       }

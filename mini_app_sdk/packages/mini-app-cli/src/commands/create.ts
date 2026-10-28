@@ -33,7 +33,6 @@ export async function createProject(projectName: string, options: CreateCommandO
     themeColor: '#0068FF',
     permissions: [
       'auth.userProfile',
-      'payment',
       'device.battery',
       'device.network',
       'storage',

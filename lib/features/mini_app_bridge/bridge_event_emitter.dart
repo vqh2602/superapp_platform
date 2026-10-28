@@ -33,15 +33,4 @@ class BridgeEventEmitter {
       'timestamp': DateTime.now().toIso8601String(),
     });
   }
-
-  Future<void> emitPaymentStatusChanged({
-    required String orderId,
-    required String status,
-  }) async {
-    await emit('payment.statusChanged', {
-      'orderId': orderId,
-      'status': status,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
 }

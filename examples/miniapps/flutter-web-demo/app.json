@@ -12,8 +12,7 @@
     "navigation.close",
     "user.getProfile",
     "device.getBatteryInfo",
-    "device.scanQRCode",
-    "payment.createOrder"
+    "device.scanQRCode"
   ],
   "developerName": "Flutter Team",
   "supportEmail": "flutter@example.com",

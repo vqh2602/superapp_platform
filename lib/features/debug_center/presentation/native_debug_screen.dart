@@ -6,7 +6,6 @@ import '../data/debug_log_repository.dart';
 import '../domain/bridge_log_entry.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../permissions/data/mock_permission_repository.dart';
-import '../../payment/data/mock_order_repository.dart';
 import '../../device/data/mock_device_adapter.dart';
 
 class NativeDebugScreen extends ConsumerStatefulWidget {
@@ -239,7 +238,6 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
     ref.read(mockAuthCodeServiceProvider).reset();
     ref.read(mockTokenServiceProvider).reset();
     ref.read(mockPermissionRepositoryProvider).reset();
-    ref.read(mockOrderRepositoryProvider).reset();
     ref.read(debugLogRepositoryProvider).clear();
     ref.read(debugLogRepositoryProvider).resetSimulations();
 

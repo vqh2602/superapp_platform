@@ -112,12 +112,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 490000,
-                      'description': 'Shopee Mall - Củ sạc nhanh GaN 65W 3 Cổng',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -306,12 +302,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 50000,
-                      'description': 'TikTok Live - Quà tặng Kim Cương Sư Tử Vàng',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -450,12 +442,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 79000,
-                      'description': 'YouTube Premium Cá Nhân 1 Tháng',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -605,12 +593,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 150000,
-                      'description': 'Viettel Tammi - Đăng ký gói Data ST150K',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -733,12 +717,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 100000,
-                      'description': 'Free Fire - Gói 530 Kim Cương Siêu Tốc',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -876,12 +856,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 599000,
-                      'description': 'CapCut Pro 1 Năm Không Giới Hạn',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -981,12 +957,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 50000,
-                      'description': 'Messenger - Tiền lì xì chúc mừng bạn bè',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -1108,12 +1080,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 25000,
-                      'description': 'Facebook Stars - 100 Ngôi Sao',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -1220,12 +1188,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 485000,
-                      'description': 'Zalo Pay - Thanh toán tiền điện EVN',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },
@@ -1333,12 +1297,8 @@ class SampleMiniAppSchemas {
                 'events': {
                   'onClick': {
                     'type': 'native_action',
-                    'action': 'payment.openCheckout',
-                    'params': {
-                      'amount': 199000,
-                      'description': 'FC Mobile - Gói cầu thủ TOTY Siêu Sao',
-                      'currency': 'VND',
-                    },
+                    'action': 'ui.showToast',
+                    'params': {'message': 'Đã chọn dịch vụ thành công'},
                   },
                 },
               },

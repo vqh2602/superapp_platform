@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../../core/config/app_theme.dart';
 import '../../../../core/config/debug_mode_provider.dart';
-import '../../../payment/data/mock_order_repository.dart';
 import '../../../permissions/data/mock_permission_repository.dart';
 
 class ProfileTab extends ConsumerWidget {
@@ -125,13 +123,6 @@ class ProfileTab extends ConsumerWidget {
                 ),
                 const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
                 _buildMenuItem(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Đơn hàng & Giao dịch',
-                  subtitle: 'Lịch sử thanh toán đồng bộ Backend',
-                  onTap: () => _showOrdersSheet(context, ref),
-                ),
-                const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-                _buildMenuItem(
                   icon: Icons.verified_user_outlined,
                   title: 'Bảo mật & Quyền riêng tư',
                   subtitle: 'Quản lý quyền cấp cho Mini Apps (Backend)',
@@ -232,109 +223,6 @@ class ProfileTab extends ConsumerWidget {
         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
       ),
       trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 20),
-    );
-  }
-
-  void _showOrdersSheet(BuildContext context, WidgetRef ref) {
-    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return FutureBuilder(
-          future: ref.read(mockOrderRepositoryProvider).fetchUserOrders(),
-          builder: (context, snapshot) {
-            final orders = snapshot.data ?? [];
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Lịch sử đơn hàng (Backend)',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Expanded(child: Center(child: CircularProgressIndicator()))
-                  else if (orders.isEmpty)
-                    const Expanded(
-                      child: Center(
-                        child: Text(
-                          'Chưa có đơn hàng nào trên Backend.',
-                          style: TextStyle(color: Color(0xFF64748B)),
-                        ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: orders.length,
-                        separatorBuilder: (_, __) => const Divider(),
-                        itemBuilder: (context, index) {
-                          final o = orders[index];
-                          final isSuccess = o.status.value == 'SUCCESS';
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              o.description,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              '${o.orderId} • App: ${o.appId}\n${DateFormat('HH:mm dd/MM/yyyy').format(o.createdAt)}',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  currencyFormatter.format(o.amount),
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                ),
-                                const SizedBox(height: 2),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isSuccess ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    o.status.value,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: isSuccess ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 

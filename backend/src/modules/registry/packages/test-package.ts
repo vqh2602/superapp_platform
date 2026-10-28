@@ -7,7 +7,7 @@ export const testSchema = { schemaVersion: 1, pages: [{ id: 'home', title: 'Demo
 export const testManifest: PackageManifest = {
   manifestVersion: 1, appId: 'coffee_shop', name: 'Coffee Shop', description: 'Demo package', category: 'Food',
   version: '1.0.0', runtimeType: MiniAppRuntimeType.WEB, entry: 'dist/index.html', icon: 'icon.png',
-  permissions: ['navigation.close', 'payment.createOrder'],
+  permissions: ['navigation.close', 'user.getProfile'],
 };
 
 export async function zipFiles(entries: Array<[string, Buffer | string]>) {

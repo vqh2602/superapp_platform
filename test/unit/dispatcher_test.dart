@@ -9,7 +9,6 @@ import 'package:superapp_platform/features/device/data/mock_device_adapter.dart'
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
-import 'package:superapp_platform/features/payment/data/mock_order_repository.dart';
 import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
 import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
 
@@ -20,7 +19,6 @@ void main() {
     late MockTokenService tokenService;
     late MockUserRepository userRepo;
     late MockDeviceAdapter deviceAdapter;
-    late MockOrderRepository orderRepo;
     late MockPermissionRepository permissionRepo;
     late DebugLogRepository debugLogRepo;
     late NativeActionDispatcher dispatcher;
@@ -41,7 +39,6 @@ void main() {
       tokenService = MockTokenService(authCodeService: authCodeService);
       userRepo = MockUserRepository(authRepository: authRepo);
       deviceAdapter = MockDeviceAdapter();
-      orderRepo = MockOrderRepository();
       permissionRepo = MockPermissionRepository();
       debugLogRepo = DebugLogRepository();
 
@@ -51,7 +48,6 @@ void main() {
         tokenService: tokenService,
         userRepo: userRepo,
         deviceAdapter: deviceAdapter,
-        orderRepo: orderRepo,
         permissionRepo: permissionRepo,
         debugLogRepo: debugLogRepo,
       );

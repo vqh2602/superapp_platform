@@ -53,8 +53,6 @@ export class SeedService implements OnApplicationBootstrap {
           'device.scanQRCode',
           'device.getLocation',
           'device.pickImage',
-          'payment.createOrder',
-          'payment.openCheckout',
           'permission.request',
           'permission.getPermissions',
           'storage.setSecureItem',
@@ -146,8 +144,6 @@ export class SeedService implements OnApplicationBootstrap {
         capabilities: [
           'user.getBasicInfo',
           'navigation.close',
-          'payment.createOrder',
-          'payment.openCheckout',
         ],
       });
       await this.appRepo.save(store);

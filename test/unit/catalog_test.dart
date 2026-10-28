@@ -34,7 +34,7 @@ void main() {
         'icon': 'coffee',
         'entryUrl': '',
         'isAsset': false,
-        'capabilities': ['payment.createOrder', 'payment.openCheckout'],
+        'capabilities': ['ui.showToast', 'navigation.close'],
         'runtimeType': 'schema',
         'category': 'Food & Beverage',
         'status': 'PUBLISHED',
@@ -143,7 +143,7 @@ void main() {
             'version': '1.0.0',
             'entryUrl': '',
             'isAsset': false,
-            'capabilities': ['payment.createOrder'],
+            'capabilities': ['navigation.close'],
           },
           {
             'id': 'sdk_playground',

@@ -5,7 +5,6 @@ import '../../authentication/data/mock_auth_code_service.dart';
 import '../../authentication/data/mock_token_service.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../device/data/mock_device_adapter.dart';
-import '../../payment/data/mock_order_repository.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../../permissions/presentation/permission_prompt_dialog.dart';
 import '../../user_profile/data/mock_user_repository.dart';
@@ -17,7 +16,6 @@ import '../handlers/auth_action_handler.dart';
 import '../handlers/user_action_handler.dart';
 import '../handlers/navigation_action_handler.dart';
 import '../handlers/device_action_handler.dart';
-import '../handlers/payment_action_handler.dart';
 import '../handlers/permission_action_handler.dart';
 import '../handlers/debug_action_handler.dart';
 import '../handlers/storage_action_handler.dart';
@@ -33,7 +31,6 @@ class NativeActionDispatcher {
   final MockTokenService tokenService;
   final MockUserRepository userRepo;
   final MockDeviceAdapter deviceAdapter;
-  final MockOrderRepository orderRepo;
   final MockPermissionRepository permissionRepo;
   final DebugLogRepository debugLogRepo;
   final MockSecureStorageRepository secureStorageRepo;
@@ -46,7 +43,6 @@ class NativeActionDispatcher {
     required this.tokenService,
     required this.userRepo,
     required this.deviceAdapter,
-    required this.orderRepo,
     required this.permissionRepo,
     required this.debugLogRepo,
     MockSecureStorageRepository? secureStorageRepo,
@@ -92,10 +88,6 @@ class NativeActionDispatcher {
       DeviceScanQrHandler(deviceAdapter: deviceAdapter),
       DeviceGetLocationHandler(deviceAdapter: deviceAdapter),
       DevicePickImageHandler(deviceAdapter: deviceAdapter),
-
-      // Payment
-      PaymentCreateOrderHandler(orderRepo: orderRepo, authRepo: authRepo),
-      PaymentOpenCheckoutHandler(orderRepo: orderRepo),
 
       // Permission
       PermissionRequestHandler(permissionRepo: permissionRepo),
@@ -309,7 +301,6 @@ final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
     tokenService: ref.watch(mockTokenServiceProvider),
     userRepo: ref.watch(mockUserRepositoryProvider),
     deviceAdapter: ref.watch(deviceAdapterProvider),
-    orderRepo: ref.watch(mockOrderRepositoryProvider),
     permissionRepo: ref.watch(mockPermissionRepositoryProvider),
     debugLogRepo: ref.watch(debugLogRepositoryProvider),
     secureStorageRepo: ref.watch(mockSecureStorageRepositoryProvider),

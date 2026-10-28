@@ -26,24 +26,6 @@ export interface AccessTokenResult {
   expiresIn: number;
 }
 
-export interface PaymentOptions {
-  orderId: string;
-  amount: number;
-  description: string;
-  partnerCode?: string;
-  extraData?: Record<string, any>;
-}
-
-export interface PaymentResult {
-  transactionId: string;
-  orderId: string;
-  status: 'SUCCESS' | 'FAILED' | 'CANCELLED';
-  amount: number;
-  timestamp: number;
-  paymentMethod: string;
-  message: string;
-}
-
 export interface BatteryInfo {
   batteryLevel: number;
   isCharging: boolean;

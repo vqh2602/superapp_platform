@@ -79,7 +79,7 @@ describe('CatalogService Tests', () => {
         status: MiniAppStatus.PUBLISHED,
         activePublishedVersion: '1.0.0',
         runtimeType: MiniAppRuntimeType.SCHEMA,
-        capabilities: ['payment.createOrder'],
+        capabilities: ['navigation.close'],
         updatedAt: new Date(),
       });
 
@@ -101,7 +101,7 @@ describe('CatalogService Tests', () => {
         id: 'coffee_shop', status: MiniAppStatus.PUBLISHED,
         activePublishedVersion: '1.0.0', capabilities: [], updatedAt: new Date(),
       });
-      mockVersionRepo.findOne.mockResolvedValue({ capabilities: ['payment.createOrder'] });
+      mockVersionRepo.findOne.mockResolvedValue({ capabilities: ['navigation.close'] });
       expect((await service.getPublishedAppById('coffee_shop')).capabilities).toEqual([]);
     });
 

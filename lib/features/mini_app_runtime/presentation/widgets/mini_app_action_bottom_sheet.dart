@@ -700,8 +700,6 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
             final capabilities = manifest?.capabilities ?? [
               'user.getBasicInfo',
               'navigation.close',
-              'payment.createOrder',
-              'payment.openCheckout',
               'device.scanQRCode',
             ];
 

@@ -2,7 +2,6 @@ export * from './types.js';
 export * from './presets.js';
 export * from './store.js';
 export * from './handlers/auth.handler.js';
-export * from './handlers/payment.handler.js';
 export * from './handlers/device.handler.js';
 export * from './handlers/storage.handler.js';
 export * from './handlers/ui.handler.js';

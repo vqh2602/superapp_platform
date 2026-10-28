@@ -1,9 +1,8 @@
 import React from 'react';
-import { Activity, CreditCard, Database, Smartphone, User } from 'lucide-react';
+import { Activity, Database, Smartphone, User } from 'lucide-react';
 import { useSimulator } from '../context/SimulatorContext.js';
 import { BridgeInspectorTab } from './tabs/BridgeInspectorTab.js';
 import { AuthMockTab } from './tabs/AuthMockTab.js';
-import { PaymentMockTab } from './tabs/PaymentMockTab.js';
 import { DeviceMockTab } from './tabs/DeviceMockTab.js';
 import { StorageInspectorTab } from './tabs/StorageInspectorTab.js';
 
@@ -13,7 +12,6 @@ export const DevToolsDrawer: React.FC = () => {
   const tabs = [
     { id: 'bridge', label: 'Bridge Inspector', icon: Activity, count: logs.length },
     { id: 'auth', label: 'Auth & Persona', icon: User, note: user.name.split(' ')[0] },
-    { id: 'payment', label: 'Payment & Wallet', icon: CreditCard },
     { id: 'device', label: 'Device & Hardware', icon: Smartphone },
     { id: 'storage', label: 'Storage', icon: Database },
   ] as const;
@@ -93,7 +91,6 @@ export const DevToolsDrawer: React.FC = () => {
       <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
         {activeTab === 'bridge' && <BridgeInspectorTab />}
         {activeTab === 'auth' && <AuthMockTab />}
-        {activeTab === 'payment' && <PaymentMockTab />}
         {activeTab === 'device' && <DeviceMockTab />}
         {activeTab === 'storage' && <StorageInspectorTab />}
       </div>

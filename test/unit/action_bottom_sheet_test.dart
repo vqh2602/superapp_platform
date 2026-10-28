@@ -18,7 +18,6 @@ void main() {
     );
 
     bool reloaded = false;
-    bool minimized = false;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -33,7 +32,7 @@ void main() {
                       manifest: manifest,
                       appId: 'messenger',
                       onReload: () => reloaded = true,
-                      onMinimize: () => minimized = true,
+                      onMinimize: () {},
                     );
                   },
                   child: const Text('Open Sheet'),

@@ -7,7 +7,6 @@ export default superApp;
 export { SuperAppSDK } from './client.js';
 export * from './types/index.js';
 export * from './modules/auth.js';
-export * from './modules/payment.js';
 export * from './modules/device.js';
 export * from './modules/storage.js';
 export * from './modules/ui.js';

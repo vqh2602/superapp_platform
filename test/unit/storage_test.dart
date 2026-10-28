@@ -9,7 +9,6 @@ import 'package:superapp_platform/features/authentication/data/mock_auth_code_se
 import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
 import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
 import 'package:superapp_platform/features/device/data/mock_device_adapter.dart';
-import 'package:superapp_platform/features/payment/data/mock_order_repository.dart';
 import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
 
@@ -169,7 +168,6 @@ void main() {
       final tokenService = MockTokenService(authCodeService: authCodeService);
       final userRepo = MockUserRepository(authRepository: authRepo);
       final deviceAdapter = MockDeviceAdapter();
-      final orderRepo = MockOrderRepository();
       permissionRepo = MockPermissionRepository();
       final debugLogRepo = DebugLogRepository();
       secureStorageRepo = MockSecureStorageRepository();
@@ -180,7 +178,6 @@ void main() {
         tokenService: tokenService,
         userRepo: userRepo,
         deviceAdapter: deviceAdapter,
-        orderRepo: orderRepo,
         permissionRepo: permissionRepo,
         debugLogRepo: debugLogRepo,
         secureStorageRepo: secureStorageRepo,
