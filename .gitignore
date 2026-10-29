@@ -48,6 +48,9 @@ yarn-error.log*
 
 # Fastlane
 **/fastlane/report.xml
+
+# Firebase
+.firebase/
 **/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output

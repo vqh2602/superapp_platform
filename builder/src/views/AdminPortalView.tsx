@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Check, Eye, EyeOff, FileArchive, Plus, Search, Upload } from 'lucide-react';
 import { MiniAppEntity, MiniAppRuntimeType, PackageInspection } from '../types';
+import { buildApiUrl } from '../api';
 
 interface Props { apps: MiniAppEntity[]; onRefreshApps: () => Promise<void>; }
 const inputClass = 'mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:border-indigo-400 outline-none';
@@ -9,7 +10,8 @@ const panelClass = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y
 
 async function request(path: string, method: string, body: unknown) {
   const form = body instanceof FormData;
-  const response = await fetch(`/api/v1/registry/apps${path}`, {
+  const url = buildApiUrl(`/api/v1/registry/apps${path}`);
+  const response = await fetch(url, {
     method, ...(form ? {} : { headers: { 'Content-Type': 'application/json' } }),
     body: form ? body : JSON.stringify(body),
   });
@@ -22,8 +24,9 @@ function AppIcon({ icon, name, color }: { icon: string; name: string; color?: st
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [icon]);
   const image = /^(https?:\/\/|\/api\/v1\/miniapps\/)/.test(icon);
+  const resolvedIcon = icon.startsWith('/') ? buildApiUrl(icon) : icon;
   return <div style={{ backgroundColor: color || '#6366F1' }} className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center font-bold text-xl">
-    {image && !failed ? <img src={icon} alt={`Icon ${name}`} onError={() => setFailed(true)} className="w-full h-full object-cover" /> : name.slice(0, 1).toUpperCase() || <Box />}
+    {image && !failed ? <img src={resolvedIcon} alt={`Icon ${name}`} onError={() => setFailed(true)} className="w-full h-full object-cover" /> : name.slice(0, 1).toUpperCase() || <Box />}
   </div>;
 }
 
