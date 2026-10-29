@@ -25,8 +25,8 @@ npm run start:prod    # Chạy sản xuất từ bản build dist/
 
 - Ứng dụng tự động nạp cấu hình từ file `.env` (thông qua `dotenv` với `override: true`).
 - TypeORM tự động khởi tạo bảng dữ liệu (`synchronize: true`).
-- Dữ liệu mẫu (Shopee, TikTok, Messenger, ...) được tự động seed khi backend khởi động lần đầu.
-- Đăng ký tài khoản qua `POST /api/v1/auth/register` (body: `{ "email", "password", "displayName" }`). Không có tài khoản mặc định.
+- Dữ liệu mẫu (Shopee, TikTok, Messenger, ...) và **Tài khoản test** (`test_demo@example.com` / `demo-password-123`) được tự động seed khi backend khởi động lần đầu.
+- Đăng ký thêm tài khoản qua `POST /api/v1/auth/register` (body: `{ "email", "password", "displayName" }`).
 
 ---
 

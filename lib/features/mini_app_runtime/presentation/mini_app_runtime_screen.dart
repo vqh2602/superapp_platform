@@ -16,6 +16,8 @@ import '../../user_profile/data/mock_user_repository.dart';
 import '../../device/data/mock_device_adapter.dart';
 import '../../permissions/data/mock_permission_repository.dart';
 import '../../storage/data/mock_secure_storage_repository.dart';
+import '../../native_actions/domain/mini_app_ui_delegate.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/web_log_entry.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
 import '../../../../core/config/debug_mode_provider.dart';
@@ -32,7 +34,8 @@ class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
 }
 
 class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver
+    implements MiniAppUiDelegate {
   late String _currentAppId;
   WebViewController? _webViewController;
   BridgeEventEmitter? _eventEmitter;
@@ -40,6 +43,19 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   String? _loadError;
   final List<WebLogEntry> _webLogs = [];
   bool _hasBlankScreenWarning = false;
+
+  // Dynamic UI & Container state from configAppView / setNavigationBarTitle / setNavigationBarColor
+  String? _overrideTitle;
+  Color? _overrideHeaderColor;
+  String? _overrideTextColor; // 'white' | 'black'
+  Color? _overrideStatusBarColor;
+  String? _statusBarStyle; // 'transparent' | 'hidden' | 'light' | 'dark'
+  bool _isActionBarHidden = false;
+  bool _isStatusBarHidden = false;
+  bool _hideBottomNav = false;
+  bool _hasPadding = true;
+  Color? _bottomNavColor;
+  bool _isKeepScreenOn = false;
 
   @override
   void initState() {
@@ -52,8 +68,85 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (_isKeepScreenOn) {
+      try {
+        WakelockPlus.disable();
+      } catch (_) {}
+    }
+    try {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+    } catch (_) {}
     _eventEmitter?.emit('miniapp.close');
     super.dispose();
+  }
+
+  @override
+  void setTitle(String title) {
+    if (mounted) {
+      setState(() {
+        _overrideTitle = title;
+      });
+    }
+  }
+
+  @override
+  void setNavigationBarColor({
+    required Color color,
+    String? textColor,
+    Color? statusBarColor,
+  }) {
+    if (mounted) {
+      setState(() {
+        _overrideHeaderColor = color;
+        if (textColor != null) _overrideTextColor = textColor;
+        if (statusBarColor != null) _overrideStatusBarColor = statusBarColor;
+      });
+    }
+  }
+
+  @override
+  void configAppView({
+    Color? headerColor,
+    String? headerTitle,
+    String? textColor,
+    String? statusBar,
+    bool? actionBarHidden,
+    bool? hideAndroidBottomNavigationBar,
+    bool? hasPadding,
+    Color? bottomNavColor,
+  }) {
+    if (mounted) {
+      setState(() {
+        if (headerColor != null) _overrideHeaderColor = headerColor;
+        if (headerTitle != null) _overrideTitle = headerTitle;
+        if (textColor != null) _overrideTextColor = textColor;
+        if (statusBar != null) {
+          _statusBarStyle = statusBar;
+          _isStatusBarHidden = statusBar == 'hidden';
+        }
+        if (actionBarHidden != null) _isActionBarHidden = actionBarHidden;
+        if (hideAndroidBottomNavigationBar != null) {
+          _hideBottomNav = hideAndroidBottomNavigationBar;
+        }
+        if (hasPadding != null) _hasPadding = hasPadding;
+        if (bottomNavColor != null) _bottomNavColor = bottomNavColor;
+      });
+    }
+  }
+
+  @override
+  void keepScreen({required bool keepScreenOn}) {
+    _isKeepScreenOn = keepScreenOn;
+  }
+
+  @override
+  void minimizeApp() {
+    _eventEmitter?.emit('miniapp.hide');
+    _eventEmitter?.emit('miniapp.minimize', {'appId': _currentAppId});
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -149,6 +242,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       debugLogRepo: ref.read(debugLogRepositoryProvider),
       controller: controller,
       manifest: validManifest,
+      uiDelegate: this,
     );
 
     final emitter = BridgeEventEmitter(controller);
@@ -335,8 +429,15 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         .getAppById(_currentAppId);
 
     final themeHex = manifest?.schema?['theme']?['backgroundColor'] as String?;
-    final themeBgColor = _parseColor(themeHex, defaultColor: Colors.white);
+    final defaultBgColor = _parseColor(themeHex, defaultColor: Colors.white);
+    final themeBgColor = defaultBgColor;
     final isDarkTheme = _isColorDark(themeBgColor);
+    final headerBgColor = _overrideHeaderColor ?? defaultBgColor;
+    final isDarkHeader = _overrideTextColor == 'white'
+        ? true
+        : (_overrideTextColor == 'black' ? false : _isColorDark(headerBgColor));
+    final headerTextColor = isDarkHeader ? Colors.white : const Color(0xFF0F172A);
+    final displayTitle = _overrideTitle ?? manifest?.name ?? 'Mini App';
 
     ref.listen(authStateProvider, (prev, next) {
       if (!next.isAuthenticated && _eventEmitter != null) {
@@ -344,130 +445,143 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       }
     });
 
+    final statusBarColor = _overrideStatusBarColor ?? Colors.transparent;
+    final statusBarIconBrightness = _statusBarStyle == 'light'
+        ? Brightness.dark
+        : (_statusBarStyle == 'dark'
+            ? Brightness.light
+            : (isDarkHeader ? Brightness.light : Brightness.dark));
+    final statusBarBrightness = statusBarIconBrightness == Brightness.light
+        ? Brightness.dark
+        : Brightness.light;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDarkTheme ? Brightness.light : Brightness.dark,
-        statusBarBrightness: isDarkTheme ? Brightness.dark : Brightness.light,
+        statusBarColor: statusBarColor,
+        statusBarIconBrightness: statusBarIconBrightness,
+        statusBarBrightness: statusBarBrightness,
+        systemNavigationBarColor: _bottomNavColor ?? (_hideBottomNav ? Colors.transparent : null),
       ),
       child: Scaffold(
-        backgroundColor: themeBgColor,
+        backgroundColor: defaultBgColor,
         body: SafeArea(
-          bottom: false,
+          top: !_isStatusBarHidden,
+          bottom: _hasPadding,
           child: Column(
             children: [
-              // WeChat-style Mini Program Top Navigation Bar (Circled in red in Image 4)
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: themeBgColor,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDarkTheme
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : const Color(0xFFEEEEEE),
-                      width: 0.8,
+              // Dynamic Top Navigation Bar (hideable via configAppView)
+              if (!_isActionBarHidden)
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: headerBgColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDarkHeader
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : const Color(0xFFEEEEEE),
+                        width: 0.8,
+                      ),
                     ),
                   ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Center Title
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 90),
-                        child: Text(
-                          manifest?.name ?? 'Mini App',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Center Title
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 90),
+                          child: Text(
+                            displayTitle,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: headerTextColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
 
-                    // Right Capsule Bar: [ ••• | ⊙ ]
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isDarkTheme
-                              ? Colors.white.withValues(alpha: 0.12)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDarkTheme
-                                ? Colors.white.withValues(alpha: 0.25)
-                                : const Color(0xFFD1D5DB),
-                            width: 0.8,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDarkTheme ? 0.2 : 0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Nút thông tin miniapp (•••)
-                            InkWell(
-                              onTap: () => _showMiniAppActionBottomSheet(manifest),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                child: Icon(
-                                  Icons.more_horiz_rounded,
-                                  size: 20,
-                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            // Capsule Divider
-                            Container(
-                              width: 0.8,
-                              height: 16,
-                              color: isDarkTheme
+                      // Right Capsule Bar: [ ••• | ⊙ ]
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: isDarkHeader
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDarkHeader
                                   ? Colors.white.withValues(alpha: 0.25)
-                                  : const Color(0xFFE5E7EB),
+                                  : const Color(0xFFD1D5DB),
+                              width: 0.8,
                             ),
-                            // Nút đóng miniapp (⊙)
-                            InkWell(
-                              onTap: () {
-                                _eventEmitter?.emit('miniapp.close');
-                                Navigator.of(context).pop();
-                              },
-                              borderRadius: const BorderRadius.only(
-                                topRight: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDarkHeader ? 0.2 : 0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                child: Icon(
-                                  Icons.adjust_rounded,
-                                  size: 18,
-                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Nút thông tin miniapp (•••)
+                              InkWell(
+                                onTap: () => _showMiniAppActionBottomSheet(manifest),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  child: Icon(
+                                    Icons.more_horiz_rounded,
+                                    size: 20,
+                                    color: headerTextColor,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                              // Capsule Divider
+                              Container(
+                                width: 0.8,
+                                height: 16,
+                                color: isDarkHeader
+                                    ? Colors.white.withValues(alpha: 0.25)
+                                    : const Color(0xFFE5E7EB),
+                              ),
+                              // Nút đóng miniapp (⊙)
+                              InkWell(
+                                onTap: () {
+                                  _eventEmitter?.emit('miniapp.close');
+                                  Navigator.of(context).pop();
+                                },
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  child: Icon(
+                                    Icons.adjust_rounded,
+                                    size: 18,
+                                    color: headerTextColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
               // Mini App Content: Full Screen, Edge-to-Edge (No white margins on left/right)
               Expanded(

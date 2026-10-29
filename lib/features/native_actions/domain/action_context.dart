@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
+import 'mini_app_ui_delegate.dart';
 
 /// Context provided to every Native Action Handler during execution.
 class ActionContext {
@@ -7,11 +8,13 @@ class ActionContext {
   final String appId;
   final String? origin;
   final MiniAppManifest? manifest;
+  final MiniAppUiDelegate? uiDelegate;
 
   const ActionContext({
     this.buildContext,
     required this.appId,
     this.origin,
     this.manifest,
+    this.uiDelegate,
   });
 }

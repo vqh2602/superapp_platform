@@ -8,7 +8,16 @@ Backend đã có tài khoản thật trong PostgreSQL, đăng ký/đăng nhập 
 - Đồng bộ quyền và quyết định của người dùng với Backend User Permission API (`/users/me/apps/:appId/permissions`).
 - Quản lý và lưu trữ đơn hàng thanh toán trên PostgreSQL qua Order API (`/orders`).
 
-Base URL: `http://localhost:3000/api/v1`. Body JSON, trừ API upload gói. Các endpoint có xác thực nhận `Authorization: Bearer <accessToken>`; không nhận userId từ client để xác định chủ tài khoản.
+Base URL:
+- Local: `http://localhost:3000/api/v1`
+- Cloud Production: `https://superappplatfrom.alwaysdata.net/api/v1`
+
+Tài khoản Test có sẵn trong hệ thống (đã được tạo và tự động seed):
+- **Email**: `test_demo@example.com`
+- **Password**: `demo-password-123`
+- **Display Name**: `Demo User`
+
+Body JSON, trừ API upload gói. Các endpoint có xác thực nhận `Authorization: Bearer <accessToken>`; không nhận userId từ client để xác định chủ tài khoản.
 
 ## Dữ liệu lưu trữ
 

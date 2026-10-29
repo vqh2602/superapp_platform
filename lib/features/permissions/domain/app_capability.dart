@@ -8,7 +8,8 @@ enum AppCapability {
   devicePickImage('device.pickImage', 'Chọn ảnh thư viện', 'Cho phép chọn ảnh từ thư viện thiết bị'),
   storageSecure('storage.secure', 'Lưu trữ bảo mật', 'Cho phép lưu và đọc khóa giá trị an toàn trong Keychain/Keystore'),
   permissionGetPermissions('permission.getPermissions', 'Lấy danh sách quyền', 'Lấy danh sách quyền đã được cấp cho Mini App'),
-  microphone('microphone', 'Truy cập micro ghi âm', 'Cho phép chuyển giọng nói thành văn bản');
+  microphone('microphone', 'Truy cập micro ghi âm', 'Cho phép chuyển giọng nói thành văn bản'),
+  notification('notification', 'Gửi thông báo', 'Cho phép Mini App gửi thông báo và tin tức quan trọng');
 
   final String key;
   final String title;

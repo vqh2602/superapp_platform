@@ -9,18 +9,21 @@ import '../debug_center/domain/bridge_log_entry.dart';
 import '../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../native_actions/application/native_action_dispatcher.dart';
 import '../native_actions/domain/action_context.dart';
+import '../native_actions/domain/mini_app_ui_delegate.dart';
 
 class BridgeDispatcher {
   final NativeActionDispatcher actionDispatcher;
   final DebugLogRepository debugLogRepo;
   final WebViewController controller;
   final MiniAppManifest manifest;
+  final MiniAppUiDelegate? uiDelegate;
 
   BridgeDispatcher({
     required this.actionDispatcher,
     required this.debugLogRepo,
     required this.controller,
     required this.manifest,
+    this.uiDelegate,
   });
 
   Future<void> handleMessage(String rawJson, BuildContext buildContext) async {
@@ -41,6 +44,7 @@ class BridgeDispatcher {
         appId: manifest.id,
         origin: request.origin,
         manifest: manifest,
+        uiDelegate: uiDelegate,
       );
 
       final resultData = await actionDispatcher.dispatch(actionName, payload, context);

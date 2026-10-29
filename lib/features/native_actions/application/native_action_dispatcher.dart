@@ -129,6 +129,9 @@ class NativeActionDispatcher {
       SetStatusBarColorHandler(),
       SetNavigationBarColorHandler(),
       ConfigAppViewHandler(),
+      KeepScreenHandler(),
+      RequestSendNotificationHandler(permissionRepo: permissionRepo),
+      MinimizeAppHandler(onMinimizeApp: onSwitchMiniApp != null ? () => onSwitchMiniApp('') : null),
       ShowMiniappMenuHandler(onCloseApp: onSwitchMiniApp != null ? () => onSwitchMiniApp('') : null),
       CloseAppHandler(onCloseApp: onSwitchMiniApp != null ? () => onSwitchMiniApp('') : null),
 
@@ -203,6 +206,12 @@ class NativeActionDispatcher {
     _handlers['setStatusBarColor'] = SetStatusBarColorHandler();
     _handlers['setNavigationBarColor'] = SetNavigationBarColorHandler();
     _handlers['configAppView'] = ConfigAppViewHandler();
+    _handlers['keepScreen'] = KeepScreenHandler();
+    _handlers['ui.keepScreen'] = KeepScreenHandler();
+    _handlers['requestSendNotification'] = RequestSendNotificationHandler(permissionRepo: permissionRepo);
+    _handlers['notification.requestSendNotification'] = RequestSendNotificationHandler(permissionRepo: permissionRepo);
+    _handlers['minimizeApp'] = MinimizeAppHandler(onMinimizeApp: onSwitchMiniApp != null ? () => onSwitchMiniApp('') : null);
+    _handlers['ui.minimizeApp'] = MinimizeAppHandler(onMinimizeApp: onSwitchMiniApp != null ? () => onSwitchMiniApp('') : null);
     _handlers['showMiniappMenu'] = ShowMiniappMenuHandler();
     _handlers['closeApp'] = CloseAppHandler();
 

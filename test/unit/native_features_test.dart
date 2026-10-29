@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
+import 'package:superapp_platform/features/native_actions/domain/mini_app_ui_delegate.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
 import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
@@ -276,5 +278,124 @@ void main() {
       expect(allStorage['k1'], 'v1');
       expect(allStorage['k2'], 'v2');
     });
+
+    test('2.14 Zalo-style App View & Screen APIs: configAppView, setNavigationBarTitle, setNavigationBarColor, keepScreen, requestSendNotification, minimizeApp', () async {
+      final uiDelegate = _TestUiDelegate();
+      final context = ActionContext(
+        appId: 'sdk_playground',
+        manifest: testManifest,
+        uiDelegate: uiDelegate,
+      );
+
+      // 1. setNavigationBarTitle
+      final titleRes = await dispatcher.dispatch('setNavigationBarTitle', {'title': 'Chi tiết sản phẩm'}, context);
+      expect(titleRes['success'], true);
+      expect(titleRes['title'], 'Chi tiết sản phẩm');
+      expect(uiDelegate.title, 'Chi tiết sản phẩm');
+
+      // 2. setNavigationBarColor
+      final colorRes = await dispatcher.dispatch('setNavigationBarColor', {
+        'color': '#0068FF',
+        'textColor': 'white',
+      }, context);
+      expect(colorRes['success'], true);
+      expect(colorRes['color'], '#0068FF');
+      expect(colorRes['textColor'], 'white');
+      expect(uiDelegate.navColor, const Color(0xFF0068FF));
+      expect(uiDelegate.textColor, 'white');
+
+      // 3. configAppView (flat + nested)
+      final configRes = await dispatcher.dispatch('configAppView', {
+        'headerTitle': 'Trang Checkout',
+        'actionBarHidden': true,
+        'statusBar': 'transparent',
+        'textColor': 'black',
+        'hideAndroidBottomNavigationBar': true,
+        'hasPadding': false,
+      }, context);
+      expect(configRes['success'], true);
+      expect(configRes['actionBarHidden'], true);
+      expect(configRes['statusBar'], 'transparent');
+      expect(uiDelegate.actionBarHidden, true);
+      expect(uiDelegate.title, 'Trang Checkout');
+      expect(uiDelegate.textColor, 'black');
+
+      // 4. keepScreen
+      final keepRes = await dispatcher.dispatch('keepScreen', {'keepScreenOn': true}, context);
+      expect(keepRes['success'], true);
+      expect(keepRes['keepScreenOn'], true);
+      expect(uiDelegate.keepScreenOn, true);
+
+      final keepOffRes = await dispatcher.dispatch('device.keepScreen', {'keepScreenOn': false}, context);
+      expect(keepOffRes['keepScreenOn'], false);
+      expect(uiDelegate.keepScreenOn, false);
+
+      // 5. requestSendNotification
+      final notifRes = await dispatcher.dispatch('requestSendNotification', {
+        'templateId': 'order_update_v1',
+        'reason': 'Cập nhật trạng thái giao hàng',
+      }, context);
+      expect(notifRes['success'], true);
+      expect(notifRes['granted'], true);
+      expect(notifRes['subscriptionId'], isNotEmpty);
+      expect(notifRes['token'], isNotEmpty);
+      expect(permissionRepo.isGranted('sdk_playground', 'notification'), true);
+
+      // 6. minimizeApp
+      final minRes = await dispatcher.dispatch('minimizeApp', {}, context);
+      expect(minRes['success'], true);
+      expect(minRes['status'], 'minimized');
+      expect(uiDelegate.minimized, true);
+    });
   });
+}
+
+class _TestUiDelegate implements MiniAppUiDelegate {
+  String? title;
+  Color? navColor;
+  String? textColor;
+  bool? actionBarHidden;
+  bool? keepScreenOn;
+  bool minimized = false;
+
+  @override
+  void setTitle(String title) {
+    this.title = title;
+  }
+
+  @override
+  void setNavigationBarColor({
+    required Color color,
+    String? textColor,
+    Color? statusBarColor,
+  }) {
+    navColor = color;
+    this.textColor = textColor;
+  }
+
+  @override
+  void configAppView({
+    Color? headerColor,
+    String? headerTitle,
+    String? textColor,
+    String? statusBar,
+    bool? actionBarHidden,
+    bool? hideAndroidBottomNavigationBar,
+    bool? hasPadding,
+    Color? bottomNavColor,
+  }) {
+    this.actionBarHidden = actionBarHidden;
+    this.textColor = textColor;
+    if (headerTitle != null) title = headerTitle;
+  }
+
+  @override
+  void keepScreen({required bool keepScreenOn}) {
+    this.keepScreenOn = keepScreenOn;
+  }
+
+  @override
+  void minimizeApp() {
+    minimized = true;
+  }
 }

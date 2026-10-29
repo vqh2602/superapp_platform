@@ -72,6 +72,11 @@ JSON body được whitelist và từ chối field lạ qua ValidationPipe. API 
 
 ### Tài khoản và token
 
+Tài khoản Test sẵn có:
+- **Email**: `test_demo@example.com`
+- **Mật khẩu**: `demo-password-123`
+- **Tên hiển thị**: `Demo User`
+
 | Method | Path | Xác thực | Công dụng |
 | --- | --- | --- | --- |
 | POST | `/auth/register` | Public | Email/password/displayName → tài khoản và token Super App |
