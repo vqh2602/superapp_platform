@@ -63,9 +63,9 @@ class MockPermissionRepository {
               'granted': granted,
             }),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
-      debugPrint('[MockPermissionRepository] Sync permission to BE failed: $e');
+      debugPrint('[MockPermissionRepository] Sync permission to BE skipped/offline: $e');
     }
   }
 
@@ -98,9 +98,9 @@ class MockPermissionRepository {
               'Authorization': 'Bearer $accessToken',
             },
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
-      debugPrint('[MockPermissionRepository] Revoke permissions on BE failed: $e');
+      debugPrint('[MockPermissionRepository] Revoke permissions on BE skipped/offline: $e');
     }
   }
 

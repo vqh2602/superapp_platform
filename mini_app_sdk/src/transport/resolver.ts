@@ -2,7 +2,8 @@ import { ITransport } from './transport.interface.js';
 import { NativeBridgeTransport } from './native-transport.js';
 import { PostMessageTransport } from './postmessage-transport.js';
 import { MockBridgeTransport, MockDispatcher } from './mock-transport.js';
-import { NativeWindowBridge, TransportConfig, TransportType } from './types.js';
+import { AdaptiveBridgeTransport } from './adaptive-transport.js';
+import { TransportConfig, TransportType } from './types.js';
 
 export interface TransportResolverOptions extends TransportConfig {
   forceTransport?: TransportType;
@@ -22,31 +23,7 @@ export class TransportResolver {
       return new MockBridgeTransport({ ...options, dispatcher: options.mockDispatcher });
     }
 
-    // 2. Automatic runtime environment detection
-    if (typeof window !== 'undefined') {
-      const win = window as unknown as NativeWindowBridge;
-
-      // Real SuperApp Flutter WebView environment
-      if (win.FlutterBridge?.postMessage) {
-        if (options.debug) {
-          console.info('[TransportResolver] Detected Native Flutter Bridge container.');
-        }
-        return new NativeBridgeTransport(options);
-      }
-
-      // Inside Simulator Iframe (parent is different window)
-      if (window.parent && window.parent !== window) {
-        if (options.debug) {
-          console.info('[TransportResolver] Detected Browser Simulator parent iframe container.');
-        }
-        return new PostMessageTransport(options);
-      }
-    }
-
-    // 3. Fallback: Mock Bridge Transport (for standalone browser tabs, local dev, or testing)
-    if (options.debug) {
-      console.info('[TransportResolver] Falling back to Mock Bridge Transport.');
-    }
-    return new MockBridgeTransport({ ...options, dispatcher: options.mockDispatcher });
+    // 2. Default: Dynamic Adaptive Bridge Transport that automatically detects and routes calls
+    return new AdaptiveBridgeTransport(options);
   }
 }

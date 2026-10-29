@@ -4,7 +4,7 @@
   "name": "Schema Runtime Engine",
   "description": "Dynamic No-Code Schema execution engine for SuperApp",
   "category": "Developer Tools",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "runtimeType": "web",
   "entry": "dist/index.html",
   "icon": "icon.png",

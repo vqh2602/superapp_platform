@@ -1,4 +1,4 @@
-export type TransportType = 'native' | 'postmessage' | 'mock';
+export type TransportType = 'native' | 'postmessage' | 'mock' | 'adaptive';
 
 export interface BridgeRequest<T = Record<string, any>> {
   id: string;

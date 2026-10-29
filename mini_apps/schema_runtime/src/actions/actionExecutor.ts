@@ -9,6 +9,12 @@ export function invokeNativeBridge(actionName: string, payload: Record<string, a
   if (actionName === 'navigation.minimizeApp') {
     return superApp.minimizeApp();
   }
+  if (actionName === 'navigation.openNativePage') {
+    return superApp.openNativePage(payload.page || 'profile', payload.params);
+  }
+  if (actionName === 'navigation.openMiniApp') {
+    return superApp.openMiniApp(payload.appId, payload.params);
+  }
   if (actionName === 'ui.showToast') {
     return superApp.showToast(payload.message || payload.title || 'Notification');
   }
@@ -84,8 +90,10 @@ export async function executeAction(
         notify(`Kết quả quét QR: ${res.content || JSON.stringify(res)}`, 'success');
       } else if (act === 'device.getLocation') {
         notify(`Tọa độ: ${res.latitude}, ${res.longitude} (${res.city || ''})`, 'success');
-      } else if (act === 'navigation.close') {
+      } else if (act === 'navigation.close' || act === 'navigation.closeApp') {
         // Closed
+      } else if (act === 'navigation.openNativePage' || act === 'navigation.openMiniApp') {
+        // Navigated directly to native screen
       } else {
         notify(`Thực thi ${act} thành công!`, 'success');
       }

@@ -109,7 +109,7 @@ async function main() {
   const tempTar = path.resolve(backendDir, 'release.tar.gz');
   if (fs.existsSync(tempTar)) fs.unlinkSync(tempTar);
 
-  runCmd(`tar -czf release.tar.gz dist package.json package-lock.json`, { cwd: backendDir });
+  runCmd(`tar -czf release.tar.gz dist package.json package-lock.json storage`, { cwd: backendDir });
 
   // Step 3: Upload bundle to Alwaysdata
   console.log('\n\x1b[33m[3/6] Uploading release bundle to Alwaysdata via SCP...\x1b[0m');

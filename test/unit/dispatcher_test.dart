@@ -27,9 +27,9 @@ void main() {
       id: 'sdk_playground',
       name: 'SDK Playground',
       description: 'Test',
-      version: '1.0.4',
+      version: '1.0.5',
       icon: 'code',
-      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.4/dist/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.5/dist/index.html',
       capabilities: ['auth.requestCode', 'user.getProfile', 'device.scanQRCode', 'device.getLocation'],
     );
 
@@ -115,6 +115,16 @@ void main() {
       expect(
         () => dispatcher.dispatch('device.scanQRCode', {}, context),
         throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.unsupported)),
+      );
+    });
+    test('navigation.openNativePage does not require capability permission', () async {
+      // Should not throw PERMISSION_DENIED even without capability granted
+      final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
+
+      // Throws internal error because buildContext is null, which proves permission check passed
+      expect(
+        () => dispatcher.dispatch('navigation.openNativePage', {'page': 'profile'}, context),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.internalError)),
       );
     });
   });

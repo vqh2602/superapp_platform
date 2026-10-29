@@ -24,7 +24,7 @@ export class NativeBridgeTransport implements ITransport {
   public isConnected(): boolean {
     if (typeof window === 'undefined') return false;
     const win = window as unknown as NativeWindowBridge;
-    return !!win.FlutterBridge?.postMessage;
+    return !!(win.FlutterBridge?.postMessage || win.SuperAppBridge?.postMessage);
   }
 
   private initNativeGlobalBridge(): void {
@@ -53,10 +53,43 @@ export class NativeBridgeTransport implements ITransport {
           this.off(event, handler);
         },
       };
+    } else {
+      // win.SuperAppBridge already exists (e.g. from Flutter's bridgePolyfillScript)
+      win.SuperAppBridge._callbacks = win.SuperAppBridge._callbacks || {};
+      win.SuperAppBridge._listeners = win.SuperAppBridge._listeners || {};
+
+      const prevDispatch = win.SuperAppBridge.dispatchResponse;
+      win.SuperAppBridge.dispatchResponse = (res: BridgeResponse) => {
+        this.handleNativeResponse(res);
+        if (typeof prevDispatch === 'function' && prevDispatch !== win.SuperAppBridge!.dispatchResponse) {
+          try {
+            prevDispatch.call(win.SuperAppBridge, res);
+          } catch (_) {}
+        }
+      };
+
+      const prevDispatchEvent = win.SuperAppBridge.dispatchEvent;
+      win.SuperAppBridge.dispatchEvent = (evt: { event: string; payload: any }) => {
+        this.emit(evt.event, evt.payload);
+        if (typeof prevDispatchEvent === 'function' && prevDispatchEvent !== win.SuperAppBridge!.dispatchEvent) {
+          try {
+            prevDispatchEvent.call(win.SuperAppBridge, evt);
+          } catch (_) {}
+        }
+      };
+
+      if (!win.SuperAppBridge.postMessage) {
+        win.SuperAppBridge.postMessage = (msg: any) => {
+          if (win.FlutterBridge?.postMessage) {
+            win.FlutterBridge.postMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+          }
+        };
+      }
     }
   }
 
   private handleNativeResponse(res: BridgeResponse): void {
+    if (!res || !res.id) return;
     if (this.debug) {
       console.log(`[NativeBridgeTransport] Response received:`, res);
     }
@@ -65,6 +98,13 @@ export class NativeBridgeTransport implements ITransport {
 
     clearTimeout(pending.timer);
     this.callbacks.delete(res.id);
+
+    if (typeof window !== 'undefined') {
+      const win = window as unknown as NativeWindowBridge;
+      if (win.SuperAppBridge?._callbacks) {
+        delete win.SuperAppBridge._callbacks[res.id];
+      }
+    }
 
     if (res.success) {
       pending.resolve(res.data);
@@ -87,8 +127,16 @@ export class NativeBridgeTransport implements ITransport {
     };
 
     return new Promise<T>((resolve, reject) => {
+      this.initNativeGlobalBridge();
+
       const timer = setTimeout(() => {
         this.callbacks.delete(id);
+        if (typeof window !== 'undefined') {
+          const win = window as unknown as NativeWindowBridge;
+          if (win.SuperAppBridge?._callbacks) {
+            delete win.SuperAppBridge._callbacks[id];
+          }
+        }
         const timeoutError: BridgeError = {
           code: 'TIMEOUT',
           message: `Bridge call "${action}" timed out after ${timeout}ms`,
@@ -107,14 +155,28 @@ export class NativeBridgeTransport implements ITransport {
 
       if (typeof window !== 'undefined') {
         const win = window as unknown as NativeWindowBridge;
+
+        // Register callback in window.SuperAppBridge._callbacks for seamless polyfill response delivery
+        if (win.SuperAppBridge) {
+          win.SuperAppBridge._callbacks = win.SuperAppBridge._callbacks || {};
+          win.SuperAppBridge._callbacks[id] = (res: BridgeResponse) => {
+            this.handleNativeResponse(res);
+          };
+        }
+
         if (win.FlutterBridge?.postMessage) {
           win.FlutterBridge.postMessage(JSON.stringify(request));
+        } else if (win.SuperAppBridge?.postMessage) {
+          win.SuperAppBridge.postMessage(request);
         } else {
           clearTimeout(timer);
           this.callbacks.delete(id);
+          if (win.SuperAppBridge?._callbacks) {
+            delete win.SuperAppBridge._callbacks[id];
+          }
           reject({
             code: 'NATIVE_NOT_AVAILABLE',
-            message: 'FlutterBridge is not installed on window object',
+            message: 'FlutterBridge or SuperAppBridge is not installed on window object',
           } as BridgeError);
         }
       } else {

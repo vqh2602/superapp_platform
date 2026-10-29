@@ -40,6 +40,18 @@ async function run() {
     process.exit(1);
   }
 
+  // 1b. Synchronize built SDK to mini app workspaces
+  log('🔄', 'Step 1b: Đồng bộ SDK mới nhất vào node_modules của các Mini App...');
+  const consumerApps = ['sdk_playground', 'schema_runtime'];
+  for (const cApp of consumerApps) {
+    const dest = path.join(MINI_APPS_DIR, cApp, 'node_modules', '@vqh2602', 'mini-app-sdk');
+    if (fs.existsSync(dest)) {
+      fs.cpSync(path.join(SDK_DIR, 'dist'), path.join(dest, 'dist'), { recursive: true });
+      fs.copyFileSync(path.join(SDK_DIR, 'package.json'), path.join(dest, 'package.json'));
+      log('🔗', `Đã đồng bộ SDK vào ${cApp}`);
+    }
+  }
+
   // 2. Build Mini Apps
   const appsToBuild = [
     { id: 'sdk_playground', dir: path.join(MINI_APPS_DIR, 'sdk_playground'), cmd: 'npm run build' },

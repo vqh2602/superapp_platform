@@ -1,4 +1,4 @@
-import { ITransport, MockBridgeTransport, TransportResolver, TransportType } from '../transport/index.js';
+import { AdaptiveBridgeTransport, ITransport, MockBridgeTransport, TransportResolver, TransportType } from '../transport/index.js';
 import { SDKMockEngine } from '../mock/index.js';
 import { AuthModule } from './modules/auth.js';
 import { DeviceModule } from './modules/device.js';
@@ -22,7 +22,7 @@ import {
 } from './types/index.js';
 
 export class SuperAppSDK {
-  public readonly version = '1.0.4';
+  public readonly version = '1.0.5';
   public readonly transport: ITransport;
   public readonly mockEngine?: SDKMockEngine;
 
@@ -58,8 +58,10 @@ export class SuperAppSDK {
       mockDispatcher,
     });
 
-    // If MockBridgeTransport was created and we have mockEngine, attach
-    if (this.transport instanceof MockBridgeTransport && mockDispatcher) {
+    // If AdaptiveBridgeTransport or MockBridgeTransport was created and we have mockEngine, attach
+    if (this.transport instanceof AdaptiveBridgeTransport && mockDispatcher) {
+      this.transport.setMockDispatcher(mockDispatcher);
+    } else if (this.transport instanceof MockBridgeTransport && mockDispatcher) {
       this.transport.setDispatcher(mockDispatcher);
     }
 
@@ -87,6 +89,14 @@ export class SuperAppSDK {
 
   public vibrate(style?: 'light' | 'medium' | 'heavy'): Promise<void> {
     return this.device.vibrate(style);
+  }
+
+  public openNativePage(page: 'profile' | 'form' | string, params?: Record<string, any>): Promise<any> {
+    return this.navigation.openNativePage(page, params);
+  }
+
+  public openMiniApp(appId: string, params?: Record<string, any>): Promise<any> {
+    return this.navigation.openMiniApp(appId, params);
   }
 
   public closeApp(): Promise<void> {

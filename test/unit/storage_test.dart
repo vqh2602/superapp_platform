@@ -147,9 +147,9 @@ void main() {
       id: 'sdk_playground',
       name: 'SDK Playground',
       description: 'Test Manifest',
-      version: '1.0.4',
+      version: '1.0.5',
       icon: 'code',
-      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.4/dist/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.5/dist/index.html',
       capabilities: [
         'storage.setSecureItem',
         'storage.getSecureItem',

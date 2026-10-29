@@ -244,6 +244,15 @@ class BridgeChannel {
         // Navigation
         minimizeApp: function() { return bridgeInvoke('navigation.minimizeApp', {}); },
         closeApp: function() { return bridgeInvoke('navigation.closeApp', {}); },
+        close: function() { return bridgeInvoke('navigation.close', {}); },
+        openNativePage: function(options) {
+          var p = typeof options === 'string' ? { page: options } : (options || {});
+          return bridgeInvoke('navigation.openNativePage', p);
+        },
+        openMiniApp: function(options) {
+          var p = typeof options === 'string' ? { appId: options } : (options || {});
+          return bridgeInvoke('navigation.openMiniApp', p);
+        },
 
         // Media
         scanQr: function(options) { return bridgeInvoke('media.scanQRCode', options || {}); },

@@ -12,7 +12,7 @@ class NavigationOpenNativePageHandler implements NativeActionHandler {
   String get actionName => 'navigation.openNativePage';
 
   @override
-  String? get requiredCapability => 'navigation.openNativePage';
+  String? get requiredCapability => null;
 
   @override
   bool get requiresAuth => false;
@@ -40,15 +40,17 @@ class NavigationOpenNativePageHandler implements NativeActionHandler {
       throw BridgeError.actionNotFound('Page not found: $page');
     }
 
-    final result = await Navigator.push(
+    // Launch navigation to native page without blocking the bridge response
+    // This allows the mini app to receive immediate confirmation and prevents bridge timeouts
+    Navigator.push(
       buildCtx,
       MaterialPageRoute(builder: (_) => targetWidget),
     );
 
     return {
       'page': page,
-      'closed': true,
-      'result': result,
+      'opened': true,
+      'status': 'navigated',
     };
   }
 }
@@ -58,7 +60,7 @@ class NavigationCloseHandler implements NativeActionHandler {
   String get actionName => 'navigation.close';
 
   @override
-  String? get requiredCapability => 'navigation.close';
+  String? get requiredCapability => null;
 
   @override
   bool get requiresAuth => false;
@@ -82,7 +84,7 @@ class NavigationOpenMiniAppHandler implements NativeActionHandler {
   String get actionName => 'navigation.openMiniApp';
 
   @override
-  String? get requiredCapability => 'navigation.openMiniApp';
+  String? get requiredCapability => null;
 
   @override
   bool get requiresAuth => false;
