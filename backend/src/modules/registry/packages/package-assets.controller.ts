@@ -22,18 +22,18 @@ export class PackageAssetsController {
     const [app, snapshot] = await Promise.all([
       this.apps.findOneBy({ id: appId }), this.versions.findOneBy({ appId, version }),
     ]);
-    if (!app || !snapshot?.packageKey) throw new NotFoundException('Package not found');
-    // Icons remain visible in management while the app itself is hidden.
+    if (!app || !snapshot) throw new NotFoundException('Mini App not found');
     if (filename !== snapshot.manifest?.icon && (app.status !== MiniAppStatus.PUBLISHED || app.activePublishedVersion !== version)) {
       throw new ForbiddenException('Mini App or version is not active');
     }
+    const key = snapshot.packageKey || `${appId}-${version}`;
     try {
-      const buffer = await this.packages.file(snapshot.packageKey, filename);
+      const buffer = await this.packages.file(key, filename);
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Cache-Control', 'no-store');
       response.type(extname(filename)).send(buffer);
-    } catch (error) {
-      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') throw new NotFoundException('File not found');
+    } catch (error: any) {
+      if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') throw new NotFoundException('File not found');
       throw error;
     }
   }

@@ -86,7 +86,7 @@ export class PackageService {
   }
 
   async file(key: string, name: string): Promise<Buffer> {
-    if (!/^[a-f0-9-]{36}$/.test(key) || !safePackagePath(name)) throw new BadRequestException('Đường dẫn tài nguyên không hợp lệ');
+    if (!/^[a-zA-Z0-9_.-]+$/.test(key) || !safePackagePath(name)) throw new BadRequestException('Đường dẫn tài nguyên không hợp lệ');
     return readFile(join(this.storageRoot, key, name));
   }
 

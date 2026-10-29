@@ -445,10 +445,21 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
 
     // Load entry point: remote Backend URL is the primary runtime loader
-    if (validManifest.isAsset && validManifest.entryUrl.startsWith('assets/')) {
-      controller.loadFlutterAsset(validManifest.entryUrl);
+    if (validManifest.isAsset && validManifest.entryUrl.startsWith('assets/') && !validManifest.entryUrl.startsWith('assets/mini_apps/')) {
+      try {
+        controller.loadFlutterAsset(validManifest.entryUrl);
+      } catch (e) {
+        debugPrint('[MiniAppRuntimeScreen] loadFlutterAsset error: $e');
+        controller.loadRequest(Uri.parse(validManifest.entryUrl));
+      }
     } else {
-      controller.loadRequest(Uri.parse(validManifest.entryUrl));
+      var targetUri = validManifest.entryUrl;
+      if (targetUri.startsWith('assets/mini_apps/')) {
+        final isWeb = validManifest.isWebApp;
+        final targetApp = isWeb ? validManifest.id : 'schema_runtime';
+        targetUri = '${EndpointConfig.alwaysdataEndpoint}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
+      }
+      controller.loadRequest(Uri.parse(targetUri));
     }
 
     Future.delayed(const Duration(milliseconds: kIsWeb ? 1200 : 3000), () {
@@ -918,5 +929,173 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
 
     return barContent;
+  }
+
+  Widget _buildAppLogo(MiniAppManifest? manifest, Color brandColor) {
+    final appId = manifest?.id ?? _currentAppId;
+    final iconStr = manifest?.icon ?? '';
+    final endpoint = ref.read(backendEndpointProvider);
+
+    String? fullNetworkUrl;
+    if (iconStr.startsWith('http://') || iconStr.startsWith('https://')) {
+      fullNetworkUrl = iconStr;
+    } else if (iconStr.startsWith('/')) {
+      fullNetworkUrl = '${endpoint.baseUrl}$iconStr';
+    }
+
+    IconData fallbackIcon = Icons.apps_rounded;
+    final iconName = iconStr.toLowerCase();
+    if (iconName == 'video' || iconName == 'movie' || appId == 'capcut' || appId == 'youtube') {
+      fallbackIcon = Icons.movie_filter_rounded;
+    } else if (iconName == 'games' || iconName == 'game' || appId == 'free_fire') {
+      fallbackIcon = Icons.sports_esports_rounded;
+    } else if (iconName == 'social' || iconName == 'chat' || appId == 'messenger') {
+      fallbackIcon = Icons.chat_bubble_rounded;
+    } else if (iconName == 'shopping' || iconName == 'cart' || appId == 'shopee') {
+      fallbackIcon = Icons.shopping_bag_rounded;
+    } else if (iconName == 'coffee' || iconName == 'storefront' || appId == 'sample_store' || appId == 'coffee_shop') {
+      fallbackIcon = Icons.coffee_rounded;
+    } else if (iconName == 'code' || iconName == 'terminal' || appId == 'sdk_playground') {
+      fallbackIcon = Icons.code_rounded;
+    } else if (iconName == 'utilities' || appId == 'viettel_tammi') {
+      fallbackIcon = Icons.cell_tower_rounded;
+    } else if (iconName == 'music' || appId == 'tiktok') {
+      fallbackIcon = Icons.music_note_rounded;
+    } else if (appId == 'fc_mobile') {
+      fallbackIcon = Icons.sports_soccer_rounded;
+    } else if (appId == 'facebook') {
+      fallbackIcon = Icons.facebook_rounded;
+    } else if (appId == 'zalo') {
+      fallbackIcon = Icons.message_rounded;
+    }
+
+    return Container(
+      width: 78,
+      height: 78,
+      decoration: BoxDecoration(
+        color: brandColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: brandColor.withValues(alpha: 0.35),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: fullNetworkUrl != null
+            ? Image.network(
+                fullNetworkUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  fallbackIcon,
+                  size: 40,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(
+                fallbackIcon,
+                size: 40,
+                color: Colors.white,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingView(
+    MiniAppManifest? manifest,
+    bool isDarkTheme,
+    Color themeBgColor,
+    Color brandColor,
+  ) {
+    final title = manifest?.name.isNotEmpty == true
+        ? manifest!.name
+        : (_overrideTitle ?? 'Mini App');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PulseEffect(
+          minScale: 0.94,
+          maxScale: 1.04,
+          duration: const Duration(milliseconds: 1400),
+          child: _buildAppLogo(manifest, brandColor),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(height: 24),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: _loadProgress.toDouble()),
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) {
+            final percent = value.clamp(0, 100).toInt();
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: brandColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: 160,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isDarkTheme ? Colors.white12 : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (value / 100.0).clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: brandColor,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: brandColor.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  percent >= 100
+                      ? 'Đang khởi chạy...'
+                      : (percent > 60
+                          ? 'Đang nạp tài nguyên...'
+                          : 'Đang tải Mini App...'),
+                  style: TextStyle(
+                    color: isDarkTheme ? Colors.white60 : const Color(0xFF64748B),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 }

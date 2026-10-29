@@ -33,6 +33,18 @@ class MiniAppRepository {
   MiniAppManifest _manifestFromApi(Map<String, dynamic> data) {
     final json = Map<String, dynamic>.from(data);
     final api = Uri.parse(_catalogUrl);
+
+    // Safeguard: If backend returned legacy assets/ path, transform to remote backend URL
+    final rawEntry = json['entryUrl'];
+    if (rawEntry is String && rawEntry.startsWith('assets/mini_apps/')) {
+      final appId = json['id'] as String? ?? '';
+      final ver = json['version'] as String? ?? '1.0.0';
+      final isWeb = json['runtimeType'] == 'web';
+      final targetApp = isWeb ? appId : 'schema_runtime';
+      json['entryUrl'] = api.resolve('/api/v1/miniapps/$targetApp/$ver/dist/index.html').toString();
+      json['isAsset'] = false;
+    }
+
     for (final key in ['entryUrl', 'icon']) {
       final value = json[key];
       if (value is String && value.startsWith('/')) {
