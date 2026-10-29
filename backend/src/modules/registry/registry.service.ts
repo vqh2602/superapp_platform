@@ -84,7 +84,7 @@ export class RegistryService {
         if (await manager.findOneBy(MiniAppVersionEntity, { appId, version: manifest.version })) throw new ConflictException(`Version "${manifest.version}" already exists`);
         packageKey = await this.packages.store(pkg);
         const base = `/api/v1/miniapps/${appId}/${manifest.version}/`;
-        const entryUrl = manifest.runtimeType === MiniAppRuntimeType.WEB ? base + manifest.entry : 'assets/mini_apps/schema_runtime/index.html';
+        const entryUrl = manifest.runtimeType === MiniAppRuntimeType.WEB ? base + manifest.entry : '/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html';
         await manager.save(MiniAppVersionEntity, manager.create(MiniAppVersionEntity, {
           appId, version: manifest.version, schemaVersion: pkg.schema?.schemaVersion || 1,
           status: MiniAppStatus.PUBLISHED, schema: pkg.schema || null, entryUrl,
@@ -97,7 +97,7 @@ export class RegistryService {
           supportEmail: manifest.supportEmail || '', website: manifest.website || '',
           themeColor: manifest.themeColor || '#6366F1',
           activePublishedVersion: manifest.version, entryUrl,
-          isAsset: manifest.runtimeType === MiniAppRuntimeType.SCHEMA,
+          isAsset: false,
           requestedPermissions: manifest.permissions,
           capabilities: app.capabilities.filter(cap => manifest.permissions.includes(cap)),
         });

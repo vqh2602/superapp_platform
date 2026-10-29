@@ -31,4 +31,12 @@ export class DeviceModule {
   }> {
     return this.transport.invoke('device.pickImage');
   }
+
+  /**
+   * Giữ màn hình luôn sáng / bật hoặc cho phép tắt
+   */
+  public async keepScreen(options: boolean | { keepScreenOn: boolean } = true): Promise<{ success: boolean; keepScreenOn: boolean }> {
+    const payload = typeof options === 'boolean' ? { keepScreenOn: options } : options;
+    return this.transport.invoke('keepScreen', payload);
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
@@ -165,7 +166,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               )
             else
-              ...filteredApps.map((app) => AppListItem(app: app)),
+              ...List.generate(filteredApps.length, (index) {
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: 20 * index),
+                  child: AppListItem(app: filteredApps[index]),
+                );
+              }),
             const SizedBox(height: 24),
           ],
 
@@ -184,14 +190,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               spacing: 10,
               runSpacing: 10,
               children: _popularKeywords.map((kw) {
-                return InkWell(
+                return BouncingTap(
                   onTap: () => _onKeywordSelected(kw),
-                  borderRadius: BorderRadius.circular(18),
+                  scaleFactor: 0.92,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Text(
                       kw,

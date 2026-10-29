@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/animations/app_motion.dart';
 import '../../features/authentication/presentation/screens/splash_screen.dart';
 import '../../features/authentication/presentation/screens/mock_login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
@@ -22,38 +23,70 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const MockLoginScreen(),
+      pageBuilder: (context, state) => buildSlideUpTransitionPage(
+        context: context,
+        state: state,
+        child: const MockLoginScreen(),
+      ),
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterScreen(),
+      pageBuilder: (context, state) => buildSlideRightTransitionPage(
+        context: context,
+        state: state,
+        child: const RegisterScreen(),
+      ),
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const MiniAppCatalogScreen(),
+      pageBuilder: (context, state) => buildSlideUpTransitionPage(
+        context: context,
+        state: state,
+        child: const MiniAppCatalogScreen(),
+      ),
     ),
     GoRoute(
       path: '/search',
-      builder: (context, state) => const SearchScreen(showBackButton: true),
+      pageBuilder: (context, state) => buildSlideUpTransitionPage(
+        context: context,
+        state: state,
+        child: const SearchScreen(showBackButton: true),
+      ),
     ),
     GoRoute(
       path: '/miniapp/:appId',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final appId = state.pathParameters['appId'] ?? 'sdk_playground';
-        return MiniAppRuntimeScreen(appId: appId);
+        return buildSlideUpTransitionPage(
+          context: context,
+          state: state,
+          child: MiniAppRuntimeScreen(appId: appId),
+        );
       },
     ),
     GoRoute(
       path: '/debug',
-      builder: (context, state) => const NativeDebugScreen(),
+      pageBuilder: (context, state) => buildSlideRightTransitionPage(
+        context: context,
+        state: state,
+        child: const NativeDebugScreen(),
+      ),
     ),
     GoRoute(
       path: '/profile',
-      builder: (context, state) => const NativeProfileScreen(),
+      pageBuilder: (context, state) => buildSlideRightTransitionPage(
+        context: context,
+        state: state,
+        child: const NativeProfileScreen(),
+      ),
     ),
     GoRoute(
       path: '/form',
-      builder: (context, state) => const NativeFormScreen(),
+      pageBuilder: (context, state) => buildSlideRightTransitionPage(
+        context: context,
+        state: state,
+        child: const NativeFormScreen(),
+      ),
     ),
   ],
 );

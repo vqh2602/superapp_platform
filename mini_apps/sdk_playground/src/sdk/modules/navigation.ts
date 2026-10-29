@@ -14,4 +14,11 @@ export class NavigationModule {
   public async openMiniApp(appId: string): Promise<any> {
     return this.transport.invoke('navigation.openMiniApp', { appId });
   }
+
+  /**
+   * Thu nhỏ mini app vào floating dock / thu về màn hình trước
+   */
+  public async minimizeApp(): Promise<any> {
+    return this.transport.invoke('minimizeApp');
+  }
 }

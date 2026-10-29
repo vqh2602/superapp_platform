@@ -68,7 +68,7 @@ flowchart TB
     end
 
     subgraph MiniAppSandbox["3. Mini App Runtime (Web / React / Schema)"]
-        SDK["@superapp/mini-app-sdk"]
+        SDK["@vqh2602/mini-app-sdk"]
         Transport["BridgeTransport (Auto Resolver)"]
         MiniAppView["Giao diện Mini App (UI Components)"]
     end
@@ -122,16 +122,15 @@ npm run start:dev
 ```
 *Backend sẽ lắng nghe tại `http://localhost:3000/api/v1` và tự động nạp dữ liệu mẫu ban đầu.*
 
-### Bước 2: Biên dịch Mini Apps (Web Assets)
+### Bước 2: Tự động Biên dịch & Đẩy Mini Apps lên Backend
 Tại thư mục gốc dự án:
 ```bash
-# Biên dịch Mini App SDK Playground thành Single-file HTML
-cd mini_apps/sdk_playground
-npm install
+# Tự động build SDK monorepo, build toàn bộ Mini Apps (sdk_playground, schema_runtime, sample_store) và đẩy lên Backend Storage
+node scripts/build-and-deploy-miniapps.cjs
+# Hoặc sử dụng npm:
 npm run build
-cd ../..
 ```
-*(Bản dựng inlined sẽ tự động xuất vào thư mục `assets/mini_apps/sdk_playground/index.html` của Flutter)*.
+*(Bản dựng inlined được đóng gói theo chuẩn SuperApp v1 và triển khai trực tiếp lên Backend Storage/Registry API. Ứng dụng Flutter SuperApp nạp Mini App qua Backend HTTP URL, không còn lưu trữ trong local assets)*.
 
 ### Bước 3: Khởi chạy SuperApp Platform (Flutter)
 ```bash
@@ -183,11 +182,14 @@ superapp_platform/
 │   ├── sdk_playground/          # Ứng dụng React 18 + TS + Vite kiểm thử toàn bộ tính năng SDK
 │   ├── sample_store/            # Mini App bán hàng mẫu
 │   └── schema_runtime/          # Runtime HTML5 thực thi No-Code Schema động
-├── mini_app_sdk/                # 📦 HỆ SINH THÁI NPM PACKAGES CHO DEVELOPER
-│   ├── packages/                # sdk-core, sdk-transport, sdk-mock-engine, mini-app-cli, simulator
-│   └── README.md                # Tài liệu chi tiết bộ công cụ Monorepo SDK
-├── assets/                      # 📦 CÁC ASSETS ĐÓNG GÓI SẴN TRONG FLUTTER
-│   └── mini_apps/               # Thư mục chứa bundle HTML/JS offline của Mini Apps
+├── mini_app_sdk/                # 📦 OFFICIAL NPM PACKAGE CHO DEVELOPER ([@vqh2602/mini-app-sdk](https://www.npmjs.com/package/@vqh2602/mini-app-sdk))
+│   ├── src/                     # Core SDK, Bridge Transport, Mock Engine, CLI
+│   ├── bin/                     # CLI executables (miniapp, simulator)
+│   ├── simulator/               # Mã nguồn Phone Simulator (React 18 + Vite)
+│   ├── simulator-dist/          # Web Phone Simulator bundle tĩnh tích hợp sẵn
+│   └── README.md                # Tài liệu chi tiết SDK & CLI All-in-One
+├── assets/                      # 📦 CÁC ASSETS TĨNH FLUTTER (Hình ảnh, Icons)
+│   └── images/                  # Ảnh minh họa và biểu tượng ứng dụng
 ├── builder/                     # 🛠️ NO-CODE SCHEMA BUILDER CMS (React + Vite :5174)
 ├── pubspec.yaml                 # Cấu hình dependencies & assets của Flutter
 └── docker-compose.yml           # Khởi chạy toàn bộ hệ thống bằng Docker Compose

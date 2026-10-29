@@ -152,8 +152,8 @@ void main() {
             'category': 'Developer Tools',
             'runtimeType': 'web',
             'version': '1.0.0',
-            'entryUrl': 'assets/mini_apps/sdk_playground/index.html',
-            'isAsset': true,
+            'entryUrl': '/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
+            'isAsset': false,
             'capabilities': ['auth.requestCode'],
             'updatedAt': DateTime.now().toIso8601String(),
           }
@@ -238,7 +238,7 @@ void main() {
         description: 'Test',
         version: '1.0.0',
         icon: 'code',
-        entryUrl: 'assets/mini_apps/sdk_playground/index.html',
+        entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
         capabilities: [
           'auth.requestCode',
           'user.getProfile',

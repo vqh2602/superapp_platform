@@ -236,7 +236,7 @@ Khi người dùng mở một Mini App từ Catalog, luồng điều hướng ho
 
 1. **Khởi tạo WebViewController**: Cấu hình chế độ JavaScript không giới hạn, màu nền trắng.
 2. **Đăng ký Bridge Channel**: Inject polyfill `window.FlutterBridge` và `window.SuperAppBridge`.
-3. **Nạp Bundle**: Tải URL từ thư mục asset local (ví dụ: `assets/mini_apps/sdk_playground/index.html`) hoặc remote URL.
+3. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
 4. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
 5. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
 

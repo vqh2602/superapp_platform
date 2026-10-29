@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
@@ -158,7 +159,10 @@ class _AppsTabState extends ConsumerState<AppsTab>
         child: Divider(height: 1, color: Color(0xFFF8FAFC)),
       ),
       itemBuilder: (context, index) {
-        return AppListItem(app: apps[index]);
+        return FadeSlideIn(
+          delay: Duration(milliseconds: 25 * index),
+          child: AppListItem(app: apps[index]),
+        );
       },
     );
   }

@@ -70,9 +70,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/mini_apps/sdk_playground/
-    - assets/mini_apps/sample_store/
-    - assets/mini_apps/schema_runtime/
     - assets/images/
 
 flutter_launcher_icons:

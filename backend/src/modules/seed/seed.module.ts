@@ -4,9 +4,13 @@ import { MiniAppEntity } from '../../entities/mini-app.entity';
 import { MiniAppVersionEntity } from '../../entities/mini-app-version.entity';
 import { UserEntity } from '../../entities/user.entity';
 import { SeedService } from './seed.service';
+import { RegistryModule } from '../registry/registry.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MiniAppEntity, MiniAppVersionEntity, UserEntity])],
+  imports: [
+    TypeOrmModule.forFeature([MiniAppEntity, MiniAppVersionEntity, UserEntity]),
+    RegistryModule,
+  ],
   providers: [SeedService],
   exports: [SeedService],
 })

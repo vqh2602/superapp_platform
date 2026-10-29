@@ -23,7 +23,7 @@ class MiniAppManifest {
     required this.version,
     required this.icon,
     required this.entryUrl,
-    this.isAsset = true,
+    this.isAsset = false,
     required this.capabilities,
     this.appRuntimeType = 'web',
     this.category = 'General',

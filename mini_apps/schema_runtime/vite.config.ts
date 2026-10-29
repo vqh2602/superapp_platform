@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), viteSingleFile()],
   base: './',
   build: {
-    outDir: path.resolve(__dirname, '../../assets/mini_apps/schema_runtime'),
+    outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
   },
 });

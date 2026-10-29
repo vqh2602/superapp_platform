@@ -20,9 +20,12 @@ abstract class MiniAppUiDelegate {
     String? headerTitle,
     String? textColor,
     String? statusBar,
+    Color? statusBarColor,
     bool? actionBarHidden,
     bool? hideAndroidBottomNavigationBar,
     bool? hasPadding,
+    bool? hasPaddingTop,
+    bool? hasPaddingBottom,
     Color? bottomNavColor,
   });
 

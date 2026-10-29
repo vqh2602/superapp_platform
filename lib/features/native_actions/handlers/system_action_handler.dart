@@ -213,7 +213,7 @@ class GetAppInfoHandler implements NativeActionHandler {
       'category': m?.category ?? 'Utilities',
       'runtimeType': m?.appRuntimeType ?? 'web',
       'description': m?.description ?? '',
-      'isAsset': m?.isAsset ?? true,
+      'isAsset': m?.isAsset ?? false,
       'status': m?.status ?? 'PUBLISHED',
     };
   }

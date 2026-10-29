@@ -55,10 +55,10 @@ void main() {
       expect(BridgeChannel.webDebugPolyfillScript, contains('addEventListener(\'error\''));
     });
 
-    test('Mini App bundled HTML integrity: schema_runtime and sdk_playground', () {
+    test('Mini App built HTML integrity: schema_runtime and sdk_playground', () {
       final paths = [
-        'assets/mini_apps/schema_runtime/index.html',
-        'assets/mini_apps/sdk_playground/index.html',
+        'mini_apps/schema_runtime/dist/index.html',
+        'mini_apps/sdk_playground/dist/index.html',
       ];
 
       for (final p in paths) {

@@ -43,6 +43,9 @@ import {
   Link2,
   Mic,
   Keyboard,
+  Bell,
+  Minimize2,
+  Type,
 } from 'lucide-react';
 
 export const FeatureCatalog: React.FC = () => {
@@ -159,48 +162,76 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => superApp.setBrightness(Number(p.brightness)),
   };
 
-  const uiStatusStyleConfig: RunnerConfig = {
-    id: 'ui_status_style',
+  const uiNavBarTitleConfig: RunnerConfig = {
+    id: 'ui_navbar_title',
     category: '2.2. UI & System Controls',
-    title: 'setStatusBarStyle',
-    description: 'Miniapp tự báo màu icon status bar phù hợp với nền của mình (light/dark).',
-    actionCode: "superApp.setStatusBarStyle('dark')",
+    title: 'setNavigationBarTitle',
+    description: 'Đặt lại tiêu đề trên thanh điều hướng AppBar của trang hiện tại.',
+    actionCode: "superApp.setNavigationBarTitle({ title: 'Sản phẩm nổi bật' })",
     hasParams: true,
-    defaultParams: { style: 'dark' },
-    run: async (p) => superApp.setStatusBarStyle(p.style),
-  };
-
-  const uiStatusBarColorConfig: RunnerConfig = {
-    id: 'ui_status_color',
-    category: '2.2. UI & System Controls',
-    title: 'setStatusBarColor',
-    description: 'Đổi màu status bar (khác setStatusBarStyle - API này đổi màu nền tuỳ chỉnh).',
-    actionCode: "superApp.setStatusBarColor('#1E293B')",
-    hasParams: true,
-    defaultParams: { color: '#1E293B' },
-    run: async (p) => superApp.setStatusBarColor(p.color),
-  };
-
-  const uiNavBarColorConfig: RunnerConfig = {
-    id: 'ui_navbar_color',
-    category: '2.2. UI & System Controls',
-    title: 'setNavigationBarColor',
-    description: 'Đổi màu thanh navigation bar.',
-    actionCode: "superApp.setNavigationBarColor('#0F172A')",
-    hasParams: true,
-    defaultParams: { color: '#0F172A' },
-    run: async (p) => superApp.setNavigationBarColor(p.color),
+    defaultParams: { title: 'Sản phẩm nổi bật' },
+    run: async (p) => superApp.setNavigationBarTitle(p),
   };
 
   const uiConfigAppViewConfig: RunnerConfig = {
     id: 'ui_config_view',
     category: '2.2. UI & System Controls',
     title: 'configAppView',
-    description: 'Cấu hình navigation bar / status bar (ẩn/hiện chế độ toàn màn hình).',
-    actionCode: 'superApp.configAppView({ hideStatusBar: false, hideNavigationBar: false })',
+    description: 'Cấu hình toàn diện: Màu nền AppBar, StatusBar, chữ sáng/tối, bật/tắt safe area top/bot (riêng nút action góc phải luôn giữ safe area bảo mật).',
+    actionCode: `await bridge.configAppView({
+  headerColor: '#0068FF',
+  statusBarColor: '#0052CC',
+  textColor: 'white',
+  statusBar: 'transparent',
+  headerTitle: 'Sản phẩm nổi bật',
+  actionBarHidden: false,
+  hasPaddingTop: false,   // Tắt safe area top (tràn viền lên đỉnh)
+  hasPaddingBottom: false // Tắt safe area bot (tràn viền xuống đáy)
+});`,
     hasParams: true,
-    defaultParams: { hideStatusBar: false, hideNavigationBar: false },
+    defaultParams: {
+      headerColor: '#0068FF',
+      statusBarColor: '#0052CC',
+      textColor: 'white',
+      statusBar: 'transparent',
+      headerTitle: 'Sản phẩm nổi bật',
+      actionBarHidden: false,
+      hasPaddingTop: false,
+      hasPaddingBottom: false,
+    },
     run: async (p) => superApp.configAppView(p),
+  };
+
+  const deviceKeepScreenConfig: RunnerConfig = {
+    id: 'device_keep_screen',
+    category: '2.2. UI & System Controls',
+    title: 'keepScreen',
+    description: 'Giữ màn hình luôn sáng / bật hoặc cho phép tắt khi không hoạt động.',
+    actionCode: 'superApp.keepScreen({ keepScreenOn: true })',
+    hasParams: true,
+    defaultParams: { keepScreenOn: true },
+    run: async (p) => superApp.keepScreen(p),
+  };
+
+  const uiNotificationConfig: RunnerConfig = {
+    id: 'ui_notification',
+    category: '2.2. UI & System Controls',
+    title: 'requestSendNotification',
+    description: 'Yêu cầu người dùng cho phép ứng dụng gửi thông báo qua OA / Mini App.',
+    actionCode: "superApp.requestSendNotification({ templateId: 'order_status_update', reason: 'Nhận thông báo cập nhật đơn hàng' })",
+    hasParams: true,
+    defaultParams: { templateId: 'order_status_update', reason: 'Nhận thông báo cập nhật đơn hàng' },
+    run: async (p) => superApp.requestSendNotification(p),
+  };
+
+  const navMinimizeConfig: RunnerConfig = {
+    id: 'nav_minimize_app',
+    category: '2.2. UI & System Controls',
+    title: 'minimizeApp',
+    description: 'Thu nhỏ mini app vào dock nền / quay về màn hình trước.',
+    actionCode: 'superApp.minimizeApp()',
+    hasParams: false,
+    run: async () => superApp.minimizeApp(),
   };
 
   const uiMenuConfig: RunnerConfig = {
@@ -715,17 +746,18 @@ export const FeatureCatalog: React.FC = () => {
       <section className="category-section">
         <div className="category-header">
           <Sliders className="category-icon" size={18} />
-          <h2 className="category-title">2.2. UI & System Controls (10 actions)</h2>
+          <h2 className="category-title">2.2. UI & System Controls (Unified)</h2>
         </div>
         <div className="feature-grid">
+          <FeatureItem icon={<Compass size={20} />} config={uiConfigAppViewConfig} statusText="Unified App View" />
+          <FeatureItem icon={<Type size={20} />} config={uiNavBarTitleConfig} statusText="NavBar Title" />
+          <FeatureItem icon={<Sun size={20} />} config={deviceKeepScreenConfig} statusText="Keep Screen Awake" />
+          <FeatureItem icon={<Bell size={20} />} config={uiNotificationConfig} statusText="OA Notification" />
+          <FeatureItem icon={<Minimize2 size={20} />} config={navMinimizeConfig} statusText="Minimize App" />
           <FeatureItem icon={<Terminal size={20} />} config={uiToastConfig} statusText="Bottom Toast" />
           <FeatureItem icon={<Vibrate size={20} />} config={uiVibrateConfig} statusText="Haptic Vibrate" />
           <FeatureItem icon={<Copy size={20} />} config={uiClipboardConfig} statusText="Copy Text" />
           <FeatureItem icon={<Sun size={20} />} config={uiBrightnessConfig} statusText="Brightness" />
-          <FeatureItem icon={<Sliders size={20} />} config={uiStatusStyleConfig} statusText="Style Light/Dark" />
-          <FeatureItem icon={<Sliders size={20} />} config={uiStatusBarColorConfig} statusText="Custom Color" />
-          <FeatureItem icon={<Sliders size={20} />} config={uiNavBarColorConfig} statusText="NavBar Color" />
-          <FeatureItem icon={<Compass size={20} />} config={uiConfigAppViewConfig} statusText="Fullscreen Mode" />
           <FeatureItem icon={<Menu size={20} />} config={uiMenuConfig} statusText="Shell Menu" />
           <FeatureItem icon={<LogOut size={20} />} config={uiCloseAppConfig} statusText="Close App" isDanger />
         </div>

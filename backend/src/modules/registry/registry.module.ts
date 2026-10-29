@@ -16,6 +16,6 @@ import { RegistryController } from './registry.controller';
   ],
   controllers: [RegistryController, PackageAssetsController],
   providers: [RegistryService, PackageService],
-  exports: [RegistryService],
+  exports: [RegistryService, PackageService],
 })
 export class RegistryModule {}

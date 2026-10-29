@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/animations/app_motion.dart';
 
 class CategoryItem {
   final String id;
@@ -62,39 +63,49 @@ class CategoryCatalogGrid extends StatelessWidget {
       itemCount: kAllCategories.length,
       itemBuilder: (context, index) {
         final cat = kAllCategories[index];
-        return InkWell(
-          onTap: () => onCategorySelected?.call(cat),
-          borderRadius: BorderRadius.circular(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: cat.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+        return FadeSlideIn(
+          delay: Duration(milliseconds: 12 * index),
+          child: BouncingTap(
+            onTap: () => onCategorySelected?.call(cat),
+            scaleFactor: 0.90,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: cat.color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cat.color.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    cat.icon,
+                    color: cat.color,
+                    size: 24,
+                  ),
                 ),
-                child: Icon(
-                  cat.icon,
-                  color: cat.color,
-                  size: 24,
+                const SizedBox(height: 8),
+                Text(
+                  cat.label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF334155),
+                    height: 1.15,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                cat.label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF334155),
-                  height: 1.15,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../data/mini_app_repository.dart';
 import '../widgets/app_list_item.dart';
 
@@ -51,58 +52,65 @@ class GamesTab extends ConsumerWidget {
           // Game Hero Banner
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              height: 150,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFEA580C), Color(0xFFF59E0B)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFEA580C).withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 60),
+              child: Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEA580C), Color(0xFFF59E0B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.all(18),
-              child: const Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '🎮 THẾ GIỚI GAME MINI',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Chiến game tức thì',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Không cần tải bộ cài nặng. Chơi mượt trên đám mây.',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
-                  ),
-                  Icon(Icons.sports_esports_rounded, color: Colors.white, size: 52),
-                ],
+                  ],
+                ),
+                padding: const EdgeInsets.all(20),
+                child: const Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '🎮 THẾ GIỚI GAME MINI',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Chiến game tức thì',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Không cần tải bộ cài nặng. Chơi mượt trên đám mây.',
+                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PulseEffect(
+                      minScale: 0.95,
+                      maxScale: 1.05,
+                      child: Icon(Icons.sports_esports_rounded, color: Colors.white, size: 54),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -120,7 +128,12 @@ class GamesTab extends ConsumerWidget {
             ),
           ),
 
-          ...displayGames.map((app) => AppListItem(app: app)),
+          ...List.generate(displayGames.length, (index) {
+            return FadeSlideIn(
+              delay: Duration(milliseconds: 30 * index),
+              child: AppListItem(app: displayGames[index]),
+            );
+          }),
         ],
       ),
     );

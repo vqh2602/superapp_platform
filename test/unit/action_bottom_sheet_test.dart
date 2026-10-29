@@ -12,7 +12,7 @@ void main() {
       description: 'Text, audio and video calls',
       version: '1.0.0',
       icon: 'social',
-      entryUrl: 'assets/mini_apps/schema_runtime/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html',
       category: 'Social Network',
       capabilities: ['user.getBasicInfo', 'navigation.close'],
     );

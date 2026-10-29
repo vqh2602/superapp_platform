@@ -22,11 +22,11 @@ export const FeatureItem: React.FC<FeatureItemProps> = ({
       <div className="feature-icon-wrapper">{icon}</div>
       <div className="feature-content">
         <div className="feature-title-row">
-          <h3 className="feature-name">{config.title}</h3>
+          <h3 className="feature-name" title={config.title}>{config.title}</h3>
           <span className={`status-tag ${isDanger ? 'tag-danger' : 'tag-ready'}`}>{statusText}</span>
         </div>
         <p className="feature-desc">{config.description}</p>
-        <code className="feature-code">{config.actionCode}</code>
+        <code className="feature-code" title={config.actionCode}>{config.actionCode}</code>
       </div>
       <div className="feature-action">
         <button

@@ -7,6 +7,9 @@ class AppConfig {
   /// Default Backend Base URL
   static const String defaultBaseUrl = 'http://localhost:3000';
 
+  /// Cloud Alwaysdata Base URL
+  static const String alwaysdataBaseUrl = 'https://superappplatfrom.alwaysdata.net';
+
   /// Catalog REST API URL for Dynamic Mini App Registry
   static const String catalogApiUrl = 'http://localhost:3000/api/v1/catalog';
 

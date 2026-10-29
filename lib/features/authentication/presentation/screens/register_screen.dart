@@ -230,18 +230,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _endpointController,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Backend Endpoint URL',
-                      hintText: 'http://localhost:3000',
+                      hintText: 'https://superappplatfrom.alwaysdata.net',
                       prefixIcon: const Icon(Icons.dns_rounded, size: 20),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.restore_rounded, size: 20),
                         tooltip: 'Đặt lại mặc định',
                         onPressed: () {
-                          _endpointController.text = AppConfig.defaultBaseUrl;
+                          setState(() {
+                            _endpointController.text = AppConfig.defaultBaseUrl;
+                          });
                         },
                       ),
-                      helperText: 'Địa chỉ máy chủ API backend',
+                      helperText: 'Nhập URL endpoint riêng hoặc bấm chọn nhanh bên dưới',
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -258,6 +261,77 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         return 'Vui lòng nhập Backend Endpoint';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Nút chọn nhanh Endpoint
+                  Builder(
+                    builder: (context) {
+                      final currentText = _endpointController.text.trim();
+                      final isAlwaysdata = currentText == EndpointConfig.alwaysdataEndpoint ||
+                          EndpointConfig.normalize(currentText) == EndpointConfig.alwaysdataEndpoint;
+                      final isLocalhost = currentText == EndpointConfig.localhostEndpoint ||
+                          EndpointConfig.normalize(currentText) == EndpointConfig.localhostEndpoint;
+
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text(
+                            'Chọn nhanh:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.cloud_rounded,
+                              size: 16,
+                              color: isAlwaysdata ? Colors.white : const Color(0xFF16A34A),
+                            ),
+                            label: const Text('Alwaysdata (Cloud)'),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isAlwaysdata ? FontWeight.bold : FontWeight.w500,
+                              color: isAlwaysdata ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            backgroundColor: isAlwaysdata ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
+                            side: BorderSide(
+                              color: isAlwaysdata ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _endpointController.text = EndpointConfig.alwaysdataEndpoint;
+                              });
+                            },
+                          ),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.computer_rounded,
+                              size: 16,
+                              color: isLocalhost ? Colors.white : const Color(0xFF0284C7),
+                            ),
+                            label: const Text('Localhost (3000)'),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isLocalhost ? FontWeight.bold : FontWeight.w500,
+                              color: isLocalhost ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            backgroundColor: isLocalhost ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                            side: BorderSide(
+                              color: isLocalhost ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _endpointController.text = EndpointConfig.localhostEndpoint;
+                              });
+                            },
+                          ),
+                        ],
+                      );
                     },
                   ),
 

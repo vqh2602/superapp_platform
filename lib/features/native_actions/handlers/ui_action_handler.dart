@@ -10,8 +10,26 @@ import '../domain/action_context.dart';
 
 Color? _tryParseHex(String? hexString) {
   if (hexString == null || hexString.isEmpty) return null;
+  final str = hexString.trim();
+  if (str.toLowerCase() == 'transparent') return Colors.transparent;
+
+  // rgb(r, g, b) or rgba(r, g, b, a)
+  if (str.toLowerCase().startsWith('rgb')) {
+    try {
+      final inside = str.substring(str.indexOf('(') + 1, str.indexOf(')'));
+      final parts = inside.split(',').map((p) => p.trim()).toList();
+      if (parts.length >= 3) {
+        final r = int.parse(parts[0]);
+        final g = int.parse(parts[1]);
+        final b = int.parse(parts[2]);
+        final a = parts.length >= 4 ? double.parse(parts[3]) : 1.0;
+        return Color.fromRGBO(r, g, b, a);
+      }
+    } catch (_) {}
+  }
+
   try {
-    final hex = hexString.replaceAll('#', '').trim();
+    final hex = str.replaceAll('#', '').trim();
     if (hex.length == 6) {
       return Color(int.parse('FF$hex', radix: 16));
     } else if (hex.length == 8) {
@@ -264,20 +282,12 @@ class SetStatusBarStyleHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    // Merged into configAppView
     final style = payload['style']?.toString().toLowerCase() ?? 'light';
-    final isDarkIcon = style == 'dark';
-
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarIconBrightness: isDarkIcon ? Brightness.dark : Brightness.light,
-        statusBarBrightness: isDarkIcon ? Brightness.light : Brightness.dark,
-      ),
-    );
-
-    return {
-      'success': true,
-      'style': style,
-    };
+    return ConfigAppViewHandler().handle({
+      'statusBar': style,
+      'textColor': style == 'light' ? 'white' : 'black',
+    }, context);
   }
 }
 
@@ -293,24 +303,11 @@ class SetStatusBarColorHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final colorHex = payload['color']?.toString() ?? '#FFFFFF';
-    Color color = Colors.white;
-
-    try {
-      final hex = colorHex.replaceFirst('#', '');
-      color = Color(int.parse(hex.length == 6 ? 'FF$hex' : hex, radix: 16));
-    } catch (_) {}
-
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: color,
-      ),
-    );
-
-    return {
-      'success': true,
-      'color': colorHex,
-    };
+    // Merged into configAppView
+    final color = payload['color']?.toString() ?? '#FFFFFF';
+    return ConfigAppViewHandler().handle({
+      'statusBarColor': color,
+    }, context);
   }
 }
 
@@ -326,36 +323,15 @@ class SetNavigationBarColorHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final colorHex = payload['color']?.toString() ?? '#FFFFFF';
-    final textColor = payload['textColor']?.toString().toLowerCase(); // 'white' | 'black'
-    final statusBarColorHex = payload['statusBarColor']?.toString();
-
-    final navColor = _tryParseHex(colorHex) ?? Colors.white;
-    final statusBarColor = _tryParseHex(statusBarColorHex);
-
-    // 1. Update runtime top header UI & status bar in MiniAppRuntimeScreen
-    context.uiDelegate?.setNavigationBarColor(
-      color: navColor,
-      textColor: textColor,
-      statusBarColor: statusBarColor,
-    );
-
-    // 2. Update System UI overlay style
-    final isWhiteText = textColor == 'white';
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        systemNavigationBarColor: navColor,
-        statusBarColor: statusBarColor ?? Colors.transparent,
-        statusBarIconBrightness: isWhiteText ? Brightness.light : Brightness.dark,
-        statusBarBrightness: isWhiteText ? Brightness.dark : Brightness.light,
-      ),
-    );
-
-    return {
-      'success': true,
-      'color': colorHex,
-      'textColor': textColor ?? 'black',
-    };
+    // Merged into configAppView
+    final color = payload['color']?.toString() ?? '#FFFFFF';
+    final textColor = payload['textColor']?.toString().toLowerCase();
+    final statusBarColor = payload['statusBarColor']?.toString();
+    return ConfigAppViewHandler().handle({
+      'headerColor': color,
+      if (textColor != null) 'textColor': textColor,
+      if (statusBarColor != null) 'statusBarColor': statusBarColor,
+    }, context);
   }
 }
 
@@ -373,27 +349,53 @@ class ConfigAppViewHandler implements NativeActionHandler {
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
     // 1. Parse flat and nested configuration parameters
     final headerColorHex = payload['headerColor']?.toString() ??
+        payload['color']?.toString() ??
         (payload['header'] is Map ? payload['header']['color']?.toString() : null);
     final headerTitle = payload['headerTitle']?.toString() ??
+        payload['title']?.toString() ??
         (payload['header'] is Map ? payload['header']['title']?.toString() : null);
     final textColor = payload['textColor']?.toString().toLowerCase() ??
         (payload['header'] is Map ? payload['header']['textColor']?.toString().toLowerCase() : null);
 
-    final statusBarRaw = payload['statusBar'];
+    final statusBarRaw = payload['statusBar'] ?? payload['style'];
     final statusBarMode = statusBarRaw is String
         ? statusBarRaw
         : (statusBarRaw is Map ? statusBarRaw['style']?.toString() : null);
 
-    final actionBarHidden = payload['actionBarHidden'] == true ||
-        (payload['header'] is Map &&
-            (payload['header']['hidden'] == true || payload['header']['hide'] == true));
+    final statusBarColorHex = payload['statusBarColor']?.toString() ??
+        (payload['statusBar'] is Map ? payload['statusBar']['color']?.toString() : null);
 
-    final hideBottomNav = payload['hideAndroidBottomNavigationBar'] == true ||
-        payload['hideNavigationBar'] == true ||
-        (payload['bottomNav'] is Map &&
-            (payload['bottomNav']['hidden'] == true || payload['bottomNav']['hide'] == true));
+    final bool? actionBarHidden = payload.containsKey('actionBarHidden')
+        ? (payload['actionBarHidden'] == true)
+        : (payload['header'] is Map
+            ? (payload['header']['hidden'] == true || payload['header']['hide'] == true)
+            : null);
 
-    final hasPadding = payload['hasPadding'] != false;
+    final bool? hideBottomNav = payload.containsKey('hideAndroidBottomNavigationBar')
+        ? (payload['hideAndroidBottomNavigationBar'] == true)
+        : (payload.containsKey('hideNavigationBar')
+            ? (payload['hideNavigationBar'] == true)
+            : (payload['bottomNav'] is Map
+                ? (payload['bottomNav']['hidden'] == true || payload['bottomNav']['hide'] == true)
+                : null));
+
+    final bool? hasPadding = payload.containsKey('hasPadding') ? (payload['hasPadding'] != false) : null;
+
+    final bool? hasPaddingTop = payload.containsKey('hasPaddingTop')
+        ? (payload['hasPaddingTop'] != false)
+        : (payload.containsKey('safeAreaTop')
+            ? (payload['safeAreaTop'] != false)
+            : (payload['safeArea'] is Map
+                ? (payload['safeArea']['top'] != false)
+                : (payload['safeArea'] is bool ? payload['safeArea'] != false : null)));
+
+    final bool? hasPaddingBottom = payload.containsKey('hasPaddingBottom')
+        ? (payload['hasPaddingBottom'] != false)
+        : (payload.containsKey('safeAreaBottom')
+            ? (payload['safeAreaBottom'] != false)
+            : (payload['safeArea'] is Map
+                ? (payload['safeArea']['bottom'] != false)
+                : (payload['safeArea'] is bool ? payload['safeArea'] != false : null)));
 
     final bottomNavColorHex = payload['bottomNavColor']?.toString() ??
         (payload['bottomNav'] is Map ? payload['bottomNav']['color']?.toString() : null);
@@ -401,6 +403,7 @@ class ConfigAppViewHandler implements NativeActionHandler {
     final isStatusBarHidden = statusBarMode == 'hidden' || payload['hideStatusBar'] == true;
 
     final headerColor = _tryParseHex(headerColorHex);
+    final statusBarColor = _tryParseHex(statusBarColorHex);
     final bottomNavColor = _tryParseHex(bottomNavColorHex);
 
     // 2. Inform runtime UI delegate
@@ -409,16 +412,19 @@ class ConfigAppViewHandler implements NativeActionHandler {
       headerTitle: headerTitle,
       textColor: textColor,
       statusBar: statusBarMode,
+      statusBarColor: statusBarColor,
       actionBarHidden: actionBarHidden,
       hideAndroidBottomNavigationBar: hideBottomNav,
       hasPadding: hasPadding,
+      hasPaddingTop: hasPaddingTop,
+      hasPaddingBottom: hasPaddingBottom,
       bottomNavColor: bottomNavColor,
     );
 
     // 3. SystemChrome overlay handling
     final overlays = <SystemUiOverlay>[];
     if (!isStatusBarHidden) overlays.add(SystemUiOverlay.top);
-    if (!hideBottomNav) overlays.add(SystemUiOverlay.bottom);
+    if (hideBottomNav != true) overlays.add(SystemUiOverlay.bottom);
 
     await SystemChrome.setEnabledSystemUIMode(
       overlays.isEmpty ? SystemUiMode.immersiveSticky : SystemUiMode.manual,
@@ -428,22 +434,23 @@ class ConfigAppViewHandler implements NativeActionHandler {
     final isWhiteText = textColor == 'white';
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
-        statusBarColor: statusBarMode == 'transparent'
-            ? Colors.transparent
-            : (headerColor ?? Colors.transparent),
+        statusBarColor: statusBarColor ??
+            (statusBarMode == 'transparent' ? Colors.transparent : (headerColor ?? Colors.transparent)),
         statusBarIconBrightness: isWhiteText ? Brightness.light : Brightness.dark,
         statusBarBrightness: isWhiteText ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: bottomNavColor,
+        systemNavigationBarColor: bottomNavColor ?? headerColor,
       ),
     );
 
     return {
       'success': true,
-      'actionBarHidden': actionBarHidden,
+      if (actionBarHidden != null) 'actionBarHidden': actionBarHidden,
       'statusBar': statusBarMode ?? (isStatusBarHidden ? 'hidden' : 'transparent'),
-      'hideAndroidBottomNavigationBar': hideBottomNav,
-      'hasPadding': hasPadding,
+      if (statusBarColorHex != null) 'statusBarColor': statusBarColorHex,
+      if (hideBottomNav != null) 'hideAndroidBottomNavigationBar': hideBottomNav,
+      if (hasPadding != null) 'hasPadding': hasPadding,
       if (headerColorHex != null) 'headerColor': headerColorHex,
+      if (headerColorHex != null) 'color': headerColorHex,
       if (headerTitle != null) 'headerTitle': headerTitle,
       if (textColor != null) 'textColor': textColor,
     };

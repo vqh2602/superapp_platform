@@ -1238,6 +1238,15 @@ export class BridgeTransport {
         return { success: true, style: payload.style || 'light' } as any;
       }
 
+      case 'setNavigationBarTitle':
+      case 'ui.setNavigationBarTitle': {
+        const title = payload.title || payload.headerTitle || '';
+        if (typeof document !== 'undefined') {
+          document.title = title || 'SDK Playground';
+        }
+        return { success: true, title } as any;
+      }
+
       case 'setStatusBarColor':
       case 'ui.setStatusBarColor': {
         return { success: true, color: payload.color || '#FFFFFF' } as any;
@@ -1245,12 +1254,50 @@ export class BridgeTransport {
 
       case 'setNavigationBarColor':
       case 'ui.setNavigationBarColor': {
-        return { success: true, color: payload.color || '#000000' } as any;
+        return {
+          success: true,
+          color: payload.color || '#0068FF',
+          textColor: payload.textColor || 'white',
+          statusBarColor: payload.statusBarColor,
+        } as any;
       }
 
       case 'configAppView':
       case 'ui.configAppView': {
-        return { success: true, hideStatusBar: !!payload.hideStatusBar, hideNavigationBar: !!payload.hideNavigationBar } as any;
+        const headerTitle = payload.headerTitle || (payload.header && payload.header.title);
+        if (headerTitle && typeof document !== 'undefined') {
+          document.title = headerTitle;
+        }
+        return {
+          success: true,
+          ...payload,
+        } as any;
+      }
+
+      case 'keepScreen':
+      case 'device.keepScreen': {
+        const keepScreenOn = payload.keepScreenOn !== undefined ? !!payload.keepScreenOn : true;
+        return { success: true, keepScreenOn } as any;
+      }
+
+      case 'requestSendNotification':
+      case 'ui.requestSendNotification': {
+        return {
+          success: true,
+          granted: true,
+          subscriptionId: `sub_sim_${Date.now()}`,
+          token: `notif_tok_${Date.now()}`,
+          templateId: payload.templateId,
+          reason: payload.reason,
+        } as any;
+      }
+
+      case 'minimizeApp':
+      case 'navigation.minimizeApp': {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'MINIAPP_MINIMIZE', appId: this.appId }, '*');
+        }
+        return { success: true, status: 'minimized', appId: this.appId, timestamp: Date.now() } as any;
       }
 
       case 'showMiniappMenu':

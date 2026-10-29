@@ -4,99 +4,48 @@ Hệ sinh thái bộ công cụ SDK, Bridge Transport, Mock Engine, CLI và Brow
 
 ---
 
-## 🏗️ 1. Kiến Trúc 5 Thành Phần (Monorepo Workspace)
+## 🏗️ 1. Kiến Trúc Hợp Nhất (All-in-One Package: `@vqh2602/mini-app-sdk`)
 
-Thư mục `mini_app_sdk/` được cấu trúc theo mô hình npm workspaces phân tách độc lập và chuyên trách:
+Toàn bộ hệ thống SDK, Mock Engine, Bridge Transport, CLI và Browser Simulator đã được hợp nhất vào **1 gói npm duy nhất**:
 
-```mermaid
-flowchart TD
-    subgraph ThirdParty["Nhà Phát Triển Thứ Ba (Mini App Developer)"]
-        DevCode["Mini App Code (React / Vue / Svelte / Vanilla)"]
-        CLI["Mini App CLI (@superapp/mini-app-cli)"]
-    end
-
-    subgraph SDKCore["Mini App SDK (@superapp/mini-app-sdk)"]
-        API["superApp.auth / payment / device / storage / ui / media"]
-    end
-
-    subgraph TransportLayer["SDK Transport (@superapp/sdk-transport)"]
-        Resolver["TransportResolver (Auto Detection)"]
-        NativeBridge["NativeBridgeTransport (Flutter WebView)"]
-        IframeBridge["PostMessageTransport (Simulator Iframe)"]
-        MockBridge["MockBridgeTransport (Standalone / Unit Tests)"]
-    end
-
-    subgraph MockEnginePkg["SDK Mock Engine (@superapp/sdk-mock-engine)"]
-        StateStore["MockStateStore (User, Wallet, Device, Storage)"]
-        AuthMock["Auth & OAuth Token Handler"]
-        PayMock["Payment & Checkout Sheet Handler"]
-        DevMock["Device, Hardware & Network Handler"]
-    end
-
-    subgraph SimPkg["Browser Simulator (@superapp/browser-simulator)"]
-        PhoneUI["Realistic Mobile Chassis (iPhone 15 / Android)"]
-        Inspector["Bridge Inspector & Realtime Tracer"]
-        DevTools["Auth Personas / Payment Bottom Sheet / Latency Injector"]
-    end
-
-    subgraph SuperAppHost["SuperApp Master Platform"]
-        FlutterRuntime["Flutter Dynamic WebView Runtime"]
-        BackendRegistry["Dynamic Registry Backend (Port 3000)"]
-    end
-
-    DevCode --> API
-    API --> Resolver
-    Resolver -->|Trong Flutter App| NativeBridge --> FlutterRuntime
-    Resolver -->|Trong Simulator| IframeBridge --> PhoneUI
-    Resolver -->|Môi trường Mock| MockBridge --> MockEnginePkg
-
-    CLI -->|dev| SimPkg
-    CLI -->|upload| BackendRegistry
-    PhoneUI <--> MockEnginePkg
-    Inspector <--> MockEnginePkg
-```
-
-| STT | Thành phần | Thư mục | Công nghệ | Vai trò & Trách nhiệm |
-| :--- | :--- | :--- | :--- | :--- |
-| **1** | **Mini App SDK** | `packages/sdk-core` | TypeScript | Bộ API chính thức xuất bản cho bên thứ ba (`npm install @superapp/mini-app-sdk`): `auth`, `payment`, `device`, `storage`, `ui`, `media`, `lifecycle`. |
-| **2** | **SDK Transport** | `packages/sdk-transport` | TypeScript | Lớp trừu tượng hoá Bridge: chuyển đổi linh hoạt giữa Flutter WebView Native (`FlutterBridge`), PostMessage trong iframe Simulator, hoặc Mock cục bộ. |
-| **3** | **SDK Mock Engine** | `packages/sdk-mock-engine` | TypeScript | Động cơ giả lập Native: sinh mã `authCode`, cấp `accessToken`, hồ sơ người dùng, quản lý số dư ví, trừ tiền thanh toán, giả lập pin, mạng, độ trễ và lưu trữ cách ly. |
-| **4** | **Mini App CLI** | `packages/mini-app-cli` | Node.js + TypeScript | Công cụ dòng lệnh: `create` (tạo dự án mẫu), `dev` (khởi chạy dev server), `build` (biên dịch + checksum), `upload` (gửi lên Registry xét duyệt), `doctor`. |
-| **5** | **Browser Simulator** | `packages/browser-simulator` | React 18 + Vite | Môi trường giả lập trực quan trên trình duyệt: khung iPhone 15/Android, capsule menu, thanh trạng thái, Bridge Inspector thời gian thực, modal xác nhận thanh toán. |
+| Khối chức năng | Thư mục source | Vai trò & Trách nhiệm |
+| :--- | :--- | :--- |
+| **Mini App Core SDK** | `src/core/` | Bộ API chính thức cho bên thứ ba (`npm install @vqh2602/mini-app-sdk`): `auth`, `payment`, `device`, `storage`, `ui`, `media`, `lifecycle`. |
+| **Bridge Transport** | `src/transport/` | Lớp trừu tượng hoá Bridge: chuyển đổi linh hoạt giữa Flutter WebView Native (`FlutterBridge`), PostMessage trong iframe Simulator, hoặc Mock cục bộ. |
+| **SDK Mock Engine** | `src/mock/` | Động cơ giả lập Native: sinh mã `authCode`, cấp `accessToken`, hồ sơ người dùng, quản lý số dư ví, trừ tiền thanh toán, giả lập pin, mạng, độ trễ và lưu trữ cách ly. |
+| **Mini App CLI** | `src/cli/` & `bin/` | Công cụ dòng lệnh: `create` (tạo dự án mẫu), `dev` (khởi chạy dev server + simulator), `build` (biên dịch + checksum), `upload` (gửi lên Registry), `simulator`. |
+| **Browser Simulator** | `simulator/` & `simulator-dist/` | Giao diện web giả lập điện thoại đã được build sẵn tĩnh, tích hợp trực tiếp vào lệnh `miniapp dev` và `miniapp simulator`. |
 
 ---
 
 ## ⚡ 2. Hướng Dẫn Vận Hành Cho Nhà Phát Triển (Quickstart)
 
-### Bước 1: Cài đặt các gói phụ thuộc Monorepo
-Từ thư mục `mini_app_sdk`:
+### Bước 1: Khởi tạo Mini App mới bằng CLI
+Lập trình viên bên thứ ba có thể chạy trực tiếp thông qua `npx`:
 ```bash
-npm install
-npm run build
+npx @vqh2602/mini-app-sdk create my_awesome_app
 ```
-
-### Bước 2: Sử dụng CLI để tạo Mini App mới
+Hoặc nếu đã cài đặt toàn cục (`npm install -g @vqh2602/mini-app-sdk`):
 ```bash
-# Sử dụng CLI
-node ./packages/mini-app-cli/bin/miniapp.js create my_awesome_app
+miniapp create my_awesome_app
 ```
 Lệnh này sẽ tự động sinh:
 - `app.json`: Manifest khai báo `appId`, `name`, `version`, `permissions`, `themeColor`.
-- `package.json`: Cài đặt sẵn `@superapp/mini-app-sdk`.
+- `package.json`: Cài đặt sẵn `@vqh2602/mini-app-sdk`.
 - `src/main.ts`: Code mẫu gọi các hàm đăng nhập, thanh toán, pin, toast.
 - `index.html` & `vite.config.ts`.
 
-### Bước 3: Chạy và kiểm thử trên Browser Simulator
-```bash
-# Khởi chạy Simulator (Port 5175)
-npm run simulator
-```
-Truy cập trình duyệt tại `http://localhost:5175/?url=http://localhost:3000`.
-
-### Bước 4: Đóng gói và xuất bản Mini App
+### Bước 2: Chạy Dev Server & Browser Simulator đồng thời
 ```bash
 cd my_awesome_app
+npx miniapp dev
+```
+Lệnh `miniapp dev` sẽ khởi chạy cả:
+* Vite dev server của Mini App (Port 3000)
+* Browser Simulator tích hợp sẵn (Port 5175 tại `http://localhost:5175/?url=http://localhost:3000`)
 
+### Bước 3: Đóng gói và xuất bản Mini App
+```bash
 # Đóng gói và kiểm tra checksum
 npx miniapp build
 
@@ -106,11 +55,11 @@ npx miniapp upload --submit --notes "Phát hành phiên bản 1.0.0"
 
 ---
 
-## 📖 3. Bảng Tra Cứu API Mini App SDK (`@superapp/mini-app-sdk`)
+## 📖 3. Bảng Tra Cứu API Mini App SDK (`@vqh2602/mini-app-sdk`)
 
 ### 🔐 3.1. Xác thực & Người dùng (`superApp.auth`)
 ```typescript
-import superApp from '@superapp/mini-app-sdk';
+import superApp from '@vqh2602/mini-app-sdk';
 
 // Đăng nhập và xin cấp quyền profile + phone
 const loginRes = await superApp.auth.login({
@@ -208,4 +157,54 @@ superApp.lifecycle.onAppShow(() => {
 superApp.lifecycle.onAppHide(() => {
   console.log('Mini App tạm dừng');
 });
+```
+
+---
+
+## 🧩 4. Sub-path Exports Nâng Cao
+
+Ngoài entrypoint mặc định `superApp`, package cung cấp các sub-path để lập trình viên tùy biến sâu:
+
+```typescript
+// 1. Tầng Transport Bridge
+import {
+  TransportResolver,
+  NativeBridgeTransport,
+  PostMessageTransport,
+  MockBridgeTransport,
+} from '@vqh2602/mini-app-sdk/transport';
+
+// 2. Động cơ Mock Engine & Dữ liệu mẫu
+import {
+  SDKMockEngine,
+  MockStateStore,
+  MOCK_USER_PRESETS,
+} from '@vqh2602/mini-app-sdk/mock';
+```
+
+---
+
+## 🛠️ 5. Dành Cho Quản Trị Viên (Maintainer Guide)
+
+### Biên dịch & Kiểm tra gói đóng gói
+```bash
+cd mini_app_sdk
+
+# Cài đặt dependencies
+npm install
+
+# Biên dịch Phone Simulator + TypeScript SDK
+npm run build
+
+# Chạy Phone Simulator cục bộ
+npm run simulator
+
+# Kiểm tra nội dung đóng gói trước khi xuất bản (Dry Run)
+npm pack --dry-run
+```
+
+### Phát hành phiên bản mới lên npm Public Registry
+```bash
+# Xuất bản trực tiếp lên npm
+npm publish --access public
 ```

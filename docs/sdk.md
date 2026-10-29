@@ -36,11 +36,11 @@
 | Công nghệ tích hợp | Định dạng gói | Khả năng tương thích | Điểm mạnh nổi bật | Trường hợp sử dụng tiêu biểu |
 | :--- | :--- | :--- | :--- | :--- |
 | **Flutter Web** | `runtimeType: "web"` (Biên dịch HTML/Wasm/JS) | 100% Native Bridge | Đồng nhất 100% trải nghiệm và Widget với SuperApp chủ; Tái sử dụng code Flutter có sẵn; Hiệu năng đồ họa mượt mà | Các đối tác đã có sẵn ứng dụng Flutter; Ứng dụng nghiệp vụ phức tạp, biểu đồ, game nhẹ |
-| **React / Next.js (Static)** | `runtimeType: "web"` (Bundle Vite/Webpack) | 100% qua `@superapp/mini-app-sdk` | Hệ sinh thái React cực lớn; Thư viện UI dồi dào (AntD, Tailwind, MUI); Build nhanh với Vite | Ứng dụng Thương mại điện tử, Đặt bàn, Đặt vé, Mạng xã hội nhỏ |
-| **Vue 3 / Nuxt (Static)** | `runtimeType: "web"` (Bundle Vite) | 100% qua `@superapp/mini-app-sdk` | Nhẹ, dễ học, tốc độ render cao, kích thước bundle tối ưu | Cửa hàng tiện ích, Tra cứu điểm thưởng, Mini game |
+| **React / Next.js (Static)** | `runtimeType: "web"` (Bundle Vite/Webpack) | 100% qua `@vqh2602/mini-app-sdk` | Hệ sinh thái React cực lớn; Thư viện UI dồi dào (AntD, Tailwind, MUI); Build nhanh với Vite | Ứng dụng Thương mại điện tử, Đặt bàn, Đặt vé, Mạng xã hội nhỏ |
+| **Vue 3 / Nuxt (Static)** | `runtimeType: "web"` (Bundle Vite) | 100% qua `@vqh2602/mini-app-sdk` | Nhẹ, dễ học, tốc độ render cao, kích thước bundle tối ưu | Cửa hàng tiện ích, Tra cứu điểm thưởng, Mini game |
 | **Vanilla HTML5 / JS** | `runtimeType: "web"` (Thuần HTML/CSS/JS) | 100% qua Bridge hoặc UMD | Không phụ thuộc công cụ build phức tạp; Dung lượng siêu nhẹ (< 50KB); Tải ngay lập tức | Trang tĩnh, Khảo sát ý kiến, Vòng quay may mắn, Tin tức |
 | **No-Code / Low-Code Schema** | `runtimeType: "schema"` (`schema.json`) | Native Flutter Widget Engine | Không cần viết JavaScript/Dart; Khai báo thuần JSON; Bảo mật tối đa | Form thu thập dữ liệu, Trang giới thiệu sản phẩm đơn giản |
-| **Svelte / Angular / Ionic** | `runtimeType: "web"` | 100% qua `@superapp/mini-app-sdk` | Tương thích chuẩn Web Component và SPA | Doanh nghiệp có sẵn codebase chuyên biệt |
+| **Svelte / Angular / Ionic** | `runtimeType: "web"` | 100% qua `@vqh2602/mini-app-sdk` | Tương thích chuẩn Web Component và SPA | Doanh nghiệp có sẵn codebase chuyên biệt |
 
 ---
 
@@ -70,7 +70,7 @@ flowchart TD
     end
 
     FlutterWebApp -->|JSON qua Bridge| NativeTransport
-    ReactVueApp -->|@superapp/mini-app-sdk| Resolver
+    ReactVueApp -->|@vqh2602/mini-app-sdk| Resolver
     VanillaApp -->|window.FlutterBridge| NativeTransport
 
     Resolver -->|Trong SuperApp| NativeTransport --> NativeHost
@@ -559,18 +559,18 @@ class _CoffeeShopScreenState extends State<CoffeeShopScreen> {
 
 ## 4. Tích hợp Mini App với Web SPA (React, Vue, Svelte, Vite)
 
-Đối với các ứng dụng Web truyền thống viết bằng React, Vue 3, Svelte hoặc TypeScript, nền tảng cung cấp gói thư viện chính thức **`@superapp/mini-app-sdk`**.
+Đối với các ứng dụng Web truyền thống viết bằng React, Vue 3, Svelte hoặc TypeScript, nền tảng cung cấp gói thư viện chính thức **`@vqh2602/mini-app-sdk`**.
 
 ### 4.1. Cài đặt & Khởi tạo SDK
 
-Cài đặt package vào dự án:
+Cài đặt package từ NPM ([@vqh2602/mini-app-sdk](https://www.npmjs.com/package/@vqh2602/mini-app-sdk)):
 ```bash
-npm install @superapp/mini-app-sdk
+npm install @vqh2602/mini-app-sdk
 ```
 
 Khởi tạo và sử dụng:
 ```typescript
-import superApp from '@superapp/mini-app-sdk';
+import superApp from '@vqh2602/mini-app-sdk';
 
 // Kiểm tra môi trường thực thi
 if (superApp.transport.getType() === 'native') {
@@ -670,7 +670,7 @@ async function handleStorageAndToast() {
 
 #### 4. Điều khiển Giao diện, Header, Màn hình, Thông báo & Thu nhỏ:
 ```typescript
-import { superApp } from '@superapp/mini-app-sdk';
+import { superApp } from '@vqh2602/mini-app-sdk';
 
 // 1. Cấu hình giao diện tổng thể (App View): Ẩn/hiện status bar, header, tràn viền
 async function setupFullscreenExperience() {
@@ -872,12 +872,14 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 | | `device.getSystemInfo` | *Không cần* | `{}` | `{ platform, model, systemVersion, screenWidth, screenHeight }` |
 | | `device.vibrate` | *Không cần* | `{ style: 'light' \| 'medium' \| 'heavy' }` | `{ success: true }` |
 | | `device.copyToClipboard`| *Không cần* | `{ text: string }` | `{ success: true }` |
-| **Giao diện & Màn hình** | `ui.showToast` | *Không cần* | `{ message: string, duration?: number }` | `{ success: true }` |
+| **Giao diện & Màn hình** | `ui.configAppView` | *Không cần* | `{ headerColor?, statusBarColor?, textColor?, statusBar?, headerTitle?, actionBarHidden?, hideAndroidBottomNavigationBar?, hasPadding? }` | `{ success: true, ... }` |
+| | `ui.setNavigationBarTitle`| *Không cần*| `{ title: string }` | `{ success: true, title: string }` |
+| | `ui.setNavigationBarColor` *(gộp vào configAppView)* | *Không cần*| `{ color: string, textColor?: 'white' \| 'black', statusBarColor?: string }` | `{ success: true, ... }` |
+| | `ui.setStatusBarColor` *(gộp vào configAppView)* | *Không cần*| `{ color: string }` | `{ success: true, ... }` |
+| | `ui.setStatusBarStyle` *(gộp vào configAppView)* | *Không cần*| `{ style: 'light' \| 'dark' }` | `{ success: true, ... }` |
+| | `ui.showToast` | *Không cần* | `{ message: string, duration?: number }` | `{ success: true }` |
 | | `ui.showAlert` | *Không cần* | `{ title: string, message: string }` | `{ success: true }` |
 | | `ui.showConfirm` | *Không cần* | `{ title: string, message: string }` | `{ confirmed: boolean }` |
-| | `ui.setNavigationBarTitle`| *Không cần*| `{ title: string }` | `{ success: true, title: string }` |
-| | `ui.setNavigationBarColor`| *Không cần*| `{ color: string, textColor?: 'white' \| 'black', statusBarColor?: string }` | `{ success: true, color: string }` |
-| | `ui.configAppView` | *Không cần* | `{ headerColor?, textColor?, statusBar?, actionBarHidden?, hideAndroidBottomNavigationBar?, hasPadding? }` | `{ success: true, ... }` |
 | | `ui.requestSendNotification`| `notification`| `{ templateId?: string, reason?: string }` | `{ success: boolean, granted: boolean, token?: string, subscriptionId?: string }` |
 | | `device.keepScreen` | *Không cần* | `{ keepScreenOn?: boolean }` | `{ success: true, keepScreenOn: boolean }` |
 | **Lưu trữ** | `storage.setSecureItem` | *Không cần* | `{ key: string, value: string }` | `{ success: true }` |
@@ -894,108 +896,189 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 
 ### 7.1. Hướng dẫn chi tiết các API Điều khiển Màn hình & Giao diện (Zalo Mini App Compatible)
 
-SuperApp Platform tích hợp đầy đủ bộ API điều khiển giao diện theo chuẩn của **Zalo Mini App Platform**, đảm bảo trải nghiệm thống nhất trên Android, iOS, Web, macOS và Windows:
+SuperApp Platform tích hợp đầy đủ bộ API điều khiển giao diện theo chuẩn của **Zalo Mini App Platform**, đồng thời liên kết mật thiết với **Thanh điều hướng Native AppBar của SuperApp Host**:
 
-#### 1. `configAppView`
-Tùy chỉnh linh hoạt chế độ hiển thị toàn diện của Mini App:
-- **`headerColor`**: Mã màu HEX của thanh tiêu đề (Action Bar).
-- **`headerTitle`**: Tiêu đề hiển thị trên header.
-- **`textColor`**: Màu chữ và icon trên thanh điều hướng & status bar (`'white'` | `'black'`).
-- **`statusBar`**: Kiểu hiển thị thanh trạng thái (`'transparent'` | `'hidden'` | `'light'` | `'dark'`).
-- **`actionBarHidden`**: Ẩn/hiện thanh điều hướng phía trên (true để cho phép tràn viền).
-- **`hideAndroidBottomNavigationBar`**: Ẩn/hiện thanh điều hướng ảo đáy màn hình của Android.
-- **`hasPadding`**: Mini App có padding theo Safe Area (tai thỏ / bottom home indicator) hay hiển thị edge-to-edge.
+> [!IMPORTANT]
+> **Hợp nhất 3 hàm cũ vào một hàm duy nhất `configAppView`:**
+> Ba API rời rạc trước đây gồm `setStatusBarStyle` (đổi icon sáng/tối), `setStatusBarColor` (đổi màu nền status bar) và `setNavigationBarColor` (đổi màu thanh header) đã được **gộp chung hoàn toàn vào `configAppView`**. Nhà phát triển chỉ cần gọi một hàm duy nhất để thay đổi màu sắc, thanh trạng thái, độ tương phản và hiệu ứng mờ kính (frosted blur) trong một lệnh gọi nguyên tử (atomic call), tránh hiện tượng giật/nhấp nháy giao diện.
 
+#### 1. `configAppView` (Hợp nhất toàn diện AppBar & Status Bar)
+Cấu hình giao diện tổng thể và điều khiển trực tiếp AppBar Native của SuperApp WebView:
+- **`headerColor`** *(thay thế `setNavigationBarColor`)*: Màu nền thanh điều hướng AppBar. Hỗ trợ mã màu HEX (`#0068FF`, `#FFFFFF`, `#0F172A`), màu RGBA (`rgba(0, 104, 255, 0.8)`), hoặc `'transparent'` (trong suốt).
+- **`statusBarColor`** *(thay thế `setStatusBarColor`)*: Màu nền của thanh trạng thái (Status Bar). Mặc định nếu không truyền, sẽ hòa cùng màu với `headerColor` để tạo thành một khối liền mạch.
+- **`textColor`** *(thay thế `setStatusBarStyle`)*: Màu chữ tiêu đề và màu icon trên thanh điều hướng & status bar (`'white'` | `'black'`). Nếu không truyền, hệ thống sẽ tự động tính toán theo độ sáng (luminance) của `headerColor`.
+- **`statusBar`**: Kiểu hiển thị thanh trạng thái thiết bị (`'transparent'` | `'hidden'` | `'light'` | `'dark'`).
+- **`headerTitle`**: Tiêu đề hiển thị ở chính giữa thanh AppBar (tự động căn giữa, giới hạn 1 dòng và cắt `ellipsis` nếu quá dài).
+- **`actionBarHidden`**: `true` để ẩn hoàn toàn thanh AppBar Native (chế độ Fullscreen tuyệt đối), `false` để hiện lại thanh AppBar.
+- **`hideAndroidBottomNavigationBar`**: Ẩn/hiện thanh điều hướng ảo ở đáy màn hình của hệ điều hành Android.
+- **`hasPadding`**: `true` (nội dung nằm trong Safe Area), `false` (nội dung tràn viền Edge-to-Edge cả trên lẫn dưới).
+- **`hasPaddingTop`** / **`safeAreaTop`**: `false` để tắt Safe Area đỉnh màn hình (nội dung web tràn lên sát mép trên cùng, phía sau notch / Dynamic Island).
+- **`hasPaddingBottom`** / **`safeAreaBottom`**: `false` để tắt Safe Area đáy màn hình (nội dung web tràn xuống sát mép dưới, phía sau thanh Home Indicator).
+
+> [!NOTE]
+> **Bảo toàn Safe Area cho Nút Action Capsule `[ ••• | ⊙ ]`:**
+> Dù Mini App có tắt hoàn toàn Safe Area trên đỉnh (`hasPaddingTop: false` hoặc `actionBarHidden: true`), **riêng nút Action Capsule `[ ••• | ⊙ ]` ở góc phải luôn luôn được giữ trong Safe Area** (bên dưới Dynamic Island / Tai thỏ / Thanh trạng thái). Điều này đảm bảo người dùng không bao giờ bị che mất nút điều khiển và luôn có thể mở menu quản trị hoặc thoát ứng dụng an toàn.
+
+> [!NOTE]
+> **So sánh Trước và Sau khi Gộp hàm:**
+> ```javascript
+> // ❌ CÁCH CŨ (Gọi 3 hàm riêng lẻ, dễ nhấp nháy UI):
+> await bridge.setNavigationBarColor('#0068FF');
+> await bridge.setStatusBarColor('#0052CC');
+> await bridge.setStatusBarStyle('light');
+>
+> // ✅ CÁCH MỚI (Gộp chung trong 1 lệnh duy nhất với configAppView):
+> await bridge.configAppView({
+>   headerColor: '#0068FF',
+>   statusBarColor: '#0052CC',
+>   textColor: 'white',
+>   statusBar: 'transparent',
+>   headerTitle: 'Sản phẩm nổi bật',
+>   actionBarHidden: false,
+>   hasPaddingTop: false,   // Tắt safe area top
+>   hasPaddingBottom: false // Tắt safe area bot
+> });
+> ```
+
+> [!IMPORTANT]
+> **Hiệu ứng Kính Mờ Trong Suốt (Frosted Glass Blur Backdrop):**
+> Khi bạn thiết lập `statusBar: 'transparent'` hoặc `headerColor: 'transparent'` (hoặc màu có độ trong suốt alpha), AppBar sẽ tự động kích hoạt bộ lọc làm mờ kính mờ `BackdropFilter(filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16))`. Đồng thời, trang web Mini App bên dưới sẽ cuộn mượt mà phía sau thanh AppBar, tạo nên trải nghiệm thị giác cao cấp chuẩn Native iOS & Android.
+
+> [!NOTE]
+> **Quy tắc Bất biến về Nút Hành động AppBar Capsule `[ ••• | ⊙ ]`:**
+> - Nút capsule góc phải trên AppBar là thành phần kiểm soát bảo mật và an toàn của SuperApp Shell (giúp người dùng luôn có thể mở BottomSheet quản lý quyền riêng tư `•••` hoặc đóng ứng dụng `⊙`).
+> - Mini App **không thể chỉnh sửa, tùy biến hành vi hoặc ẩn** nút capsule này.
+> - **Cơ chế Tự động Thích ứng Màu sắc (Auto-Contrast):** Nút capsule được trang bị thuật toán tính toán độ tương phản động. Khi nền AppBar chuyển sang màu tối hoặc xanh đậm (`#0068FF`), nút capsule tự động đổi sang viên thuốc kính mờ viền trắng và icon trắng tinh; khi nền sáng (`#FFFFFF`), capsule tự chuyển sang màu trắng thanh lịch với icon đen đá (`#0F172A`); khi nền trong suốt, viên capsule phủ lớp frosted glass riêng biệt giúp người dùng luôn quan sát rõ ràng dù nội dung web bên dưới là video, hình ảnh hay chữ.
+
+##### Ví dụ Code JavaScript / TypeScript:
 ```typescript
-// Ví dụ: Bật chế độ Fullscreen tràn viền cho Game / Media Player
-await superApp.ui.configAppView({
+// 1. Cấu hình màu xanh thương hiệu với chữ trắng, status bar trong suốt
+await bridge.configAppView({
+  headerColor: '#0068FF',
+  statusBarColor: '#0052CC',
+  headerTitle: 'Sản phẩm nổi bật',
+  textColor: 'white',
+  statusBar: 'transparent',
+  actionBarHidden: false,
+});
+
+// 2. Chế độ Kính mờ trong suốt (Frosted Glass Blur) với nội dung cuộn bên dưới
+await bridge.configAppView({
+  headerColor: 'transparent',
+  headerTitle: 'Khám phá Bộ sưu tập',
+  textColor: 'black',
+  statusBar: 'transparent',
+  actionBarHidden: false,
+  hasPadding: false, // Để banner cuộn tràn viền dưới AppBar
+});
+
+// 3. Toàn màn hình ẩn hoàn toàn AppBar (cho Games / Video Player)
+await bridge.configAppView({
   actionBarHidden: true,
   statusBar: 'hidden',
-  hideAndroidBottomNavigationBar: true,
   hasPadding: false,
+  hideAndroidBottomNavigationBar: true,
 });
 ```
 
 #### 2. `setNavigationBarTitle`
-Đặt lại tiêu đề trên thanh điều hướng của trang hiện tại:
+Đặt lại tiêu đề trên thanh điều hướng của trang hiện tại một cách tức thì:
 ```typescript
-await superApp.ui.setNavigationBarTitle('Giỏ hàng của bạn (3)');
+// Qua bridge global
+await bridge.setNavigationBarTitle({ title: 'Chi tiết Đơn hàng #9981' });
+// hoặc truyền chuỗi trực tiếp:
+await bridge.setNavigationBarTitle('Chi tiết Đơn hàng #9981');
+
+// Qua SuperApp SDK
+await superApp.ui.setNavigationBarTitle('Chi tiết Đơn hàng #9981');
 ```
 
-#### 3. `setNavigationBarColor`
-Đặt lại màu sắc của thanh điều hướng (Header):
+#### 3. Các hàm tương thích ngược (Legacy Aliases)
+Ba hàm `setNavigationBarColor`, `setStatusBarColor`, và `setStatusBarStyle` vẫn được giữ dưới dạng alias tương thích ngược, bên dưới tự động chuyển tiếp về `configAppView`:
 ```typescript
-await superApp.ui.setNavigationBarColor({
-  color: '#0068FF',
-  textColor: 'white', // Icon & chữ đổi sang màu trắng
-  statusBarColor: '#0052CC', // (Tuỳ chọn) màu status bar
-});
+// Vẫn hoạt động bình thường nhờ tự động chuyển tiếp về configAppView:
+await bridge.setNavigationBarColor({ color: '#0068FF', textColor: 'white' });
+await bridge.setStatusBarColor('#0052CC');
+await bridge.setStatusBarStyle('light');
 ```
 
 #### 4. `keepScreen`
-Giữ màn hình thiết bị luôn bật, không tự động tắt sau thời gian chờ (idle timeout):
+Giữ màn hình thiết bị luôn bật, không tự động tắt sau thời gian chờ (idle timeout) bằng Native Wakelock:
 ```typescript
-// Bật giữ sáng khi đang quét mã hoặc xem video
-await superApp.device.keepScreen({ keepScreenOn: true });
+// Bật giữ sáng khi đang livestream, quét barcode hoặc đọc tài liệu
+await bridge.keepScreen({ keepScreenOn: true });
+// hoặc rút gọn:
+await bridge.keepScreen(true);
 
-// Tắt giữ sáng khi rời trang
-await superApp.device.keepScreen({ keepScreenOn: false });
+// Tắt giữ sáng khi rời khỏi trang
+await bridge.keepScreen({ keepScreenOn: false });
 ```
 
 #### 5. `requestSendNotification`
-Yêu cầu người dùng cấp quyền gửi thông báo qua Official Account (OA) / Mini App Notification Channel:
+Yêu cầu người dùng cấp quyền gửi thông báo qua Official Account (OA) / Mini App Notification Channel (tự động bật hộp thoại phân quyền Native):
 ```typescript
-const res = await superApp.ui.requestSendNotification({
-  templateId: 'order_status_v1',
+const res = await bridge.requestSendNotification({
+  templateId: 'order_status_update',
   reason: 'Nhận thông báo cập nhật lộ trình giao hàng trực tiếp',
 });
 
 if (res.granted) {
-  // Gửi subscription token này về Backend để lưu vào cơ sở dữ liệu
-  await fetch('/api/save-notification-token', {
-    method: 'POST',
-    body: JSON.stringify({ token: res.token, subscriptionId: res.subscriptionId })
-  });
+  console.log('Đã được cấp quyền! Subscription ID:', res.subscriptionId);
+  console.log('Notification Token:', res.token);
+  // Gửi token này lên Backend của Mini App để gửi tin nhắn CSKH sau này
+} else {
+  console.warn('Người dùng từ chối cấp quyền thông báo');
 }
 ```
 
 #### 6. `minimizeApp`
 Thu nhỏ Mini App vào dạng Floating Bubble / Background Dock trong SuperApp:
 ```typescript
-// Cho phép người dùng thu nhỏ Mini App và quay lại màn hình chính của SuperApp
+// Thu nhỏ Mini App và quay lại màn hình chính của SuperApp
+await bridge.minimizeApp();
+
+// Hoặc qua SDK
 await superApp.navigation.minimizeApp();
 ```
 
 ---
 
-## 8. Bộ công cụ phát triển: CLI & Browser Simulator
+## 8. Bộ công cụ phát triển: All-in-One SDK, CLI & Browser Simulator
 
-Hệ sinh thái đi kèm bộ công cụ CLI chuyên nghiệp giúp tăng tốc chu kỳ phát triển:
+Toàn bộ hệ thống SDK, công cụ dòng lệnh (CLI) và môi trường giả lập (Browser Simulator) được đóng gói hợp nhất trong **1 thư viện npm duy nhất**: **`@vqh2602/mini-app-sdk`**.
 
-### 8.1. Cài đặt và sử dụng Mini App CLI (`@superapp/mini-app-cli`)
+### 8.1. Cài đặt và sử dụng Mini App CLI (`miniapp`)
+
+Lập trình viên có thể dùng trực tiếp qua `npx` mà không cần cài đặt trước:
 
 ```bash
-# 1. Khởi tạo Mini App mới từ template chuẩn
-node ./mini_app_sdk/packages/mini-app-cli/bin/miniapp.js create my_awesome_app
+# 1. Khởi tạo Mini App mới từ template chuẩn (React / Vanilla TS)
+npx @vqh2602/mini-app-sdk create my_awesome_app
+# Hoặc nếu đã cài đặt toàn cục (npm install -g @vqh2602/mini-app-sdk):
+miniapp create my_awesome_app
 
-# 2. Khởi chạy dev server kèm Browser Simulator
+# 2. Khởi chạy dev server kèm Browser Simulator tích hợp sẵn
 cd my_awesome_app
-npm run dev
+npx miniapp dev
+# -> Lệnh này đồng thời khởi chạy Vite server (:3000) và mở Phone Simulator (:5175)
 
-# 3. Kiểm tra tính hợp lệ của manifest và môi trường
+# 3. Khởi chạy riêng Browser Simulator & DevTools độc lập
+npx miniapp simulator --port 5175 --app-url http://localhost:3000
+
+# 4. Kiểm tra tính hợp lệ của manifest và môi trường
 npx miniapp doctor
 
-# 4. Đóng gói biên dịch và sinh SHA-256 checksum
+# 5. Đóng gói biên dịch và sinh SHA-256 checksum
 npx miniapp build
 
-# 5. Tải lên và gửi xét duyệt tới Registry Backend
+# 6. Tải lên và gửi xét duyệt tới Registry Backend
 npx miniapp upload --submit --notes "Phát hành phiên bản 1.0.0"
 ```
 
-### 8.2. Môi trường giả lập Browser Simulator
+### 8.2. Môi trường giả lập Browser Simulator & DevTools tích hợp sẵn
 
-Browser Simulator (`packages/browser-simulator`) cho phép bạn kiểm thử Mini App ngay trên trình duyệt máy tính mà không cần cài đặt ứng dụng Flutter lên điện thoại thật:
-- **Chasis mô phỏng điện thoại thật**: Lựa chọn giữa khung iPhone 15 Pro hoặc Android Google Pixel.
+Browser Simulator được đóng gói sẵn tĩnh ngay bên trong `@vqh2602/mini-app-sdk` (`simulator-dist/`), cho phép bạn kiểm thử Mini App ngay trên trình duyệt máy tính mà không cần cài đặt ứng dụng Flutter lên điện thoại thật:
+- **Chassis mô phỏng điện thoại thật**: Lựa chọn giữa khung iPhone 15 Pro hoặc Android Google Pixel.
 - **Capsule Menu**: Thanh công cụ góc phải tiêu chuẩn (Nút Reload, Nút Đóng, Menu cài đặt).
 - **Bridge Inspector thời gian thực**: Theo dõi từng gói tin request/response gửi qua lại giữa Web và Native.
 - **DevTools Panel**:
@@ -1003,6 +1086,7 @@ Browser Simulator (`packages/browser-simulator`) cho phép bạn kiểm thử Mi
   - Tùy chỉnh mức pin giả lập, chuyển đổi trạng thái mạng WiFi / 4G / Offline.
   - Bộ giả lập thanh toán SuperApp Pay BottomSheet.
   - Bộ tiêm độ trễ mạng (Latency Injector: 0ms, 200ms, 1500ms).
+- **Khởi chạy độc lập**: Gõ lệnh `npx miniapp simulator` hoặc `npx @vqh2602/mini-app-sdk simulator` tại bất kỳ đâu.
 
 ---
 

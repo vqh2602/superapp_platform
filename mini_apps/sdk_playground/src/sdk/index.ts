@@ -1,3 +1,5 @@
+import officialSuperApp, { SuperAppSDK as BaseSuperAppSDK } from '@vqh2602/mini-app-sdk';
+export { BaseSuperAppSDK };
 import { BridgeTransport } from './bridgeTransport';
 import { AuthModule, MockAuthBackend } from './modules/auth';
 import { UserModule } from './modules/user';
@@ -72,7 +74,6 @@ export class SuperAppSDK {
   public getAppInfo() { return this.system.getAppInfo(); }
   public getBatteryInfo() { return this.system.getBatteryInfo(); }
   public getContacts() { return this.system.getContacts(); }
-  public closeApp() { return this.system.closeApp(); }
 
   public openPhone(phoneNumber: string) { return this.phone.openPhone(phoneNumber); }
   public openSMS(phoneNumber: string, body?: string) { return this.phone.openSMS(phoneNumber, body); }
@@ -88,9 +89,15 @@ export class SuperAppSDK {
   public setBrightness(brightness: number) { return this.ui.setBrightness(brightness); }
   public setStatusBarStyle(style: 'light' | 'dark') { return this.ui.setStatusBarStyle(style); }
   public setStatusBarColor(color: string) { return this.ui.setStatusBarColor(color); }
-  public setNavigationBarColor(color: string) { return this.ui.setNavigationBarColor(color); }
-  public configAppView(options: any) { return this.ui.configAppView(options); }
+  public setNavigationBarTitle(options: string | { title: string }) { return officialSuperApp.setNavigationBarTitle(options); }
+  public setTitle(title: string) { return officialSuperApp.setNavigationBarTitle(title); }
+  public setNavigationBarColor(options: any) { return officialSuperApp.setNavigationBarColor(options); }
+  public configAppView(options: any) { return officialSuperApp.configAppView(options); }
   public showMiniappMenu() { return this.ui.showMiniappMenu(); }
+  public keepScreen(options?: boolean | { keepScreenOn: boolean }) { return officialSuperApp.keepScreen(options); }
+  public requestSendNotification(options?: any) { return officialSuperApp.requestSendNotification(options); }
+  public minimizeApp() { return officialSuperApp.minimizeApp(); }
+  public closeApp() { return officialSuperApp.closeApp(); }
 
   public scanQr(options?: any) { return this.media.scanQr(options); }
   public getPhoto(options?: any) { return this.media.getPhoto(options); }
@@ -115,3 +122,10 @@ export class SuperAppSDK {
 // Global default instances
 export const superApp = new SuperAppSDK('sdk_playground');
 export const mockAuthBackend = new MockAuthBackend(superApp.transport);
+export { officialSuperApp };
+
+if (typeof window !== 'undefined') {
+  (window as any).superApp = superApp;
+  (window as any).bridge = superApp;
+  (window as any).officialSuperApp = officialSuperApp;
+}

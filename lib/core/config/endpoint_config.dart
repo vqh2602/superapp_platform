@@ -7,10 +7,13 @@ class EndpointConfig {
 
   const EndpointConfig({required this.baseUrl});
 
+  static const String localhostEndpoint = 'http://localhost:3000';
+  static const String alwaysdataEndpoint = 'https://superappplatfrom.alwaysdata.net';
+
   static String normalize(String url) {
     var trimmed = url.trim();
     if (trimmed.isEmpty) {
-      trimmed = 'http://localhost:3000';
+      trimmed = localhostEndpoint;
     }
     // Remove trailing slashes
     while (trimmed.endsWith('/')) {
@@ -21,6 +24,19 @@ class EndpointConfig {
       trimmed = trimmed.substring(0, trimmed.length - '/api/v1'.length);
     }
     return trimmed;
+  }
+
+  bool get isLocalhost =>
+      baseUrl.contains('localhost') || baseUrl.contains('127.0.0.1');
+
+  bool get isAlwaysdata =>
+      baseUrl.contains('superappplatfrom.alwaysdata.net');
+
+  String get shortLabel {
+    if (isAlwaysdata) return 'Alwaysdata';
+    if (isLocalhost) return 'Localhost';
+    final uri = Uri.tryParse(baseUrl);
+    return uri?.host.isNotEmpty == true ? uri!.host : baseUrl;
   }
 
   String get apiBaseUrl => '$baseUrl/api/v1';

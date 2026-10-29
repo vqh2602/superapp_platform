@@ -1,59 +1,31 @@
 import { ComponentAction } from '../types';
-
-declare global {
-  interface Window {
-    FlutterBridge?: {
-      postMessage: (msg: string) => void;
-    };
-    SuperAppBridge?: {
-      _callbacks: Record<string, any>;
-      _listeners: Record<string, any>;
-    };
-  }
-}
-
-let reqSeq = 1;
+import superApp from '@vqh2602/mini-app-sdk';
 
 export function invokeNativeBridge(actionName: string, payload: Record<string, any> = {}, appId: string = 'schema_app'): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const id = `req_schema_${Date.now()}_${reqSeq++}`;
-    const request = {
-      id,
-      action: actionName,
-      payload,
-      appId,
-      timestamp: Date.now(),
-    };
+  // Use official @vqh2602/mini-app-sdk transport
+  if (actionName === 'navigation.close') {
+    return superApp.closeApp();
+  }
+  if (actionName === 'navigation.minimizeApp') {
+    return superApp.minimizeApp();
+  }
+  if (actionName === 'ui.showToast') {
+    return superApp.showToast(payload.message || payload.title || 'Notification');
+  }
+  if (actionName === 'ui.configAppView') {
+    return superApp.configAppView(payload as any);
+  }
+  if (actionName === 'device.vibrate') {
+    return superApp.vibrate(payload.style);
+  }
+  if (actionName === 'device.keepScreen') {
+    return superApp.keepScreen(payload);
+  }
+  if (actionName === 'ui.requestSendNotification') {
+    return superApp.requestSendNotification(payload);
+  }
 
-    if (typeof window !== 'undefined' && window.FlutterBridge && window.FlutterBridge.postMessage) {
-      window.SuperAppBridge = window.SuperAppBridge || { _callbacks: {}, _listeners: {} } as any;
-      window.SuperAppBridge!._callbacks = window.SuperAppBridge!._callbacks || {};
-      window.SuperAppBridge!._callbacks[id] = (res: any) => {
-        if (res.success) {
-          resolve(res.data);
-        } else {
-          reject(res.error || { code: 'INTERNAL_ERROR', message: 'Action failed' });
-        }
-      };
-      window.FlutterBridge.postMessage(JSON.stringify(request));
-    } else {
-      // Browser preview simulator fallback
-      console.log(`[SchemaRuntime Simulator] Native action dispatched: ${actionName}`, payload);
-      setTimeout(() => {
-        if (actionName === 'payment.createOrder') {
-          resolve({ orderId: `ORD_SIM_${Date.now()}`, amount: payload.amount, status: 'PENDING' });
-        } else if (actionName === 'payment.openCheckout') {
-          resolve({ orderId: payload.orderId, status: 'SUCCESS', message: 'Simulated payment approved' });
-        } else if (actionName === 'device.scanQRCode') {
-          resolve({ content: 'https://superapp.mock/pay?demo=123', isMock: true });
-        } else if (actionName === 'navigation.close') {
-          resolve({ closed: true });
-        } else {
-          resolve({ success: true, action: actionName, payload });
-        }
-      }, 350);
-    }
-  });
+  return superApp.transport.invoke(actionName, payload);
 }
 
 export async function executeAction(

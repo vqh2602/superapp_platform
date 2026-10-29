@@ -149,7 +149,7 @@ void main() {
       description: 'Test Manifest',
       version: '1.0.0',
       icon: 'code',
-      entryUrl: 'assets/mini_apps/sdk_playground/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
       capabilities: [
         'storage.setSecureItem',
         'storage.getSecureItem',

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/app_motion.dart';
+import '../../../../core/config/debug_mode_provider.dart';
+import '../../../../core/config/endpoint_config.dart';
+import '../../../../core/widgets/backend_endpoint_selector_sheet.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
-import '../../../../core/config/debug_mode_provider.dart';
 
 class HomeTab extends ConsumerWidget {
   final VoidCallback? onNavigateToSearch;
@@ -43,57 +46,66 @@ class HomeTab extends ConsumerWidget {
               // 2. SEARCH BAR SHORTCUT
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: InkWell(
-                  onTap: () {
-                    if (onNavigateToSearch != null) {
-                      onNavigateToSearch!();
-                    } else {
-                      context.push('/search');
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 22),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Tìm kiếm ứng dụng hoặc trò chơi...',
-                            style: TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 14,
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 50),
+                  child: BouncingTap(
+                    onTap: () {
+                      if (onNavigateToSearch != null) {
+                        onNavigateToSearch!();
+                      } else {
+                        context.push('/search');
+                      }
+                    },
+                    scaleFactor: 0.98,
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Tìm kiếm ứng dụng hoặc trò chơi...',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
 
               // 3. PROMO BANNER CAROUSEL
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildBanner(context),
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: FadeSlideIn(
+                  delay: Duration(milliseconds: 100),
+                  child: AnimatedHomeBanner(),
+                ),
               ),
 
               // 4. QUICK SERVICE CATEGORIES
-              _buildQuickServices(context),
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 150),
+                child: _buildQuickServices(context),
+              ),
 
               const SizedBox(height: 16),
 
@@ -156,16 +168,50 @@ class HomeTab extends ConsumerWidget {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
-                      ElevatedButton.icon(
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await ref.read(backendEndpointProvider.notifier).setEndpoint(EndpointConfig.alwaysdataEndpoint);
+                              ref.invalidate(dynamicCatalogProvider);
+                              ref.invalidate(catalogCategoriesProvider);
+                            },
+                            icon: const Icon(Icons.cloud_rounded, size: 16),
+                            label: const Text('Alwaysdata Cloud'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await ref.read(backendEndpointProvider.notifier).setEndpoint(EndpointConfig.localhostEndpoint);
+                              ref.invalidate(dynamicCatalogProvider);
+                              ref.invalidate(catalogCategoriesProvider);
+                            },
+                            icon: const Icon(Icons.computer_rounded, size: 16),
+                            label: const Text('Localhost (3000)'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => showBackendEndpointSelectorSheet(context, ref),
+                            icon: const Icon(Icons.edit_rounded, size: 16),
+                            label: const Text('Nhập endpoint riêng'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
                         onPressed: () {
                           ref.invalidate(dynamicCatalogProvider);
                           ref.invalidate(catalogCategoriesProvider);
                         },
                         icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text('Thử lại'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
-                          foregroundColor: Colors.white,
+                        label: const Text('Thử lại kết nối hiện tại'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
                         ),
                       ),
                     ],
@@ -230,9 +276,12 @@ class HomeTab extends ConsumerWidget {
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
-                    children: allApps.map((app) {
-                      return AppListItem(app: app);
-                    }).toList(),
+                    children: List.generate(allApps.length, (index) {
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: 30 * index),
+                        child: AppListItem(app: allApps[index]),
+                      );
+                    }),
                   ),
                 ),
               ],
@@ -263,8 +312,9 @@ class HomeTab extends ConsumerWidget {
       child: Row(
         children: [
           // Avatar
-          InkWell(
+          BouncingTap(
             onTap: () => context.push('/profile'),
+            scaleFactor: 0.92,
             child: CircleAvatar(
               radius: 26,
               backgroundColor: const Color(0xFF2563EB),
@@ -284,6 +334,7 @@ class HomeTab extends ConsumerWidget {
           Expanded(
             child: InkWell(
               onTap: () => context.push('/profile'),
+              borderRadius: BorderRadius.circular(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -301,18 +352,25 @@ class HomeTab extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'VIP',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF059669),
+                      const PulseEffect(
+                        minScale: 0.95,
+                        maxScale: 1.05,
+                        duration: Duration(milliseconds: 1600),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Text(
+                              'VIP',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -349,6 +407,11 @@ class HomeTab extends ConsumerWidget {
           ),
 
           // Header Quick Actions
+          IconButton(
+            tooltip: 'Chọn Backend Endpoint (Alwaysdata / Localhost / Custom)',
+            icon: const Icon(Icons.dns_rounded, color: Color(0xFF0284C7), size: 22),
+            onPressed: () => showBackendEndpointSelectorSheet(context, ref),
+          ),
           if (ref.watch(isDebugModeEnabledProvider))
             IconButton(
               tooltip: 'Debug Logs',
@@ -391,80 +454,6 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildBanner(BuildContext context) {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00BA52).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'SUPER APP PLATFORM',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF00BA52),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Hệ sinh thái Mini App',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Mở ngay ứng dụng tức thì không cần cài đặt.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.rocket_launch_rounded, color: Color(0xFF00BA52), size: 36),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildQuickServices(BuildContext context) {
     final services = [
       {'name': 'Đồ uống', 'icon': Icons.coffee_rounded, 'color': const Color(0xFFF59E0B), 'appId': 'sample_store'},
@@ -491,33 +480,43 @@ class HomeTab extends ConsumerWidget {
         itemCount: services.length,
         itemBuilder: (context, index) {
           final s = services[index];
-          return InkWell(
-            onTap: () => context.push('/miniapp/${s['appId']}'),
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: (s['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
+          return FadeSlideIn(
+            delay: Duration(milliseconds: 25 * index),
+            child: BouncingTap(
+              onTap: () => context.push('/miniapp/${s['appId']}'),
+              scaleFactor: 0.88,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: (s['color'] as Color).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (s['color'] as Color).withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 24),
                   ),
-                  child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 24),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  s['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155),
+                  const SizedBox(height: 6),
+                  Text(
+                    s['name'] as String,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -527,7 +526,7 @@ class HomeTab extends ConsumerWidget {
 
   Widget _buildFeaturedHorizontal(BuildContext context, List<MiniAppManifest> apps) {
     return SizedBox(
-      height: 120,
+      height: 126,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -535,69 +534,84 @@ class HomeTab extends ConsumerWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final app = apps[index];
-          return Container(
-            width: 220,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: app.icon.startsWith('http://') || app.icon.startsWith('https://')
-                        ? Image.network(app.icon, fit: BoxFit.cover,
-                            errorBuilder: (_, error, stackTrace) => const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24))
-                        : const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24),
-                  ),
+          return FadeSlideIn(
+            direction: Axis.horizontal,
+            delay: Duration(milliseconds: 40 * index),
+            child: BouncingTap(
+              onTap: () => context.push('/miniapp/${app.id}'),
+              scaleFactor: 0.96,
+              child: Container(
+                width: 220,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        app.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        app.category,
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-                        maxLines: 1,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: app.icon.startsWith('http://') || app.icon.startsWith('https://')
+                            ? Image.network(app.icon, fit: BoxFit.cover,
+                                errorBuilder: (_, error, stackTrace) => const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24))
+                            : const Icon(Icons.apps_rounded, color: Color(0xFF2563EB), size: 24),
                       ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        height: 24,
-                        child: ElevatedButton(
-                          onPressed: () => context.push('/miniapp/${app.id}'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00BA52),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            app.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: const Text('Mở'),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            app.category,
+                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                            maxLines: 1,
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 24,
+                            child: ElevatedButton(
+                              onPressed: () => context.push('/miniapp/${app.id}'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00BA52),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                              child: const Text('Mở'),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -639,6 +653,171 @@ class HomeTab extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class AnimatedHomeBanner extends StatefulWidget {
+  final VoidCallback? onTap;
+
+  const AnimatedHomeBanner({super.key, this.onTap});
+
+  @override
+  State<AnimatedHomeBanner> createState() => _AnimatedHomeBannerState();
+}
+
+class _AnimatedHomeBannerState extends State<AnimatedHomeBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _floatAnim;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+
+    _floatAnim = Tween<double>(begin: -4.0, end: 4.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _glowAnim = Tween<double>(begin: 0.15, end: 0.4).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          height: 154,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F2744)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF38BDF8).withValues(alpha: _glowAnim.value * 0.8),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2563EB).withValues(alpha: _glowAnim.value),
+                blurRadius: 18,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00BA52).withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF00BA52).withValues(alpha: 0.4),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00E676),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'SUPERAPP PLATFORM',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF00E676),
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Hệ sinh thái Mini App',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Mở ngay ứng dụng tức thì không cần cài đặt.',
+                      style: TextStyle(
+                        color: Color(0xFFCBD5E1),
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Transform.translate(
+                offset: Offset(0, _floatAnim.value),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF2563EB).withValues(alpha: 0.3),
+                        const Color(0xFF00BA52).withValues(alpha: 0.2),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00BA52).withValues(alpha: _glowAnim.value),
+                        blurRadius: 16,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.rocket_launch_rounded,
+                    color: Color(0xFF00E676),
+                    size: 40,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

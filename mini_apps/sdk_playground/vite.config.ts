@@ -22,7 +22,7 @@ export default defineConfig({
   plugins: [react(), viteSingleFile(), removeModuleAttrs()],
   base: './',
   build: {
-    outDir: path.resolve(__dirname, '../../assets/mini_apps/sdk_playground'),
+    outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
   },
 });

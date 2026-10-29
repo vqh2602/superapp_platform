@@ -70,30 +70,55 @@ class _MiniAppCatalogScreenState extends ConsumerState<MiniAppCatalogScreen> {
           unselectedFontSize: 11,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
+              activeIcon: AnimatedScale(
+                scale: 1.14,
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.home_rounded),
+              ),
               label: 'Trang chủ',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.grid_view_outlined),
-              activeIcon: Icon(Icons.grid_view_rounded),
+              activeIcon: AnimatedScale(
+                scale: 1.14,
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.grid_view_rounded),
+              ),
               label: 'Ứng dụng',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.sports_esports_outlined),
-              activeIcon: Icon(Icons.sports_esports_rounded),
+              activeIcon: AnimatedScale(
+                scale: 1.14,
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.sports_esports_rounded),
+              ),
               label: 'Trò chơi',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.search_rounded),
-              activeIcon: Icon(Icons.search_rounded),
+              activeIcon: AnimatedScale(
+                scale: 1.14,
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.search_rounded),
+              ),
               label: 'Tìm kiếm',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
+              activeIcon: AnimatedScale(
+                scale: 1.14,
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.person_rounded),
+              ),
               label: 'Của tôi',
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/config/app_theme.dart';
 import '../../../../core/config/debug_mode_provider.dart';
@@ -151,56 +152,63 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // App Logo
-                  Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.3),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: Image.asset(
-                          'assets/images/app_logo.png',
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            padding: const EdgeInsets.all(18),
-                            color: AppTheme.primary,
-                            child: const Icon(
-                              Icons.lock_person_rounded,
-                              size: 44,
-                              color: Colors.white,
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 40),
+                    child: Column(
+                      children: [
+                        Center(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primary.withValues(alpha: 0.35),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: Image.asset(
+                                'assets/images/app_logo.png',
+                                width: 84,
+                                height: 84,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  padding: const EdgeInsets.all(18),
+                                  color: AppTheme.primary,
+                                  child: const Icon(
+                                    Icons.lock_person_rounded,
+                                    size: 44,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'SuperApp Platform',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Đăng nhập tài khoản & kết nối Backend Mini App',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: const Color(0xFF64748B).withValues(alpha: 0.9),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'SuperApp Platform',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Đăng nhập tài khoản & kết nối Backend Mini App',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: const Color(0xFF64748B).withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -241,18 +249,21 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _endpointController,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Backend Endpoint URL',
-                      hintText: 'http://localhost:3000',
+                      hintText: 'https://superappplatfrom.alwaysdata.net',
                       prefixIcon: const Icon(Icons.dns_rounded, size: 20),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.restore_rounded, size: 20),
                         tooltip: 'Đặt lại mặc định',
                         onPressed: () {
-                          _endpointController.text = AppConfig.defaultBaseUrl;
+                          setState(() {
+                            _endpointController.text = AppConfig.defaultBaseUrl;
+                          });
                         },
                       ),
-                      helperText: 'Địa chỉ máy chủ API (SuperApp Backend)',
+                      helperText: 'Nhập URL endpoint riêng hoặc bấm chọn nhanh bên dưới',
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -269,6 +280,77 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                         return 'Vui lòng nhập Backend Endpoint';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Nút chọn nhanh Endpoint
+                  Builder(
+                    builder: (context) {
+                      final currentText = _endpointController.text.trim();
+                      final isAlwaysdata = currentText == EndpointConfig.alwaysdataEndpoint ||
+                          EndpointConfig.normalize(currentText) == EndpointConfig.alwaysdataEndpoint;
+                      final isLocalhost = currentText == EndpointConfig.localhostEndpoint ||
+                          EndpointConfig.normalize(currentText) == EndpointConfig.localhostEndpoint;
+
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text(
+                            'Chọn nhanh:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.cloud_rounded,
+                              size: 16,
+                              color: isAlwaysdata ? Colors.white : const Color(0xFF16A34A),
+                            ),
+                            label: const Text('Alwaysdata (Cloud)'),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isAlwaysdata ? FontWeight.bold : FontWeight.w500,
+                              color: isAlwaysdata ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            backgroundColor: isAlwaysdata ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
+                            side: BorderSide(
+                              color: isAlwaysdata ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _endpointController.text = EndpointConfig.alwaysdataEndpoint;
+                              });
+                            },
+                          ),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.computer_rounded,
+                              size: 16,
+                              color: isLocalhost ? Colors.white : const Color(0xFF0284C7),
+                            ),
+                            label: const Text('Localhost (3000)'),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isLocalhost ? FontWeight.bold : FontWeight.w500,
+                              color: isLocalhost ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            backgroundColor: isLocalhost ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                            side: BorderSide(
+                              color: isLocalhost ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _endpointController.text = EndpointConfig.localhostEndpoint;
+                              });
+                            },
+                          ),
+                        ],
+                      );
                     },
                   ),
 
@@ -371,55 +453,67 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                   const SizedBox(height: 20),
 
                   // Login Button
-                  ElevatedButton(
-                    onPressed: authState.isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Đăng nhập SuperApp',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  BouncingTap(
+                    scaleFactor: 0.97,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: authState.isLoading ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 2,
+                        ),
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Đăng nhập SuperApp',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 14),
 
                   // Register Button
-                  OutlinedButton.icon(
-                    onPressed: authState.isLoading
-                        ? null
-                        : () {
-                            context.push('/register');
-                          },
-                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
-                    label: const Text(
-                      'Đăng ký tài khoản mới',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primary,
-                      side: const BorderSide(color: AppTheme.primary, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  BouncingTap(
+                    scaleFactor: 0.97,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: authState.isLoading
+                            ? null
+                            : () {
+                                context.push('/register');
+                              },
+                        icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+                        label: const Text(
+                          'Đăng ký tài khoản mới',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                          side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
                   ),

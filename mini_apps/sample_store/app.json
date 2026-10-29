@@ -1,0 +1,19 @@
+{
+  "manifestVersion": 1,
+  "appId": "sample_store",
+  "name": "Sample Mini App 2 (Store)",
+  "description": "Secondary Mini App to demonstrate cross-mini-app native switching",
+  "category": "Food & Beverage",
+  "version": "1.0.0",
+  "runtimeType": "web",
+  "entry": "dist/index.html",
+  "icon": "icon.png",
+  "permissions": [
+    "user.getBasicInfo",
+    "navigation.close"
+  ],
+  "developerName": "SuperApp Sample Dev",
+  "supportEmail": "sample@superapp.vn",
+  "website": "https://superapp.vn",
+  "themeColor": "#2563EB"
+}

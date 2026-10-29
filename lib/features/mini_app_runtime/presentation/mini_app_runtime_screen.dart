@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import '../../native_actions/domain/mini_app_ui_delegate.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/web_log_entry.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
 
@@ -54,6 +56,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   bool _isStatusBarHidden = false;
   bool _hideBottomNav = false;
   bool _hasPadding = true;
+  bool _hasPaddingTop = true;
+  bool _hasPaddingBottom = true;
   Color? _bottomNavColor;
   bool _isKeepScreenOn = false;
 
@@ -111,9 +115,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     String? headerTitle,
     String? textColor,
     String? statusBar,
+    Color? statusBarColor,
     bool? actionBarHidden,
     bool? hideAndroidBottomNavigationBar,
     bool? hasPadding,
+    bool? hasPaddingTop,
+    bool? hasPaddingBottom,
     Color? bottomNavColor,
   }) {
     if (mounted) {
@@ -125,11 +132,18 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           _statusBarStyle = statusBar;
           _isStatusBarHidden = statusBar == 'hidden';
         }
+        if (statusBarColor != null) _overrideStatusBarColor = statusBarColor;
         if (actionBarHidden != null) _isActionBarHidden = actionBarHidden;
         if (hideAndroidBottomNavigationBar != null) {
           _hideBottomNav = hideAndroidBottomNavigationBar;
         }
-        if (hasPadding != null) _hasPadding = hasPadding;
+        if (hasPadding != null) {
+          _hasPadding = hasPadding;
+          _hasPaddingTop = hasPadding;
+          _hasPaddingBottom = hasPadding;
+        }
+        if (hasPaddingTop != null) _hasPaddingTop = hasPaddingTop;
+        if (hasPaddingBottom != null) _hasPaddingBottom = hasPaddingBottom;
         if (bottomNavColor != null) _bottomNavColor = bottomNavColor;
       });
     }
@@ -171,10 +185,30 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
   Color _parseColor(String? hexString, {Color defaultColor = Colors.white}) {
     if (hexString == null || hexString.isEmpty) return defaultColor;
+    final str = hexString.trim();
+    if (str.toLowerCase() == 'transparent') return Colors.transparent;
+
+    // rgb(r, g, b) or rgba(r, g, b, a)
+    if (str.toLowerCase().startsWith('rgb')) {
+      try {
+        final inside = str.substring(str.indexOf('(') + 1, str.indexOf(')'));
+        final parts = inside.split(',').map((p) => p.trim()).toList();
+        if (parts.length >= 3) {
+          final r = int.parse(parts[0]);
+          final g = int.parse(parts[1]);
+          final b = int.parse(parts[2]);
+          final a = parts.length >= 4 ? double.parse(parts[3]) : 1.0;
+          return Color.fromRGBO(r, g, b, a);
+        }
+      } catch (_) {}
+    }
+
     try {
-      String hex = hexString.replaceAll('#', '').trim();
+      String hex = str.replaceAll('#', '').trim();
       if (hex.length == 6) {
         hex = 'FF$hex';
+      } else if (hex.length == 8) {
+        return Color(int.parse(hex, radix: 16));
       } else if (hex.length == 3) {
         hex = 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
       }
@@ -185,6 +219,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   bool _isColorDark(Color color) {
+    if (color == Colors.transparent || color.a < 0.2) {
+      return false;
+    }
     return color.computeLuminance() < 0.5;
   }
 
@@ -380,10 +417,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       _eventEmitter = emitter;
     }
 
-    // Load entry point based on runtime type
-    if (validManifest.isSchemaApp) {
-      controller.loadFlutterAsset('assets/mini_apps/schema_runtime/index.html');
-    } else if (validManifest.isAsset) {
+    // Load entry point: remote Backend URL is the primary runtime loader
+    if (validManifest.isAsset && validManifest.entryUrl.startsWith('assets/')) {
       controller.loadFlutterAsset(validManifest.entryUrl);
     } else {
       controller.loadRequest(Uri.parse(validManifest.entryUrl));
@@ -445,6 +480,24 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       }
     });
 
+    final safeTopInset = MediaQuery.of(context).padding.top;
+    final safeBottomInset = MediaQuery.of(context).padding.bottom;
+    final bool enableSafeAreaTop = _hasPaddingTop && _hasPadding;
+    final bool enableSafeAreaBottom = _hasPaddingBottom && _hasPadding;
+
+    final isHeaderTransparent = headerBgColor == Colors.transparent ||
+        headerBgColor.a < 0.95 ||
+        _statusBarStyle == 'transparent';
+    const headerBarHeight = 48.0;
+    final totalHeaderHeight = (_isStatusBarHidden ? 0.0 : safeTopInset) + headerBarHeight;
+
+    // Effective background tint for frosted glass / transparent header
+    final effectiveHeaderBgColor = headerBgColor == Colors.transparent
+        ? (isDarkHeader
+            ? Colors.black.withValues(alpha: 0.3)
+            : Colors.white.withValues(alpha: 0.65))
+        : (isHeaderTransparent ? headerBgColor.withValues(alpha: 0.8) : headerBgColor);
+
     final statusBarColor = _overrideStatusBarColor ?? Colors.transparent;
     final statusBarIconBrightness = _statusBarStyle == 'light'
         ? Brightness.dark
@@ -455,6 +508,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         ? Brightness.dark
         : Brightness.light;
 
+    // Mini App Content Top & Bottom
+    final contentTop = (isHeaderTransparent || !enableSafeAreaTop || _isActionBarHidden)
+        ? (enableSafeAreaTop && !_isStatusBarHidden ? safeTopInset : 0.0)
+        : totalHeaderHeight;
+    final contentBottom = enableSafeAreaBottom ? safeBottomInset : 0.0;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: statusBarColor,
@@ -464,235 +523,364 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       ),
       child: Scaffold(
         backgroundColor: defaultBgColor,
-        body: SafeArea(
-          top: !_isStatusBarHidden,
-          bottom: _hasPadding,
-          child: Column(
-            children: [
-              // Dynamic Top Navigation Bar (hideable via configAppView)
-              if (!_isActionBarHidden)
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: headerBgColor,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isDarkHeader
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : const Color(0xFFEEEEEE),
-                        width: 0.8,
+        body: Stack(
+          children: [
+            // Mini App Content: Edge-to-Edge with dynamic offset based on header transparency & safe area
+            Positioned(
+              top: contentTop,
+              left: 0,
+              right: 0,
+              bottom: contentBottom,
+              child: Stack(
+                children: [
+                  if (_webViewController != null && _loadError == null)
+                    SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: WebViewWidget(controller: _webViewController!),
+                    ),
+
+                  // Diagnostic Alert Banner for blank screen (Only in debug mode)
+                  if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 20,
+                      child: Material(
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF1E293B),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
+                                  style: TextStyle(color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Center Title
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 90),
-                          child: Text(
-                            displayTitle,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: headerTextColor,
+
+                  if (_isLoading)
+                    Container(
+                      color: themeBgColor,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PulseEffect(
+                              minScale: 0.92,
+                              maxScale: 1.08,
+                              child: Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: (isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52)).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52)).withValues(alpha: 0.25),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.bolt_rounded,
+                                  size: 38,
+                                  color: isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52),
+                                ),
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-
-                      // Right Capsule Bar: [ ••• | ⊙ ]
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: isDarkHeader
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDarkHeader
-                                  ? Colors.white.withValues(alpha: 0.25)
-                                  : const Color(0xFFD1D5DB),
-                              width: 0.8,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDarkHeader ? 0.2 : 0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Nút thông tin miniapp (•••)
-                              InkWell(
-                                onTap: () => _showMiniAppActionBottomSheet(manifest),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  bottomLeft: Radius.circular(16),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  child: Icon(
-                                    Icons.more_horiz_rounded,
-                                    size: 20,
-                                    color: headerTextColor,
-                                  ),
-                                ),
-                              ),
-                              // Capsule Divider
-                              Container(
-                                width: 0.8,
-                                height: 16,
-                                color: isDarkHeader
-                                    ? Colors.white.withValues(alpha: 0.25)
-                                    : const Color(0xFFE5E7EB),
-                              ),
-                              // Nút đóng miniapp (⊙)
-                              InkWell(
-                                onTap: () {
-                                  _eventEmitter?.emit('miniapp.close');
-                                  Navigator.of(context).pop();
-                                },
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(16),
-                                  bottomRight: Radius.circular(16),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  child: Icon(
-                                    Icons.adjust_rounded,
-                                    size: 18,
-                                    color: headerTextColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Mini App Content: Full Screen, Edge-to-Edge (No white margins on left/right)
-              Expanded(
-                child: Stack(
-                  children: [
-                    if (_webViewController != null && _loadError == null)
-                      SizedBox(
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: WebViewWidget(controller: _webViewController!),
-                      ),
-
-                    // Diagnostic Alert Banner for blank screen (Only in debug mode)
-                    if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 20,
-                        child: Material(
-                          elevation: 8,
-                          borderRadius: BorderRadius.circular(12),
-                          color: const Color(0xFF1E293B),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
-                                const SizedBox(width: 10),
-                                const Expanded(
-                                  child: Text(
-                                    'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
-                                    style: TextStyle(color: Colors.white, fontSize: 12),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white54, size: 16),
-                                  onPressed: () => setState(() => _hasBlankScreenWarning = false),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    if (_isLoading)
-                      Container(
-                        color: themeBgColor,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
                                 color: isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52),
+                                strokeWidth: 2.8,
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Đang khởi tạo Mini App...',
-                                style: TextStyle(
-                                  color: isDarkTheme ? Colors.white70 : const Color(0xFF64748B),
-                                  fontSize: 13,
-                                ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Đang khởi tạo Mini App...',
+                              style: TextStyle(
+                                color: isDarkTheme ? Colors.white70 : const Color(0xFF64748B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
 
-                    if (_loadError != null)
-                      Container(
-                        color: themeBgColor,
-                        padding: const EdgeInsets.all(24),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                size: 48,
-                                color: Colors.red,
+                  if (_loadError != null)
+                    Container(
+                      color: themeBgColor,
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              size: 48,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _loadError!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                                fontSize: 14,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _loadError!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _isLoading = true;
-                                    _loadError = null;
-                                    _initMiniApp();
-                                  });
-                                },
-                                child: const Text('Thử lại'),
-                              ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLoading = true;
+                                  _loadError = null;
+                                  _initMiniApp();
+                                });
+                              },
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
                         ),
                       ),
-                  ],
+                    ),
+                ],
+              ),
+            ),
+
+            // Dynamic Top Navigation Bar (with frosted glass / blur and auto-contrast capsule)
+            if (!_isActionBarHidden)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildAdaptiveAppBar(
+                  context: context,
+                  manifest: manifest,
+                  topInset: _isStatusBarHidden ? 0.0 : safeTopInset,
+                  displayTitle: displayTitle,
+                  headerBgColor: effectiveHeaderBgColor,
+                  isDarkHeader: isDarkHeader,
+                  headerTextColor: headerTextColor,
+                  isHeaderTransparent: isHeaderTransparent,
+                ),
+              )
+            else
+              // Khi tắt/ẩn AppBar, riêng nút action capsule [ ••• | ⊙ ] vẫn luôn được bảo toàn Safe Area góc phải
+              Positioned(
+                top: (_isStatusBarHidden ? 0.0 : safeTopInset) + 8.0,
+                right: 14.0,
+                child: _buildCapsuleButton(
+                  context: context,
+                  manifest: manifest,
+                  isDarkHeader: isDarkHeader,
+                  isHeaderTransparent: true,
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildCapsuleButton({
+    required BuildContext context,
+    required MiniAppManifest? manifest,
+    required bool isDarkHeader,
+    required bool isHeaderTransparent,
+  }) {
+    // Dynamic Auto-contrast capsule styling:
+    // Mini App CANNOT edit/remove this button (SuperApp host security invariant).
+    // The button automatically calculates contrast to remain clearly visible on any background.
+    final bool useGlassCapsule = isHeaderTransparent;
+    final Color capsuleBg = useGlassCapsule
+        ? (isDarkHeader
+            ? Colors.black.withValues(alpha: 0.4)
+            : Colors.white.withValues(alpha: 0.75))
+        : (isDarkHeader
+            ? Colors.white.withValues(alpha: 0.18)
+            : Colors.white.withValues(alpha: 0.95));
+
+    final Color capsuleBorderColor = isDarkHeader
+        ? Colors.white.withValues(alpha: 0.35)
+        : const Color(0xFFCBD5E1);
+
+    final Color capsuleIconColor = isDarkHeader
+        ? Colors.white
+        : const Color(0xFF0F172A);
+
+    final Color capsuleDividerColor = isDarkHeader
+        ? Colors.white.withValues(alpha: 0.3)
+        : const Color(0xFFE2E8F0);
+
+    Widget capsuleButton = Container(
+      height: 32,
+      decoration: BoxDecoration(
+        color: capsuleBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: capsuleBorderColor, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkHeader ? 0.3 : 0.06),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Nút thông tin miniapp (•••)
+          InkWell(
+            onTap: () => _showMiniAppActionBottomSheet(manifest),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              bottomLeft: Radius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Icon(
+                Icons.more_horiz_rounded,
+                size: 20,
+                color: capsuleIconColor,
+              ),
+            ),
+          ),
+          // Capsule Divider
+          Container(
+            width: 0.8,
+            height: 16,
+            color: capsuleDividerColor,
+          ),
+          // Nút đóng miniapp (⊙)
+          InkWell(
+            onTap: () {
+              _eventEmitter?.emit('miniapp.close');
+              Navigator.of(context).pop();
+            },
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Icon(
+                Icons.adjust_rounded,
+                size: 18,
+                color: capsuleIconColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (useGlassCapsule) {
+      capsuleButton = ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: capsuleButton,
+        ),
+      );
+    }
+
+    return capsuleButton;
+  }
+
+  Widget _buildAdaptiveAppBar({
+    required BuildContext context,
+    required MiniAppManifest? manifest,
+    required double topInset,
+    required String displayTitle,
+    required Color headerBgColor,
+    required bool isDarkHeader,
+    required Color headerTextColor,
+    required bool isHeaderTransparent,
+  }) {
+    final capsuleButton = _buildCapsuleButton(
+      context: context,
+      manifest: manifest,
+      isDarkHeader: isDarkHeader,
+      isHeaderTransparent: isHeaderTransparent,
+    );
+
+    final barContent = Container(
+      height: _isStatusBarHidden ? 48.0 : (topInset + 48.0),
+      padding: EdgeInsets.only(
+        top: _isStatusBarHidden ? 0.0 : topInset,
+        left: 14,
+        right: 14,
+      ),
+      decoration: BoxDecoration(
+        color: headerBgColor,
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkHeader
+                ? Colors.white.withValues(alpha: 0.1)
+                : const Color(0xFFE2E8F0),
+            width: 0.8,
+          ),
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Center Title (dynamically updated by configAppView or setTitle)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 90),
+              child: Text(
+                displayTitle,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: headerTextColor,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+
+          // Right Capsule Bar: [ ••• | ⊙ ] (Host-Controlled, Cannot be removed or edited)
+          Align(
+            alignment: Alignment.centerRight,
+            child: capsuleButton,
+          ),
+        ],
+      ),
+    );
+
+    if (isHeaderTransparent) {
+      return ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: barContent,
+        ),
+      );
+    }
+
+    return barContent;
   }
 }

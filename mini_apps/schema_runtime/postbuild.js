@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.resolve(__dirname, '../../assets/mini_apps/schema_runtime/index.html');
+const htmlPath = path.resolve(__dirname, 'dist/index.html');
 
 if (fs.existsSync(htmlPath)) {
   let content = fs.readFileSync(htmlPath, 'utf8');

@@ -1,0 +1,12 @@
+{
+  "name": "superapp-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SuperApp Platform with Dynamic Mini App Ecosystem",
+  "scripts": {
+    "build:sdk": "npm run build --prefix mini_app_sdk",
+    "build:miniapps": "node scripts/build-and-deploy-miniapps.cjs",
+    "deploy:miniapps": "node scripts/build-and-deploy-miniapps.cjs",
+    "build": "node scripts/build-and-deploy-miniapps.cjs"
+  }
+}

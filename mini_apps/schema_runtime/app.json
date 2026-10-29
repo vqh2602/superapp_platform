@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "appId": "schema_runtime",
+  "name": "Schema Runtime Engine",
+  "description": "Dynamic No-Code Schema execution engine for SuperApp",
+  "category": "Developer Tools",
+  "version": "1.0.0",
+  "runtimeType": "web",
+  "entry": "dist/index.html",
+  "icon": "icon.png",
+  "permissions": [
+    "navigation.close",
+    "navigation.openMiniApp",
+    "user.getProfile",
+    "user.getBasicInfo",
+    "device.getLocation",
+    "device.scanQRCode",
+    "device.pickImage",
+    "storage.setSecureItem",
+    "storage.getSecureItem",
+    "storage.removeSecureItem",
+    "configAppView",
+    "showToast"
+  ],
+  "developerName": "SuperApp Platform Team",
+  "supportEmail": "developer@superapp.vn",
+  "website": "https://superapp.vn",
+  "themeColor": "#0068FF"
+}

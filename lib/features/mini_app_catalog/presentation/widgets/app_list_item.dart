@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/app_motion.dart';
 import '../../domain/mini_app_manifest.dart';
 
 class AppListItem extends StatelessWidget {
@@ -14,20 +15,22 @@ class AppListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        if (onOpen != null) {
-          onOpen!();
-        } else {
-          context.push('/miniapp/${app.id}');
-        }
-      },
-      borderRadius: BorderRadius.circular(12),
+    void handleOpen() {
+      if (onOpen != null) {
+        onOpen!();
+      } else {
+        context.push('/miniapp/${app.id}');
+      }
+    }
+
+    return BouncingTap(
+      onTap: handleOpen,
+      scaleFactor: 0.98,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // App Icon
+            // App Icon with subtle elevation
             _buildAppIcon(app),
             const SizedBox(width: 14),
 
@@ -63,30 +66,37 @@ class AppListItem extends StatelessWidget {
             ),
             const SizedBox(width: 12),
 
-            // Open Action Button: Green Pill "Mở"
-            ElevatedButton(
-              onPressed: () {
-                if (onOpen != null) {
-                  onOpen!();
-                } else {
-                  context.push('/miniapp/${app.id}');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00BA52),
-                foregroundColor: Colors.white,
-                elevation: 0,
+            // Open Action Button: Green Pill "Mở" with spring tap
+            BouncingTap(
+              onTap: handleOpen,
+              scaleFactor: 0.90,
+              child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                minimumSize: const Size(64, 34),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(17),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00C853), Color(0xFF00A344)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00BA52).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                textStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                child: const Text(
+                  'Mở',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
-              child: const Text('Mở'),
             ),
           ],
         ),

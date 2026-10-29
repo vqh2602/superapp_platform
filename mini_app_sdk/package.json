@@ -1,25 +1,74 @@
 {
-  "name": "superapp-sdk-monorepo",
-  "version": "1.0.0",
-  "private": true,
-  "description": "SuperApp Mini App Developer SDK Ecosystem: Core SDK, Transport Bridge, Mock Engine, CLI, and Browser Simulator",
-  "workspaces": [
-    "packages/*"
+  "name": "@vqh2602/mini-app-sdk",
+  "version": "1.0.1",
+  "description": "Official Unified TypeScript SDK & CLI for SuperApp Mini Apps: Core API, Bridge Transport, Mock Engine, and Browser Simulator",
+  "type": "module",
+  "bin": {
+    "miniapp": "bin/miniapp.js",
+    "superapp": "bin/miniapp.js",
+    "miniapp-simulator": "bin/simulator.js",
+    "superapp-simulator": "bin/simulator.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./transport": {
+      "types": "./dist/transport/index.d.ts",
+      "import": "./dist/transport/index.js",
+      "default": "./dist/transport/index.js"
+    },
+    "./mock": {
+      "types": "./dist/mock/index.d.ts",
+      "import": "./dist/mock/index.js",
+      "default": "./dist/mock/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "simulator-dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "npm run build --workspace=@superapp/sdk-transport && npm run build --workspace=@superapp/sdk-mock-engine && npm run build --workspace=@superapp/mini-app-sdk && npm run build --workspace=@superapp/mini-app-cli && npm run build --workspace=@superapp/browser-simulator",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "simulator": "npm run dev --workspace=@superapp/browser-simulator",
-    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
+    "build:sim": "vite build simulator",
+    "build:ts": "tsc",
+    "build": "npm run build:sim && npm run build:ts && chmod +x ./bin/*.js",
+    "prepublishOnly": "npm run build",
+    "simulator": "node ./bin/simulator.js",
+    "clean": "rm -rf dist simulator-dist"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
   },
   "keywords": [
     "superapp",
     "mini-app",
     "sdk",
-    "transport",
+    "bridge",
     "mock-engine",
     "cli",
-    "simulator"
+    "simulator",
+    "devtools"
   ],
   "author": "SuperApp Platform Team",
   "license": "MIT"
