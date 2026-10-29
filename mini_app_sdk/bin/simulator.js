@@ -13,6 +13,17 @@ if (!fs.existsSync(distDir)) {
 }
 
 const args = process.argv.slice(2);
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+Usage: superapp-simulator [options]
+
+Options:
+  --port <number>    Port to run simulator on (default: 5175)
+  -h, --help         Show this help message
+`);
+  process.exit(0);
+}
+
 const portIndex = args.indexOf('--port');
 const port = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1], 10) : 5175;
 
@@ -66,6 +77,16 @@ const server = http.createServer((req, res) => {
       res.end(data);
     });
   });
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ \x1b[31mError: Port ${port} is already in use.\x1b[0m Try passing a different port with: \x1b[33m--port <port>\x1b[0m\n`);
+    process.exit(1);
+  } else {
+    console.error(`\n❌ Server error: ${err.message}\n`);
+    process.exit(1);
+  }
 });
 
 server.listen(port, () => {

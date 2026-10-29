@@ -27,9 +27,9 @@ void main() {
       id: 'sdk_playground',
       name: 'SDK Playground',
       description: 'Test',
-      version: '1.0.0',
+      version: '1.0.4',
       icon: 'code',
-      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/sdk_playground/1.0.4/dist/index.html',
       capabilities: ['auth.requestCode', 'user.getProfile', 'device.scanQRCode', 'device.getLocation'],
     );
 

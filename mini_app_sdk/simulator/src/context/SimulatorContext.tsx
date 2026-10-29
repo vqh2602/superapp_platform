@@ -82,32 +82,65 @@ export const SimulatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [mockEngine]);
 
+  // Sync manual payment mode with mock engine
+  useEffect(() => {
+    if (manualPaymentMode) {
+      mockEngine.payment.setApprovalHook((order: MockPaymentOrder) => {
+        return new Promise<boolean>((resolve) => {
+          manualResolverRef.current = resolve;
+          setPendingPayment({ order, resolve });
+        });
+      });
+    } else {
+      mockEngine.payment.setApprovalHook(undefined);
+    }
+  }, [mockEngine, manualPaymentMode]);
+
   // Handle postMessage from child iframe
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       const data = event.data;
-      if (!data || data.type !== 'SUPERAPP_BRIDGE_REQUEST') return;
+      if (!data) return;
 
-      const request = data.request as BridgeRequest;
-      if (!request || !request.id) return;
+      // 1. Handle special shell messages
+      if (data.type === 'MINIAPP_CLOSE' || data.type === 'MINIAPP_MINIMIZE') {
+        mockEngine.onLog((entry) => setLogs((prev) => [entry, ...prev.slice(0, 150)]));
+        return;
+      }
+
+      // 2. Parse Bridge Request envelope
+      let request: BridgeRequest | null = null;
+      if (data.type === 'SUPERAPP_BRIDGE_REQUEST' && data.request) {
+        request = data.request as BridgeRequest;
+      } else if (data.id && data.action) {
+        // Direct request format fallback
+        request = data as BridgeRequest;
+      }
+
+      if (!request || !request.id || !request.action) return;
 
       // Dispatch to mock engine
       const response: BridgeResponse = await mockEngine.dispatch(request);
 
-      // Refresh local store states that might have mutated
+      // Refresh local store states that might have mutated (e.g. balance, storage)
       setUserState(mockEngine.store.getUser());
       setDeviceStateLocal(mockEngine.store.getDeviceState());
 
       // Send response back to sender iframe
+      const responsePayload = {
+        type: 'SUPERAPP_BRIDGE_RESPONSE',
+        response,
+      };
+
       if (event.source && 'postMessage' in event.source) {
-        (event.source as Window).postMessage(
-          {
-            type: 'SUPERAPP_BRIDGE_RESPONSE',
-            response,
-          },
-          '*'
-        );
+        (event.source as Window).postMessage(responsePayload, '*');
       }
+
+      // Broadcast to all iframes to ensure delivery
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach((ifr) => {
+        ifr.contentWindow?.postMessage(responsePayload, '*');
+      });
     };
 
     window.addEventListener('message', handleMessage);
@@ -125,21 +158,37 @@ export const SimulatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setUser = (u: Partial<MockUserProfile>) => {
     const updated = mockEngine.store.setUser(u);
     setUserState(updated);
+    sendEventToMiniApp('session.changed', { user: updated, status: 'LOGGED_IN' });
+    sendEventToMiniApp('auth.userChanged', { user: updated });
+    sendEventToMiniApp('auth.sessionChanged', { state: 'logged_in', user: updated, userId: updated.id });
   };
 
   const setUserPreset = (preset: 'standard' | 'vip' | 'lowBalance' | 'unverified') => {
     const updated = mockEngine.store.setUserPreset(preset);
     setUserState(updated);
+    sendEventToMiniApp('session.changed', { user: updated, status: 'LOGGED_IN' });
+    sendEventToMiniApp('auth.userChanged', { user: updated });
+    sendEventToMiniApp('auth.sessionChanged', { state: 'logged_in', user: updated, userId: updated.id });
   };
 
   const setNetwork = (n: Partial<MockNetworkCondition>) => {
     mockEngine.store.setNetworkCondition(n);
-    setNetworkState(mockEngine.store.getNetworkCondition());
+    const updated = mockEngine.store.getNetworkCondition();
+    setNetworkState(updated);
+    sendEventToMiniApp('miniapp.networkChanged', {
+      isConnected: updated.online,
+      networkType: updated.type,
+    });
   };
 
   const setDeviceState = (d: Partial<MockDeviceState>) => {
     mockEngine.store.updateDeviceState(d);
-    setDeviceStateLocal(mockEngine.store.getDeviceState());
+    const updated = mockEngine.store.getDeviceState();
+    setDeviceStateLocal(updated);
+    sendEventToMiniApp('miniapp.batteryChanged', {
+      batteryLevel: updated.batteryLevel,
+      isCharging: updated.isCharging,
+    });
   };
 
   const reloadIframe = () => {

@@ -4,6 +4,10 @@
   "private": true,
   "description": "SuperApp Platform with Dynamic Mini App Ecosystem",
   "scripts": {
+    "bump": "node scripts/bump-version.cjs patch",
+    "bump:minor": "node scripts/bump-version.cjs minor",
+    "bump:major": "node scripts/bump-version.cjs major",
+    "release": "node scripts/bump-version.cjs patch && cd mini_app_sdk && npm publish --access public",
     "build:sdk": "npm run build --prefix mini_app_sdk",
     "build:miniapps": "node scripts/build-and-deploy-miniapps.cjs",
     "deploy:miniapps": "node scripts/build-and-deploy-miniapps.cjs",

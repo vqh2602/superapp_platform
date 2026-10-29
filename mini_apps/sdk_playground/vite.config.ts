@@ -6,6 +6,7 @@ import path from 'path';
 function removeModuleAttrs(): Plugin {
   return {
     name: 'remove-module-attrs',
+    apply: 'build',
     transformIndexHtml: {
       order: 'post',
       handler(html: string) {

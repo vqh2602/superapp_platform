@@ -113,6 +113,17 @@
             else reject(res.error);
           };
           window.FlutterBridge.postMessage(JSON.stringify(request));
+        } else if (window.parent && window.parent !== window) {
+          // Connected to Browser Simulator
+          var onMsg = function(e) {
+            if (e.data && e.data.type === 'SUPERAPP_BRIDGE_RESPONSE' && e.data.response && e.data.response.id === id) {
+              window.removeEventListener('message', onMsg);
+              if (e.data.response.success) resolve(e.data.response.data);
+              else reject(e.data.response.error);
+            }
+          };
+          window.addEventListener('message', onMsg);
+          window.parent.postMessage({ type: 'SUPERAPP_BRIDGE_REQUEST', request: request }, '*');
         } else {
           // Browser fallback
           setTimeout(() => resolve({ mock: true, action: action, status: 'SUCCESS' }), 300);

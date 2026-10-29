@@ -24,10 +24,68 @@ export class BridgeTransport {
 
   constructor(appId: string = 'sdk_playground') {
     this.appId = appId;
+    this.ensureSuperAppBridge();
+    this.initSimulatorEventListener();
+  }
+
+  private ensureSuperAppBridge(): void {
+    if (typeof window === 'undefined') return;
+    if (!window.SuperAppBridge) {
+      window.SuperAppBridge = {
+        _callbacks: {},
+        _listeners: {},
+        postMessage: (msg) => {
+          if (this.isConnectedToNative()) {
+            window.FlutterBridge?.postMessage(JSON.stringify(msg));
+          } else if (this.isConnectedToSimulator()) {
+            window.parent.postMessage({ type: 'SUPERAPP_BRIDGE_REQUEST', request: msg }, '*');
+          }
+        },
+        dispatchResponse: (res) => window.SuperAppBridge?._callbacks[res.id]?.(res),
+        dispatchEvent: (evt) => {
+          const list = window.SuperAppBridge?._listeners[evt.event] || [];
+          list.forEach((fn) => {
+            try { fn(evt.payload); } catch (e) { console.error('[BridgeTransport] Listener error:', e); }
+          });
+        },
+        addEventListener: (event, handler) => {
+          window.SuperAppBridge!._listeners[event] = window.SuperAppBridge!._listeners[event] || [];
+          window.SuperAppBridge!._listeners[event].push(handler);
+        },
+        removeEventListener: (event, handler) => {
+          if (!window.SuperAppBridge?._listeners[event]) return;
+          window.SuperAppBridge._listeners[event] = window.SuperAppBridge._listeners[event].filter((h) => h !== handler);
+        },
+      };
+    }
+  }
+
+  private initSimulatorEventListener(): void {
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === 'SUPERAPP_BRIDGE_EVENT' && data.event) {
+        this.ensureSuperAppBridge();
+        if (window.SuperAppBridge?.dispatchEvent) {
+          window.SuperAppBridge.dispatchEvent({ event: data.event, payload: data.payload });
+        }
+      }
+    });
   }
 
   public isConnectedToNative(): boolean {
     return typeof window !== 'undefined' && !!window.FlutterBridge?.postMessage;
+  }
+
+  public isConnectedToSimulator(): boolean {
+    return typeof window !== 'undefined' && !!window.parent && window.parent !== window;
+  }
+
+  public isConnected(): boolean {
+    return this.isConnectedToNative() || this.isConnectedToSimulator();
   }
 
   public invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs: number = 8000): Promise<T> {
@@ -88,8 +146,32 @@ export class BridgeTransport {
         };
 
         window.FlutterBridge!.postMessage(JSON.stringify(request));
+      } else if (this.isConnectedToSimulator()) {
+        // Connected to Browser Simulator parent window via PostMessage
+        const handleResponse = (event: MessageEvent) => {
+          const data = event.data;
+          if (data && data.type === 'SUPERAPP_BRIDGE_RESPONSE') {
+            const res = data.response as BridgeResponse<T>;
+            if (res && res.id === id) {
+              window.removeEventListener('message', handleResponse);
+              clearTimeout(timer);
+              if (res.success) {
+                resolve(res.data as T);
+              } else {
+                reject(res.error || { code: 'SIMULATOR_ERROR', message: 'Request failed in simulator' });
+              }
+            }
+          }
+        };
+
+        window.addEventListener('message', handleResponse);
+
+        window.parent.postMessage({
+          type: 'SUPERAPP_BRIDGE_REQUEST',
+          request,
+        }, '*');
       } else {
-        // Fallback Browser Simulator Transport
+        // Fallback Standalone Browser Tab Simulation
         this.simulateBrowserTransport<T>(action, payload)
           .then((data) => {
             clearTimeout(timer);
@@ -105,17 +187,9 @@ export class BridgeTransport {
 
   public addEventListener(event: string, handler: BridgeEventListener): () => void {
     if (typeof window === 'undefined') return () => {};
-    if (!window.SuperAppBridge) {
-      window.SuperAppBridge = {
-        _callbacks: {},
-        _listeners: {},
-        postMessage: () => {},
-        dispatchResponse: () => {},
-        dispatchEvent: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      };
-    }
+    this.ensureSuperAppBridge();
+
+    if (!window.SuperAppBridge) return () => {};
 
     if (!window.SuperAppBridge._listeners[event]) {
       window.SuperAppBridge._listeners[event] = [];

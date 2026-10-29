@@ -42,6 +42,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   WebViewController? _webViewController;
   BridgeEventEmitter? _eventEmitter;
   bool _isLoading = true;
+  int _loadProgress = 15;
   String? _loadError;
   final List<WebLogEntry> _webLogs = [];
   bool _hasBlankScreenWarning = false;
@@ -228,6 +229,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   Future<void> _initMiniApp() async {
     setState(() {
       _hasBlankScreenWarning = false;
+      _isLoading = true;
+      _loadProgress = 15;
     });
 
     // Revalidate visibility, active version and current grants on every launch.
@@ -240,12 +243,18 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+        _loadProgress = 0;
         _loadError = 'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
       });
       return;
     }
 
     final validManifest = manifest;
+    if (mounted) {
+      setState(() {
+        if (_loadProgress < 30) _loadProgress = 30;
+      });
+    }
     final themeHex = validManifest.schema?['theme']?['backgroundColor'] as String?;
     final themeBg = _parseColor(themeHex, defaultColor: Colors.white);
 
@@ -336,7 +345,19 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     controller.setNavigationDelegate(
       NavigationDelegate(
+        onProgress: (int progress) {
+          if (mounted) {
+            setState(() {
+              _loadProgress = progress.clamp(15, 100);
+            });
+          }
+        },
         onPageStarted: (url) {
+          if (mounted) {
+            setState(() {
+              if (_loadProgress < 35) _loadProgress = 35;
+            });
+          }
           if (!kIsWeb) {
             _safeRunScript(controller, resetScript);
             _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
@@ -371,6 +392,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               } catch(e) { console.error("[Schema Inject Error]", e.message || e); }''',
             );
           }
+          if (mounted) {
+            setState(() {
+              _loadProgress = 100;
+            });
+          }
+          await Future.delayed(const Duration(milliseconds: 220));
           if (mounted) {
             setState(() {
               _isLoading = false;
@@ -427,6 +454,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     Future.delayed(const Duration(milliseconds: kIsWeb ? 1200 : 3000), () {
       if (mounted && _isLoading && _loadError == null) {
         setState(() {
+          _loadProgress = 100;
           _isLoading = false;
         });
         emitter.emit('miniapp.ready', {
@@ -473,6 +501,55 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         : (_overrideTextColor == 'black' ? false : _isColorDark(headerBgColor));
     final headerTextColor = isDarkHeader ? Colors.white : const Color(0xFF0F172A);
     final displayTitle = _overrideTitle ?? manifest?.name ?? 'Mini App';
+
+    Color brandColor;
+    final themePrimaryHex = manifest?.schema?['theme']?['primaryColor'] as String? ??
+        manifest?.schema?['theme']?['accentColor'] as String?;
+    if (themePrimaryHex != null && themePrimaryHex.isNotEmpty) {
+      brandColor = _parseColor(themePrimaryHex, defaultColor: const Color(0xFF2563EB));
+    } else {
+      switch (_currentAppId) {
+        case 'tiktok':
+          brandColor = const Color(0xFF010101);
+          break;
+        case 'youtube':
+          brandColor = const Color(0xFFFF0000);
+          break;
+        case 'messenger':
+          brandColor = const Color(0xFF0084FF);
+          break;
+        case 'facebook':
+          brandColor = const Color(0xFF1877F2);
+          break;
+        case 'zalo':
+          brandColor = const Color(0xFF0068FF);
+          break;
+        case 'shopee':
+          brandColor = const Color(0xFFEE4D2D);
+          break;
+        case 'sample_store':
+        case 'coffee_shop':
+          brandColor = const Color(0xFFD97706);
+          break;
+        case 'sdk_playground':
+          brandColor = const Color(0xFF2563EB);
+          break;
+        case 'free_fire':
+          brandColor = const Color(0xFFF59E0B);
+          break;
+        case 'fc_mobile':
+          brandColor = const Color(0xFF10B981);
+          break;
+        case 'capcut':
+          brandColor = const Color(0xFF06B6D4);
+          break;
+        case 'viettel_tammi':
+          brandColor = const Color(0xFFDC2626);
+          break;
+        default:
+          brandColor = isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52);
+      }
+    }
 
     ref.listen(authStateProvider, (prev, next) {
       if (!next.isAuthenticated && _eventEmitter != null) {
@@ -576,52 +653,11 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                     Container(
                       color: themeBgColor,
                       child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            PulseEffect(
-                              minScale: 0.92,
-                              maxScale: 1.08,
-                              child: Container(
-                                width: 72,
-                                height: 72,
-                                decoration: BoxDecoration(
-                                  color: (isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52)).withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: (isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52)).withValues(alpha: 0.25),
-                                      blurRadius: 20,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.bolt_rounded,
-                                  size: 38,
-                                  color: isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(
-                                color: isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52),
-                                strokeWidth: 2.8,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Đang khởi tạo Mini App...',
-                              style: TextStyle(
-                                color: isDarkTheme ? Colors.white70 : const Color(0xFF64748B),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        child: _buildLoadingView(
+                          manifest,
+                          isDarkTheme,
+                          themeBgColor,
+                          brandColor,
                         ),
                       ),
                     ),

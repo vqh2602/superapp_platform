@@ -1,6 +1,6 @@
 {
   "name": "@vqh2602/mini-app-sdk",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Official Unified TypeScript SDK & CLI for SuperApp Mini Apps: Core API, Bridge Transport, Mock Engine, and Browser Simulator",
   "type": "module",
   "bin": {
@@ -41,7 +41,13 @@
     "build:sim": "vite build simulator",
     "build:ts": "tsc",
     "build": "npm run build:sim && npm run build:ts && chmod +x ./bin/*.js",
-    "prepublishOnly": "npm run build",
+    "bump": "node ../scripts/bump-version.cjs patch",
+    "bump:minor": "node ../scripts/bump-version.cjs minor",
+    "bump:major": "node ../scripts/bump-version.cjs major",
+    "release": "node ../scripts/bump-version.cjs patch && npm publish --access public",
+    "release:minor": "node ../scripts/bump-version.cjs minor && npm publish --access public",
+    "release:major": "node ../scripts/bump-version.cjs major && npm publish --access public",
+    "prepublishOnly": "node ../scripts/bump-version.cjs check-publish && npm run build",
     "simulator": "node ./bin/simulator.js",
     "clean": "rm -rf dist simulator-dist"
   },

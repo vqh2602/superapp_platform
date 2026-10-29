@@ -115,7 +115,7 @@ export class SuperAppSDK {
   public removeSecretData(key: string, domain?: string) { return this.storage.removeSecretData(key, domain); }
 
   public isConnected(): boolean {
-    return this.transport.isConnectedToNative();
+    return this.transport.isConnected();
   }
 }
 

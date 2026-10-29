@@ -108,7 +108,8 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   async seedExistingApps() {
-    this.logger.log('Checking & seeding initial Mini Apps in Registry (Remote Backend Hosted)...');
+    this.logger.log('Checking & seeding initial Mini Apps in Registry v1.0.4 (Remote Backend Hosted)...');
+    const targetVersion = '1.0.4';
 
     // 0. Seed Schema Runtime (Host engine for all No-Code schema apps)
     const schemaRuntimeManifest = {
@@ -117,13 +118,13 @@ export class SeedService implements OnApplicationBootstrap {
       name: 'Schema Runtime Engine',
       description: 'Dynamic No-Code Schema execution engine for SuperApp',
       category: 'Developer Tools',
-      version: '1.0.0',
+      version: targetVersion,
       runtimeType: MiniAppRuntimeType.WEB,
       entry: 'dist/index.html',
       icon: 'icon.png',
       permissions: ['navigation.close', 'navigation.openMiniApp', 'showToast', 'configAppView'],
     };
-    const schemaRuntimePkgKey = await this.ensurePackageStored('schema_runtime', '1.0.0', schemaRuntimeManifest);
+    const schemaRuntimePkgKey = await this.ensurePackageStored('schema_runtime', targetVersion, schemaRuntimeManifest);
 
     let schemaRuntimeApp = await this.appRepo.findOne({ where: { id: 'schema_runtime' } });
     if (!schemaRuntimeApp) {
@@ -136,8 +137,8 @@ export class SeedService implements OnApplicationBootstrap {
         tenantId: 'system_core',
         runtimeType: MiniAppRuntimeType.WEB,
         status: MiniAppStatus.PUBLISHED,
-        activePublishedVersion: '1.0.0',
-        entryUrl: '/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html',
+        activePublishedVersion: targetVersion,
+        entryUrl: `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`,
         isAsset: false,
         capabilities: schemaRuntimeManifest.permissions,
       });
@@ -145,21 +146,42 @@ export class SeedService implements OnApplicationBootstrap {
 
       const ver = this.versionRepo.create({
         appId: 'schema_runtime',
-        version: '1.0.0',
+        version: targetVersion,
         schemaVersion: 1,
         status: MiniAppStatus.PUBLISHED,
-        entryUrl: '/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html',
+        entryUrl: `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`,
         capabilities: schemaRuntimeManifest.permissions,
         packageKey: schemaRuntimePkgKey,
         manifest: schemaRuntimeManifest,
-        reviewNotes: 'Seeded schema runtime package',
+        reviewNotes: `Seeded schema runtime package v${targetVersion}`,
         publishedAt: new Date(),
       });
       await this.versionRepo.save(ver);
-    } else if (schemaRuntimePkgKey && !schemaRuntimeApp.entryUrl.includes('/api/v1/miniapps/')) {
-      schemaRuntimeApp.entryUrl = '/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html';
+    } else {
+      schemaRuntimeApp.activePublishedVersion = targetVersion;
+      schemaRuntimeApp.entryUrl = `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`;
       schemaRuntimeApp.isAsset = false;
       await this.appRepo.save(schemaRuntimeApp);
+
+      let ver = await this.versionRepo.findOne({ where: { appId: 'schema_runtime', version: targetVersion } });
+      if (!ver) {
+        ver = this.versionRepo.create({
+          appId: 'schema_runtime',
+          version: targetVersion,
+          schemaVersion: 1,
+          status: MiniAppStatus.PUBLISHED,
+          entryUrl: `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`,
+          capabilities: schemaRuntimeManifest.permissions,
+          packageKey: schemaRuntimePkgKey,
+          manifest: schemaRuntimeManifest,
+          reviewNotes: `Seeded schema runtime package v${targetVersion}`,
+          publishedAt: new Date(),
+        });
+        await this.versionRepo.save(ver);
+      } else if (schemaRuntimePkgKey && !ver.packageKey) {
+        ver.packageKey = schemaRuntimePkgKey;
+        await this.versionRepo.save(ver);
+      }
     }
 
     // 1. Seed SDK Playground
@@ -169,7 +191,7 @@ export class SeedService implements OnApplicationBootstrap {
       name: 'SDK Playground',
       description: 'React + TypeScript Mini App test bed with interactive SDK runner',
       category: 'Developer Tools',
-      version: '1.0.0',
+      version: targetVersion,
       runtimeType: MiniAppRuntimeType.WEB,
       entry: 'dist/index.html',
       icon: 'icon.png',
@@ -237,15 +259,15 @@ export class SeedService implements OnApplicationBootstrap {
         'debug.simulateFailure',
       ],
     };
-    const playgroundPkgKey = await this.ensurePackageStored('sdk_playground', '1.0.0', playgroundManifest);
+    const playgroundPkgKey = await this.ensurePackageStored('sdk_playground', targetVersion, playgroundManifest);
 
-    const existingPlayground = await this.appRepo.findOne({
+    let existingPlayground = await this.appRepo.findOne({
       where: { id: 'sdk_playground' },
     });
 
     if (!existingPlayground) {
-      this.logger.log('Seeding existing Mini App: sdk_playground (web)...');
-      const playground = this.appRepo.create({
+      this.logger.log(`Seeding existing Mini App: sdk_playground (web v${targetVersion})...`);
+      existingPlayground = this.appRepo.create({
         id: 'sdk_playground',
         name: 'SDK Playground',
         description: 'React + TypeScript Mini App test bed with interactive SDK runner',
@@ -254,40 +276,50 @@ export class SeedService implements OnApplicationBootstrap {
         tenantId: 'system_core',
         runtimeType: MiniAppRuntimeType.WEB,
         status: MiniAppStatus.PUBLISHED,
-        activePublishedVersion: '1.0.0',
-        entryUrl: '/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
+        activePublishedVersion: targetVersion,
+        entryUrl: `/api/v1/miniapps/sdk_playground/${targetVersion}/dist/index.html`,
         isAsset: false,
         capabilities: playgroundManifest.permissions,
       });
-      await this.appRepo.save(playground);
+      await this.appRepo.save(existingPlayground);
 
       const ver = this.versionRepo.create({
         appId: 'sdk_playground',
-        version: '1.0.0',
+        version: targetVersion,
         schemaVersion: 1,
         status: MiniAppStatus.PUBLISHED,
-        entryUrl: '/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html',
-        capabilities: playground.capabilities,
+        entryUrl: `/api/v1/miniapps/sdk_playground/${targetVersion}/dist/index.html`,
+        capabilities: existingPlayground.capabilities,
         packageKey: playgroundPkgKey,
         manifest: playgroundManifest,
-        reviewNotes: 'Seeded system initial app',
+        reviewNotes: `Seeded system initial app v${targetVersion}`,
         publishedAt: new Date(),
       });
       await this.versionRepo.save(ver);
     } else {
-      // Migrate legacy asset URLs if previously seeded as asset
-      if (existingPlayground.isAsset || existingPlayground.entryUrl.startsWith('assets/')) {
-        this.logger.log('Migrating sdk_playground from assets/ to BE remote package URL...');
-        existingPlayground.entryUrl = '/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html';
-        existingPlayground.isAsset = false;
-        await this.appRepo.save(existingPlayground);
+      existingPlayground.activePublishedVersion = targetVersion;
+      existingPlayground.entryUrl = `/api/v1/miniapps/sdk_playground/${targetVersion}/dist/index.html`;
+      existingPlayground.isAsset = false;
+      await this.appRepo.save(existingPlayground);
 
-        const ver = await this.versionRepo.findOne({ where: { appId: 'sdk_playground', version: '1.0.0' } });
-        if (ver) {
-          ver.entryUrl = '/api/v1/miniapps/sdk_playground/1.0.0/dist/index.html';
-          if (playgroundPkgKey) ver.packageKey = playgroundPkgKey;
-          await this.versionRepo.save(ver);
-        }
+      let ver = await this.versionRepo.findOne({ where: { appId: 'sdk_playground', version: targetVersion } });
+      if (!ver) {
+        ver = this.versionRepo.create({
+          appId: 'sdk_playground',
+          version: targetVersion,
+          schemaVersion: 1,
+          status: MiniAppStatus.PUBLISHED,
+          entryUrl: `/api/v1/miniapps/sdk_playground/${targetVersion}/dist/index.html`,
+          capabilities: existingPlayground.capabilities,
+          packageKey: playgroundPkgKey,
+          manifest: playgroundManifest,
+          reviewNotes: `Seeded system initial app v${targetVersion}`,
+          publishedAt: new Date(),
+        });
+        await this.versionRepo.save(ver);
+      } else if (playgroundPkgKey && !ver.packageKey) {
+        ver.packageKey = playgroundPkgKey;
+        await this.versionRepo.save(ver);
       }
     }
 
@@ -298,21 +330,21 @@ export class SeedService implements OnApplicationBootstrap {
       name: 'Sample Mini App 2 (Store)',
       description: 'Secondary Mini App to demonstrate cross-mini-app native switching',
       category: 'Food & Beverage',
-      version: '1.0.0',
+      version: targetVersion,
       runtimeType: MiniAppRuntimeType.WEB,
       entry: 'dist/index.html',
       icon: 'icon.png',
       permissions: ['user.getBasicInfo', 'navigation.close'],
     };
-    const storePkgKey = await this.ensurePackageStored('sample_store', '1.0.0', storeManifest);
+    const storePkgKey = await this.ensurePackageStored('sample_store', targetVersion, storeManifest);
 
-    const existingStore = await this.appRepo.findOne({
+    let existingStore = await this.appRepo.findOne({
       where: { id: 'sample_store' },
     });
 
     if (!existingStore) {
-      this.logger.log('Seeding existing Mini App: sample_store (web)...');
-      const store = this.appRepo.create({
+      this.logger.log(`Seeding existing Mini App: sample_store (web v${targetVersion})...`);
+      existingStore = this.appRepo.create({
         id: 'sample_store',
         name: 'Sample Mini App 2 (Store)',
         description: 'Secondary Mini App to demonstrate cross-mini-app native switching',
@@ -321,49 +353,60 @@ export class SeedService implements OnApplicationBootstrap {
         tenantId: 'system_core',
         runtimeType: MiniAppRuntimeType.WEB,
         status: MiniAppStatus.PUBLISHED,
-        activePublishedVersion: '1.0.0',
-        entryUrl: '/api/v1/miniapps/sample_store/1.0.0/dist/index.html',
+        activePublishedVersion: targetVersion,
+        entryUrl: `/api/v1/miniapps/sample_store/${targetVersion}/dist/index.html`,
         isAsset: false,
         capabilities: storeManifest.permissions,
       });
-      await this.appRepo.save(store);
+      await this.appRepo.save(existingStore);
 
       const ver = this.versionRepo.create({
         appId: 'sample_store',
-        version: '1.0.0',
+        version: targetVersion,
         schemaVersion: 1,
         status: MiniAppStatus.PUBLISHED,
-        entryUrl: '/api/v1/miniapps/sample_store/1.0.0/dist/index.html',
-        capabilities: store.capabilities,
+        entryUrl: `/api/v1/miniapps/sample_store/${targetVersion}/dist/index.html`,
+        capabilities: existingStore.capabilities,
         packageKey: storePkgKey,
         manifest: storeManifest,
-        reviewNotes: 'Seeded system store app',
+        reviewNotes: `Seeded system store app v${targetVersion}`,
         publishedAt: new Date(),
       });
       await this.versionRepo.save(ver);
     } else {
-      if (existingStore.isAsset || existingStore.entryUrl.startsWith('assets/')) {
-        this.logger.log('Migrating sample_store from assets/ to BE remote package URL...');
-        existingStore.entryUrl = '/api/v1/miniapps/sample_store/1.0.0/dist/index.html';
-        existingStore.isAsset = false;
-        await this.appRepo.save(existingStore);
+      existingStore.activePublishedVersion = targetVersion;
+      existingStore.entryUrl = `/api/v1/miniapps/sample_store/${targetVersion}/dist/index.html`;
+      existingStore.isAsset = false;
+      await this.appRepo.save(existingStore);
 
-        const ver = await this.versionRepo.findOne({ where: { appId: 'sample_store', version: '1.0.0' } });
-        if (ver) {
-          ver.entryUrl = '/api/v1/miniapps/sample_store/1.0.0/dist/index.html';
-          if (storePkgKey) ver.packageKey = storePkgKey;
-          await this.versionRepo.save(ver);
-        }
+      let ver = await this.versionRepo.findOne({ where: { appId: 'sample_store', version: targetVersion } });
+      if (!ver) {
+        ver = this.versionRepo.create({
+          appId: 'sample_store',
+          version: targetVersion,
+          schemaVersion: 1,
+          status: MiniAppStatus.PUBLISHED,
+          entryUrl: `/api/v1/miniapps/sample_store/${targetVersion}/dist/index.html`,
+          capabilities: existingStore.capabilities,
+          packageKey: storePkgKey,
+          manifest: storeManifest,
+          reviewNotes: `Seeded system store app v${targetVersion}`,
+          publishedAt: new Date(),
+        });
+        await this.versionRepo.save(ver);
+      } else if (storePkgKey && !ver.packageKey) {
+        ver.packageKey = storePkgKey;
+        await this.versionRepo.save(ver);
       }
     }
 
     // 3. Seed Schema Mini Apps (Shopee, TikTok, Coffee House, Viettel Tammi, Free Fire, CapCut, Messenger...)
-    const schemaEntryUrl = '/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html';
+    const schemaEntryUrl = `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`;
     for (const [appId, data] of Object.entries(sampleSchemas)) {
-      const existing = await this.appRepo.findOne({ where: { id: appId } });
+      let existing = await this.appRepo.findOne({ where: { id: appId } });
       if (!existing) {
-        this.logger.log(`Seeding Schema Mini App: ${appId} (schema)...`);
-        const schemaApp = this.appRepo.create({
+        this.logger.log(`Seeding Schema Mini App: ${appId} (schema v${targetVersion})...`);
+        existing = this.appRepo.create({
           id: appId,
           name: data.name,
           description: data.description,
@@ -372,40 +415,52 @@ export class SeedService implements OnApplicationBootstrap {
           tenantId: 'system_core',
           runtimeType: MiniAppRuntimeType.SCHEMA,
           status: MiniAppStatus.PUBLISHED,
-          activePublishedVersion: '1.0.0',
+          activePublishedVersion: targetVersion,
           entryUrl: schemaEntryUrl,
           isAsset: false,
           capabilities: data.capabilities,
         });
-        await this.appRepo.save(schemaApp);
+        await this.appRepo.save(existing);
 
         const version = this.versionRepo.create({
           appId,
-          version: '1.0.0',
+          version: targetVersion,
           schemaVersion: 1,
           status: MiniAppStatus.PUBLISHED,
           schema: data.schema,
           entryUrl: schemaEntryUrl,
           capabilities: data.capabilities,
-          reviewNotes: `Seeded ${data.name} schema app`,
+          reviewNotes: `Seeded ${data.name} schema app v${targetVersion}`,
           publishedAt: new Date(),
         });
         await this.versionRepo.save(version);
       } else {
-        if (existing.isAsset || existing.entryUrl.startsWith('assets/')) {
-          existing.entryUrl = schemaEntryUrl;
-          existing.isAsset = false;
-          await this.appRepo.save(existing);
+        existing.activePublishedVersion = targetVersion;
+        existing.entryUrl = schemaEntryUrl;
+        existing.isAsset = false;
+        await this.appRepo.save(existing);
 
-          const ver = await this.versionRepo.findOne({ where: { appId, version: '1.0.0' } });
-          if (ver) {
-            ver.entryUrl = schemaEntryUrl;
-            await this.versionRepo.save(ver);
-          }
+        let ver = await this.versionRepo.findOne({ where: { appId, version: targetVersion } });
+        if (!ver) {
+          ver = this.versionRepo.create({
+            appId,
+            version: targetVersion,
+            schemaVersion: 1,
+            status: MiniAppStatus.PUBLISHED,
+            schema: data.schema,
+            entryUrl: schemaEntryUrl,
+            capabilities: data.capabilities,
+            reviewNotes: `Seeded ${data.name} schema app v${targetVersion}`,
+            publishedAt: new Date(),
+          });
+          await this.versionRepo.save(ver);
+        } else {
+          ver.entryUrl = schemaEntryUrl;
+          await this.versionRepo.save(ver);
         }
       }
     }
 
-    this.logger.log('Seeding completed successfully: all Mini Apps configured for remote Backend hosting.');
+    this.logger.log(`Seeding completed successfully: all Mini Apps configured for remote Backend hosting (v${targetVersion}).`);
   }
 }

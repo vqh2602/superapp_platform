@@ -75,6 +75,16 @@ export function startSimulatorServer(port: number = 5175): http.Server {
     });
   });
 
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error(`Port ${port} đang được sử dụng bởi một tiến trình khác. Thử lại với tuỳ chọn --port <port khác>.`);
+      process.exit(1);
+    } else {
+      logger.error(`Lỗi server: ${err.message}`);
+      process.exit(1);
+    }
+  });
+
   server.listen(port, () => {
     logger.success(`Browser Simulator đang chạy tại: http://localhost:${port}`);
     logger.info(`Trải nghiệm giả lập Mini App tại: http://localhost:${port}/?url=http://localhost:3000`);

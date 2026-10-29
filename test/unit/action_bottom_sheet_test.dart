@@ -10,9 +10,9 @@ void main() {
       id: 'messenger',
       name: 'Messenger',
       description: 'Text, audio and video calls',
-      version: '1.0.0',
+      version: '1.0.4',
       icon: 'social',
-      entryUrl: 'http://localhost:3000/api/v1/miniapps/schema_runtime/1.0.0/dist/index.html',
+      entryUrl: 'http://localhost:3000/api/v1/miniapps/schema_runtime/1.0.4/dist/index.html',
       category: 'Social Network',
       capabilities: ['user.getBasicInfo', 'navigation.close'],
     );

@@ -6,18 +6,52 @@ export class AuthMockHandler {
   public async login(payload: { scopes?: string[]; prompt?: boolean } = {}): Promise<any> {
     const user = this.store.getUser();
     const session = this.store.createSession();
-    const authCode = `authcode_${Math.random().toString(36).substring(2, 10)}`;
+    const authCode = `AUTH_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
     return {
       authCode,
       accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       expiresIn: session.expiresIn,
       user: {
         id: user.id,
         name: user.name,
         avatarUrl: user.avatarUrl,
-        phone: payload.scopes?.includes('user.phone') ? user.phone : undefined,
-        email: payload.scopes?.includes('user.email') ? user.email : undefined,
+        phone: payload.scopes?.includes('user.phone') ? user.phone : user.phone,
+        email: payload.scopes?.includes('user.email') ? user.email : user.email,
+        role: user.role,
+        walletBalance: user.walletBalance,
+      },
+    };
+  }
+
+  public async requestCode(payload: { scopes?: string[] } = {}): Promise<any> {
+    const user = this.store.getUser();
+    const authCode = `AUTH_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    return {
+      authCode,
+      userId: user.id,
+      expiresIn: 60,
+    };
+  }
+
+  public async exchangeCode(payload: { authCode?: string } = {}): Promise<any> {
+    const user = this.store.getUser();
+    const session = this.store.createSession();
+    return {
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+      userId: user.id,
+      user: {
+        id: user.id,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        walletBalance: user.walletBalance,
       },
     };
   }
@@ -47,6 +81,20 @@ export class AuthMockHandler {
       avatarUrl: user.avatarUrl,
       role: user.role,
       isVerified: user.isVerified,
+      walletBalance: user.walletBalance,
+    };
+  }
+
+  public async getProfile(): Promise<any> {
+    return this.getUserProfile();
+  }
+
+  public async getBasicInfo(): Promise<any> {
+    const user = this.store.getUser();
+    return {
+      id: user.id,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
     };
   }
 

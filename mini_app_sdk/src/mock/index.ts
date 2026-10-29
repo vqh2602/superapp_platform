@@ -6,4 +6,5 @@ export * from './handlers/device.handler.js';
 export * from './handlers/storage.handler.js';
 export * from './handlers/ui.handler.js';
 export * from './handlers/media.handler.js';
+export * from './handlers/payment.handler.js';
 export * from './mock-engine.js';
