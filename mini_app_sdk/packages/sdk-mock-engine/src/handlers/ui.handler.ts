@@ -31,4 +31,35 @@ export class UIMockHandler {
   public async setStatusBarColor(payload: { color: string }): Promise<any> {
     return { success: true, color: payload.color };
   }
+
+  public async setNavigationBarColor(payload: { color: string; textColor?: string; statusBarColor?: string }): Promise<any> {
+    return {
+      success: true,
+      color: payload.color,
+      textColor: payload.textColor || 'black',
+      statusBarColor: payload.statusBarColor,
+    };
+  }
+
+  public async configAppView(payload: any = {}): Promise<any> {
+    return {
+      success: true,
+      actionBarHidden: !!payload.actionBarHidden,
+      statusBar: payload.statusBar || 'transparent',
+      hideAndroidBottomNavigationBar: !!payload.hideAndroidBottomNavigationBar,
+      hasPadding: payload.hasPadding !== false,
+      ...payload,
+    };
+  }
+
+  public async requestSendNotification(payload: { templateId?: string; reason?: string } = {}): Promise<any> {
+    return {
+      success: true,
+      granted: true,
+      subscriptionId: `mock_sub_${Date.now()}`,
+      token: `mock_notif_token_${Date.now()}`,
+      templateId: payload.templateId,
+      reason: payload.reason,
+    };
+  }
 }

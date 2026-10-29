@@ -86,3 +86,59 @@ export interface SDKInitOptions {
   timeoutMs?: number;
   debug?: boolean;
 }
+
+export interface ConfigAppViewOptions {
+  headerColor?: string;
+  headerTitle?: string;
+  textColor?: 'white' | 'black';
+  statusBar?: 'transparent' | 'hidden' | 'light' | 'dark';
+  actionBarHidden?: boolean;
+  hideAndroidBottomNavigationBar?: boolean;
+  hasPadding?: boolean;
+  bottomNavColor?: string;
+  header?: {
+    color?: string;
+    title?: string;
+    textColor?: 'white' | 'black';
+    hidden?: boolean;
+    hide?: boolean;
+  };
+  bottomNav?: {
+    color?: string;
+    hidden?: boolean;
+    hide?: boolean;
+  };
+}
+
+export interface SetNavigationBarColorOptions {
+  color: string;
+  textColor?: 'white' | 'black';
+  statusBarColor?: string;
+}
+
+export interface KeepScreenOptions {
+  keepScreenOn?: boolean;
+}
+
+export interface RequestSendNotificationOptions {
+  templateId?: string;
+  reason?: string;
+}
+
+export interface NotificationResult {
+  success: boolean;
+  granted: boolean;
+  subscriptionId?: string;
+  token?: string;
+  templateId?: string;
+  reason?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface MinimizeAppResult {
+  success: boolean;
+  status: string;
+  appId: string;
+  timestamp?: number;
+}

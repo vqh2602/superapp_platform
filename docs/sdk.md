@@ -328,6 +328,51 @@ class SuperAppBridgeClient {
     _eventListeners.putIfAbsent(event, () => []).add(callback);
   }
 
+  // --- Zalo-style App View & Screen Helpers ---
+
+  Future<dynamic> configAppView({
+    String? headerColor,
+    String? headerTitle,
+    String? textColor,
+    String? statusBar,
+    bool? actionBarHidden,
+    bool? hideAndroidBottomNavigationBar,
+    bool? hasPadding,
+  }) => invoke('ui.configAppView', {
+    if (headerColor != null) 'headerColor': headerColor,
+    if (headerTitle != null) 'headerTitle': headerTitle,
+    if (textColor != null) 'textColor': textColor,
+    if (statusBar != null) 'statusBar': statusBar,
+    if (actionBarHidden != null) 'actionBarHidden': actionBarHidden,
+    if (hideAndroidBottomNavigationBar != null)
+      'hideAndroidBottomNavigationBar': hideAndroidBottomNavigationBar,
+    if (hasPadding != null) 'hasPadding': hasPadding,
+  });
+
+  Future<dynamic> setNavigationBarTitle(String title) =>
+      invoke('ui.setNavigationBarTitle', {'title': title});
+
+  Future<dynamic> setNavigationBarColor(
+    String color, {
+    String textColor = 'black',
+    String? statusBarColor,
+  }) => invoke('ui.setNavigationBarColor', {
+    'color': color,
+    'textColor': textColor,
+    if (statusBarColor != null) 'statusBarColor': statusBarColor,
+  });
+
+  Future<dynamic> keepScreen({bool keepScreenOn = true}) =>
+      invoke('device.keepScreen', {'keepScreenOn': keepScreenOn});
+
+  Future<dynamic> requestSendNotification({String? templateId, String? reason}) =>
+      invoke('ui.requestSendNotification', {
+        if (templateId != null) 'templateId': templateId,
+        if (reason != null) 'reason': reason,
+      });
+
+  Future<dynamic> minimizeApp() => invoke('navigation.minimizeApp');
+
   void _handleLocalMockFallback(String id, String action, Map<String, dynamic> payload) {
     web.console.warn('[FlutterWebBridge] Đang chạy chế độ Giả lập (Mock Fallback) cho: $action'.toJS);
     Timer(const Duration(milliseconds: 200), () {
@@ -623,6 +668,61 @@ async function handleStorageAndToast() {
 }
 ```
 
+#### 4. Điều khiển Giao diện, Header, Màn hình, Thông báo & Thu nhỏ:
+```typescript
+import { superApp } from '@superapp/mini-app-sdk';
+
+// 1. Cấu hình giao diện tổng thể (App View): Ẩn/hiện status bar, header, tràn viền
+async function setupFullscreenExperience() {
+  await superApp.ui.configAppView({
+    headerColor: '#0068FF',
+    headerTitle: 'Chi tiết sản phẩm',
+    textColor: 'white',
+    statusBar: 'transparent',
+    actionBarHidden: false,
+    hideAndroidBottomNavigationBar: false,
+    hasPadding: true,
+  });
+}
+
+// 2. Đổi tiêu đề thanh điều hướng của trang hiện tại
+async function changePageTitle(newTitle: string) {
+  await superApp.ui.setNavigationBarTitle(newTitle);
+}
+
+// 3. Đổi màu thanh điều hướng & status bar
+async function applyBrandColor(hexColor: string) {
+  await superApp.ui.setNavigationBarColor({
+    color: hexColor,
+    textColor: 'white',
+  });
+}
+
+// 4. Giữ màn hình luôn sáng (cho livestream, quét barcode, đọc sách)
+async function toggleScreenAwake(enable: boolean) {
+  await superApp.device.keepScreen({ keepScreenOn: enable });
+}
+
+// 5. Yêu cầu người dùng cho phép ứng dụng gửi thông báo
+async function subscribeNotifications() {
+  const result = await superApp.ui.requestSendNotification({
+    templateId: 'order_status_v1',
+    reason: 'Nhận thông báo cập nhật đơn hàng & khuyến mãi',
+  });
+
+  if (result.granted) {
+    console.log('Đã đăng ký nhận thông báo, Token:', result.token);
+  } else {
+    console.warn('Người dùng từ chối cấp quyền thông báo');
+  }
+}
+
+// 6. Thu nhỏ Mini App vào floating bubble / background dock
+async function handleMinimize() {
+  await superApp.navigation.minimizeApp();
+}
+```
+
 ---
 
 ## 5. Tích hợp Mini App với Vanilla HTML5 / JavaScript
@@ -772,16 +872,99 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 | | `device.getSystemInfo` | *Không cần* | `{}` | `{ platform, model, systemVersion, screenWidth, screenHeight }` |
 | | `device.vibrate` | *Không cần* | `{ style: 'light' \| 'medium' \| 'heavy' }` | `{ success: true }` |
 | | `device.copyToClipboard`| *Không cần* | `{ text: string }` | `{ success: true }` |
-| **Giao diện** | `ui.showToast` | *Không cần* | `{ message: string, duration?: number }` | `{ success: true }` |
+| **Giao diện & Màn hình** | `ui.showToast` | *Không cần* | `{ message: string, duration?: number }` | `{ success: true }` |
 | | `ui.showAlert` | *Không cần* | `{ title: string, message: string }` | `{ success: true }` |
-| | `ui.setNavigationBarTitle`| *Không cần*| `{ title: string }` | `{ success: true }` |
+| | `ui.showConfirm` | *Không cần* | `{ title: string, message: string }` | `{ confirmed: boolean }` |
+| | `ui.setNavigationBarTitle`| *Không cần*| `{ title: string }` | `{ success: true, title: string }` |
+| | `ui.setNavigationBarColor`| *Không cần*| `{ color: string, textColor?: 'white' \| 'black', statusBarColor?: string }` | `{ success: true, color: string }` |
+| | `ui.configAppView` | *Không cần* | `{ headerColor?, textColor?, statusBar?, actionBarHidden?, hideAndroidBottomNavigationBar?, hasPadding? }` | `{ success: true, ... }` |
+| | `ui.requestSendNotification`| `notification`| `{ templateId?: string, reason?: string }` | `{ success: boolean, granted: boolean, token?: string, subscriptionId?: string }` |
+| | `device.keepScreen` | *Không cần* | `{ keepScreenOn?: boolean }` | `{ success: true, keepScreenOn: boolean }` |
 | **Lưu trữ** | `storage.setSecureItem` | *Không cần* | `{ key: string, value: string }` | `{ success: true }` |
 | | `storage.getSecureItem` | *Không cần* | `{ key: string }` | `{ key: string, value: string }` |
 | | `storage.removeSecureItem`| *Không cần*| `{ key: string }` | `{ success: true }` |
+| | `storage.getAll` | *Không cần* | `{}` | `Record<string, string>` |
 | | `storage.clear` | *Không cần* | `{}` | `{ success: true }` |
-| **Điều hướng** | `navigation.close` | `navigation.close` | `{}` | `{ success: true }` |
+| **Điều hướng** | `navigation.close` / `navigation.closeApp` | `navigation.close` | `{}` | `{ success: true }` |
+| | `navigation.minimizeApp` | *Không cần* | `{}` | `{ success: true, status: 'minimized', appId: string }` |
 | | `navigation.openMiniApp` | `navigation.openMiniApp`| `{ appId: string, params?: object }` | `{ success: true }` |
 | | `navigation.openExternalBrowser` | *Không cần* | `{ url: string }` | `{ success: true }` |
+
+---
+
+### 7.1. Hướng dẫn chi tiết các API Điều khiển Màn hình & Giao diện (Zalo Mini App Compatible)
+
+SuperApp Platform tích hợp đầy đủ bộ API điều khiển giao diện theo chuẩn của **Zalo Mini App Platform**, đảm bảo trải nghiệm thống nhất trên Android, iOS, Web, macOS và Windows:
+
+#### 1. `configAppView`
+Tùy chỉnh linh hoạt chế độ hiển thị toàn diện của Mini App:
+- **`headerColor`**: Mã màu HEX của thanh tiêu đề (Action Bar).
+- **`headerTitle`**: Tiêu đề hiển thị trên header.
+- **`textColor`**: Màu chữ và icon trên thanh điều hướng & status bar (`'white'` | `'black'`).
+- **`statusBar`**: Kiểu hiển thị thanh trạng thái (`'transparent'` | `'hidden'` | `'light'` | `'dark'`).
+- **`actionBarHidden`**: Ẩn/hiện thanh điều hướng phía trên (true để cho phép tràn viền).
+- **`hideAndroidBottomNavigationBar`**: Ẩn/hiện thanh điều hướng ảo đáy màn hình của Android.
+- **`hasPadding`**: Mini App có padding theo Safe Area (tai thỏ / bottom home indicator) hay hiển thị edge-to-edge.
+
+```typescript
+// Ví dụ: Bật chế độ Fullscreen tràn viền cho Game / Media Player
+await superApp.ui.configAppView({
+  actionBarHidden: true,
+  statusBar: 'hidden',
+  hideAndroidBottomNavigationBar: true,
+  hasPadding: false,
+});
+```
+
+#### 2. `setNavigationBarTitle`
+Đặt lại tiêu đề trên thanh điều hướng của trang hiện tại:
+```typescript
+await superApp.ui.setNavigationBarTitle('Giỏ hàng của bạn (3)');
+```
+
+#### 3. `setNavigationBarColor`
+Đặt lại màu sắc của thanh điều hướng (Header):
+```typescript
+await superApp.ui.setNavigationBarColor({
+  color: '#0068FF',
+  textColor: 'white', // Icon & chữ đổi sang màu trắng
+  statusBarColor: '#0052CC', // (Tuỳ chọn) màu status bar
+});
+```
+
+#### 4. `keepScreen`
+Giữ màn hình thiết bị luôn bật, không tự động tắt sau thời gian chờ (idle timeout):
+```typescript
+// Bật giữ sáng khi đang quét mã hoặc xem video
+await superApp.device.keepScreen({ keepScreenOn: true });
+
+// Tắt giữ sáng khi rời trang
+await superApp.device.keepScreen({ keepScreenOn: false });
+```
+
+#### 5. `requestSendNotification`
+Yêu cầu người dùng cấp quyền gửi thông báo qua Official Account (OA) / Mini App Notification Channel:
+```typescript
+const res = await superApp.ui.requestSendNotification({
+  templateId: 'order_status_v1',
+  reason: 'Nhận thông báo cập nhật lộ trình giao hàng trực tiếp',
+});
+
+if (res.granted) {
+  // Gửi subscription token này về Backend để lưu vào cơ sở dữ liệu
+  await fetch('/api/save-notification-token', {
+    method: 'POST',
+    body: JSON.stringify({ token: res.token, subscriptionId: res.subscriptionId })
+  });
+}
+```
+
+#### 6. `minimizeApp`
+Thu nhỏ Mini App vào dạng Floating Bubble / Background Dock trong SuperApp:
+```typescript
+// Cho phép người dùng thu nhỏ Mini App và quay lại màn hình chính của SuperApp
+await superApp.navigation.minimizeApp();
+```
 
 ---
 

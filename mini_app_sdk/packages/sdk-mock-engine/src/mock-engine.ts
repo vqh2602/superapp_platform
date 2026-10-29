@@ -171,6 +171,9 @@ export class SDKMockEngine {
       case 'device.vibrate':
       case 'vibrate':
         return this.device.vibrate(p);
+      case 'device.keepScreen':
+      case 'keepScreen':
+        return this.device.keepScreen(p);
 
       // Storage
       case 'storage.getItem':
@@ -199,9 +202,20 @@ export class SDKMockEngine {
         return this.ui.showConfirm(p);
       case 'ui.setNavigationBarTitle':
       case 'setTitle':
+      case 'setNavigationBarTitle':
         return this.ui.setNavigationBarTitle(p);
       case 'ui.setStatusBarColor':
+      case 'setStatusBarColor':
         return this.ui.setStatusBarColor(p);
+      case 'ui.setNavigationBarColor':
+      case 'setNavigationBarColor':
+        return this.ui.setNavigationBarColor(p);
+      case 'ui.configAppView':
+      case 'configAppView':
+        return this.ui.configAppView(p);
+      case 'ui.requestSendNotification':
+      case 'requestSendNotification':
+        return this.ui.requestSendNotification(p);
 
       // Media
       case 'media.scanQRCode':
@@ -215,6 +229,9 @@ export class SDKMockEngine {
       case 'navigation.closeApp':
       case 'closeApp':
         return { success: true, message: 'App closed' };
+      case 'navigation.minimizeApp':
+      case 'minimizeApp':
+        return { success: true, status: 'minimized', appId };
 
       default:
         throw {

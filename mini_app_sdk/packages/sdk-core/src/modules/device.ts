@@ -1,5 +1,5 @@
 import { ITransport } from '@superapp/sdk-transport';
-import { BatteryInfo, DeviceInfo, NetworkInfo } from '../types/index.js';
+import { BatteryInfo, DeviceInfo, KeepScreenOptions, NetworkInfo } from '../types/index.js';
 
 export class DeviceModule {
   constructor(private transport: ITransport) {}
@@ -37,5 +37,15 @@ export class DeviceModule {
    */
   public async vibrate(style: 'light' | 'medium' | 'heavy' = 'light'): Promise<void> {
     await this.transport.invoke('device.vibrate', { style });
+  }
+
+  /**
+   * Giữ màn hình luôn bật / luôn sáng
+   */
+  public async keepScreen(options?: KeepScreenOptions | boolean): Promise<{ success: boolean; keepScreenOn: boolean }> {
+    const payload = typeof options === 'boolean'
+      ? { keepScreenOn: options }
+      : (options || { keepScreenOn: true });
+    return this.transport.invoke<{ success: boolean; keepScreenOn: boolean }>('device.keepScreen', payload);
   }
 }

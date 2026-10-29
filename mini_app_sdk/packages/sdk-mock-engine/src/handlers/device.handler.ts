@@ -48,4 +48,9 @@ export class DeviceMockHandler {
     }
     return { success: true, style: payload.style || 'light' };
   }
+
+  public async keepScreen(payload: { keepScreenOn?: boolean } = {}): Promise<any> {
+    const keepScreenOn = payload.keepScreenOn !== false;
+    return { success: true, keepScreenOn };
+  }
 }

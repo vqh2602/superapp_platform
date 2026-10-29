@@ -1,4 +1,5 @@
 import { ITransport } from '@superapp/sdk-transport';
+import { MinimizeAppResult } from '../types/index.js';
 
 export class NavigationModule {
   constructor(private transport: ITransport) {}
@@ -8,6 +9,13 @@ export class NavigationModule {
    */
   public async closeApp(): Promise<void> {
     await this.transport.invoke('navigation.closeApp');
+  }
+
+  /**
+   * Thu nhỏ Mini App vào dạng floating window / background dock
+   */
+  public async minimizeApp(): Promise<MinimizeAppResult> {
+    return this.transport.invoke<MinimizeAppResult>('navigation.minimizeApp');
   }
 
   /**

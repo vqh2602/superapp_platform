@@ -10,7 +10,13 @@ import { LifecycleModule } from './modules/lifecycle.js';
 import {
   AuthLoginOptions,
   AuthLoginResult,
+  ConfigAppViewOptions,
+  KeepScreenOptions,
+  MinimizeAppResult,
+  NotificationResult,
+  RequestSendNotificationOptions,
   SDKInitOptions,
+  SetNavigationBarColorOptions,
   ToastOptions,
   UserProfile,
 } from './types/index.js';
@@ -85,6 +91,30 @@ export class SuperAppSDK {
 
   public closeApp(): Promise<void> {
     return this.navigation.closeApp();
+  }
+
+  public minimizeApp(): Promise<MinimizeAppResult> {
+    return this.navigation.minimizeApp();
+  }
+
+  public configAppView(options: ConfigAppViewOptions): Promise<any> {
+    return this.ui.configAppView(options);
+  }
+
+  public setNavigationBarTitle(title: string | { title: string }): Promise<void> {
+    return this.ui.setNavigationBarTitle(title);
+  }
+
+  public setNavigationBarColor(options: SetNavigationBarColorOptions | string): Promise<void> {
+    return this.ui.setNavigationBarColor(options);
+  }
+
+  public keepScreen(options?: KeepScreenOptions | boolean): Promise<{ success: boolean; keepScreenOn: boolean }> {
+    return this.device.keepScreen(options);
+  }
+
+  public requestSendNotification(options?: RequestSendNotificationOptions): Promise<NotificationResult> {
+    return this.ui.requestSendNotification(options);
   }
 
   public on(event: string, callback: (payload: any) => void): () => void {

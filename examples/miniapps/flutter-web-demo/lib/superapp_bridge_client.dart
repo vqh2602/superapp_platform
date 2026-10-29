@@ -112,6 +112,60 @@ class SuperAppBridgeClient {
     _eventListeners.putIfAbsent(event, () => []).add(callback);
   }
 
+  // --- Zalo-style App View & Screen Helpers ---
+
+  Future<dynamic> configAppView({
+    String? headerColor,
+    String? headerTitle,
+    String? textColor,
+    String? statusBar,
+    bool? actionBarHidden,
+    bool? hideAndroidBottomNavigationBar,
+    bool? hasPadding,
+  }) {
+    return invoke('ui.configAppView', {
+      if (headerColor != null) 'headerColor': headerColor,
+      if (headerTitle != null) 'headerTitle': headerTitle,
+      if (textColor != null) 'textColor': textColor,
+      if (statusBar != null) 'statusBar': statusBar,
+      if (actionBarHidden != null) 'actionBarHidden': actionBarHidden,
+      if (hideAndroidBottomNavigationBar != null)
+        'hideAndroidBottomNavigationBar': hideAndroidBottomNavigationBar,
+      if (hasPadding != null) 'hasPadding': hasPadding,
+    });
+  }
+
+  Future<dynamic> setNavigationBarTitle(String title) {
+    return invoke('ui.setNavigationBarTitle', {'title': title});
+  }
+
+  Future<dynamic> setNavigationBarColor(
+    String color, {
+    String textColor = 'black',
+    String? statusBarColor,
+  }) {
+    return invoke('ui.setNavigationBarColor', {
+      'color': color,
+      'textColor': textColor,
+      if (statusBarColor != null) 'statusBarColor': statusBarColor,
+    });
+  }
+
+  Future<dynamic> keepScreen({bool keepScreenOn = true}) {
+    return invoke('device.keepScreen', {'keepScreenOn': keepScreenOn});
+  }
+
+  Future<dynamic> requestSendNotification({String? templateId, String? reason}) {
+    return invoke('ui.requestSendNotification', {
+      if (templateId != null) 'templateId': templateId,
+      if (reason != null) 'reason': reason,
+    });
+  }
+
+  Future<dynamic> minimizeApp() {
+    return invoke('navigation.minimizeApp');
+  }
+
   void _handleLocalMockFallback(String id, String action, Map<String, dynamic> payload) {
     Timer(const Duration(milliseconds: 150), () {
       final completer = _callbacks.remove(id);
