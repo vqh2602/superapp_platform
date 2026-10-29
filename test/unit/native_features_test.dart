@@ -241,5 +241,40 @@ void main() {
       expect(hideKbd['success'], true);
       expect(hideKbd['hidden'], true);
     });
+
+    test('2.13 Mini App SDK Compatibility: showAlert, showConfirm, setNavigationBarTitle, media.chooseImage, storage.getAll, media.scanQRCode', () async {
+      final context = ActionContext(appId: 'sdk_playground', manifest: testManifest);
+
+      // UI Dialogs & Title
+      final alert = await dispatcher.dispatch('ui.showAlert', {'title': 'Chú ý', 'message': 'Nội dung thông báo'}, context);
+      expect(alert['success'], true);
+
+      final confirm = await dispatcher.dispatch('ui.showConfirm', {'title': 'Xác nhận', 'message': 'Bạn có chắc?'}, context);
+      expect(confirm['confirmed'], false); // headless returns false fallback
+
+      final navTitle = await dispatcher.dispatch('ui.setNavigationBarTitle', {'title': 'Trang chủ Mini App'}, context);
+      expect(navTitle['success'], true);
+      expect(navTitle['title'], 'Trang chủ Mini App');
+
+      // Media SDK calls
+      final scanRes = await dispatcher.dispatch('media.scanQRCode', {}, context);
+      expect(scanRes['content'], isNotEmpty);
+      expect(scanRes['format'], 'QR_CODE');
+
+      final chooseImg = await dispatcher.dispatch('media.chooseImage', {'count': 2}, context);
+      expect((chooseImg['tempFilePaths'] as List).length, 2);
+      expect(chooseImg['count'], 2);
+
+      // Device Info alias
+      final devInfo = await dispatcher.dispatch('device.getDeviceInfo', {}, context);
+      expect(devInfo['screenWidth'], isPositive);
+
+      // Storage getAll
+      await dispatcher.dispatch('storage.setItem', {'key': 'k1', 'value': 'v1'}, context);
+      await dispatcher.dispatch('storage.setItem', {'key': 'k2', 'value': 'v2'}, context);
+      final allStorage = await dispatcher.dispatch('storage.getAll', {}, context);
+      expect(allStorage['k1'], 'v1');
+      expect(allStorage['k2'], 'v2');
+    });
   });
 }

@@ -133,6 +133,33 @@ class StorageClearHandler implements NativeActionHandler {
   }
 }
 
+class StorageGetAllHandler implements NativeActionHandler {
+  final MockSecureStorageRepository secureStorageRepo;
+
+  StorageGetAllHandler({required this.secureStorageRepo});
+
+  @override
+  String get actionName => 'storage.getAll';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final domain = (payload['domain']?.toString().isNotEmpty ?? false)
+        ? payload['domain'].toString()
+        : 'default';
+
+    return await secureStorageRepo.getAll(
+      appId: context.appId,
+      domain: domain,
+    );
+  }
+}
+
 class StorageSetCredentialsHandler implements NativeActionHandler {
   final MockSecureStorageRepository secureStorageRepo;
 

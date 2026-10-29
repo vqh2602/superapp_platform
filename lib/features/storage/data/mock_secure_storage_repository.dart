@@ -175,6 +175,30 @@ class MockSecureStorageRepository {
     return keys.toList();
   }
 
+  Future<Map<String, String>> getAll({
+    required String appId,
+    String domain = 'default',
+  }) async {
+    final result = <String, String>{};
+    try {
+      final all = await _secureStorage.readAll();
+      final prefix = 'sec_${appId}_${domain}_';
+      for (final entry in all.entries) {
+        if (entry.key.startsWith(prefix)) {
+          result[entry.key.substring(prefix.length)] = entry.value;
+        }
+      }
+    } catch (_) {}
+
+    final domainMap = _storage[appId]?[domain];
+    if (domainMap != null) {
+      for (final entry in domainMap.entries) {
+        result[entry.key] = entry.value.value;
+      }
+    }
+    return result;
+  }
+
   Future<Map<String, dynamic>> setCredentials({
     required String appId,
     required String domain,

@@ -17,7 +17,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "package:miniapp": "node scripts/package-miniapp.cjs",
     "test:packages:db": "node scripts/smoke-package.cjs",
-    "test:auth:db": "node scripts/smoke-auth.cjs"
+    "test:auth:db": "node scripts/smoke-auth.cjs",
+    "deploy:alwaysdata": "node scripts/deploy-alwaysdata.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -26,6 +27,7 @@
     "@nestjs/typeorm": "^10.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "dotenv": "^18.0.9",
     "multer": "^2.5.0",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",

@@ -38,12 +38,13 @@ Tài liệu dự án được phân tách thành 3 phần chuyên biệt phục 
    - **Quy trình đóng gói**: Cấu hình Vite xuất bản Single-file inlined bundle (`index.html`).
 
 3. ⚙️ **[Tài liệu Backend Registry & Hướng dẫn Deploy (docs/backend.md)](docs/backend.md)** (Xem nhanh [`backend/README.md`](backend/README.md)):
-   - **Đặc tả hệ thống**: NestJS 10, TypeORM, PostgreSQL 14+, Dynamic Registry & No-Code Schema.
-   - **Đầy đủ thông số REST APIs**: Nhóm API `/catalog` (cho Flutter) và `/registry` (cho Admin Builder).
+   - **Endpoint Production Live**: `https://superappplatfrom.alwaysdata.net/api/v1`
+   - **Đặc tả hệ thống**: NestJS 10, TypeORM, PostgreSQL 17, Dynamic Registry & No-Code Schema.
+   - **Đầy đủ thông số REST APIs**: Nhóm API `/auth`, `/catalog`, `/users/me/apps`, `/miniapp`, `/orders`, `/registry`.
    - **Hướng dẫn triển khai chi tiết (Deployment Guide)**:
      - Chạy phát triển cục bộ (Local Development).
-     - Triển khai trọn gói bằng Docker & Docker Compose (`docker compose up -d`).
-     - Triển khai máy chủ Production với PM2, Nginx Reverse Proxy, cấu hình SSL/HTTPS và sao lưu dữ liệu (`pg_dump`).
+     - Triển khai tự động Cloud Alwaysdata ([docs/alwaysdata-deployment.md](docs/alwaysdata-deployment.md)) với lệnh `npm run deploy:alwaysdata`.
+     - CI/CD tự động qua GitHub Actions (`.github/workflows/deploy-backend-alwaysdata.yml`).
 
 ---
 

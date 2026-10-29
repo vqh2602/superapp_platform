@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ override: true });
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { json } from 'express';
@@ -26,7 +28,8 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  logger.log(`Dynamic Mini App Registry & Catalog API running at http://localhost:${port}/api/v1/catalog/apps`);
+  const host = process.env.IP || process.env.HOST || '::';
+  await app.listen(port, host);
+  logger.log(`Dynamic Mini App Registry & Catalog API running at http://${host}:${port}/api/v1/catalog/apps`);
 }
 bootstrap();

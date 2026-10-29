@@ -1,0 +1,65 @@
+name: Deploy Backend to Alwaysdata
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend-alwaysdata.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ALWAYSDATA_SSH_KEY }}
+          SSH_USER: ${{ secrets.ALWAYSDATA_SSH_USER }}
+          SSH_HOST: ${{ secrets.ALWAYSDATA_SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Package & Deploy via SCP
+        env:
+          SSH_USER: ${{ secrets.ALWAYSDATA_SSH_USER }}
+          SSH_HOST: ${{ secrets.ALWAYSDATA_SSH_HOST }}
+          REMOTE_DIR: ${{ secrets.ALWAYSDATA_REMOTE_DIR || 'superapp_backend' }}
+        run: |
+          tar -czf release.tar.gz dist package.json package-lock.json
+          ssh $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_DIR/storage/miniapps"
+          scp release.tar.gz $SSH_USER@$SSH_HOST:$REMOTE_DIR/release.tar.gz
+          ssh $SSH_USER@$SSH_HOST "cd $REMOTE_DIR && tar -xzf release.tar.gz && rm release.tar.gz && npm install --omit=dev && pkill -f 'dist/main' || true"
+
+      - name: Restart Site via Alwaysdata API
+        if: ${{ secrets.ALWAYSDATA_API_KEY != '' && secrets.ALWAYSDATA_SITE_ID != '' }}
+        env:
+          API_KEY: ${{ secrets.ALWAYSDATA_API_KEY }}
+          ACCOUNT: ${{ secrets.ALWAYSDATA_SSH_USER }}
+          SITE_ID: ${{ secrets.ALWAYSDATA_SITE_ID }}
+        run: |
+          curl -s -X POST --user "${API_KEY} account=${ACCOUNT}:" "https://api.alwaysdata.com/v1/site/${SITE_ID}/restart/"

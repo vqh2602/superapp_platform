@@ -30,8 +30,12 @@ import { SeedModule } from './modules/seed/seed.module';
         UserMiniAppPermissionEntity,
         MiniAppAuthCodeEntity,
       ],
-      synchronize: true, // Development schema auto-sync
-      logging: false,
+      synchronize: process.env.DB_SYNCHRONIZE !== 'false', // Development & auto schema sync
+      logging: process.env.DB_LOGGING === 'true',
+      ssl:
+        process.env.DB_SSL === 'true'
+          ? { rejectUnauthorized: false }
+          : false,
     }),
     AuthModule,
     RegistryModule,

@@ -44,6 +44,105 @@ class ShowToastHandler implements NativeActionHandler {
   }
 }
 
+class ShowAlertHandler implements NativeActionHandler {
+  @override
+  String get actionName => 'ui.showAlert';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final title = payload['title']?.toString() ?? 'Thông báo';
+    final message = payload['message']?.toString() ?? '';
+    final buttonText = payload['buttonText']?.toString() ?? 'Đóng';
+
+    if (context.buildContext != null) {
+      await showDialog(
+        context: context.buildContext!,
+        builder: (ctx) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(buttonText),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return {'success': true};
+  }
+}
+
+class ShowConfirmHandler implements NativeActionHandler {
+  @override
+  String get actionName => 'ui.showConfirm';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final title = payload['title']?.toString() ?? 'Xác nhận';
+    final message = payload['message']?.toString() ?? '';
+    final confirmText = payload['confirmText']?.toString() ?? 'Xác nhận';
+    final cancelText = payload['cancelText']?.toString() ?? 'Huỷ';
+
+    var confirmed = false;
+    if (context.buildContext != null) {
+      confirmed = await showDialog<bool>(
+            context: context.buildContext!,
+            builder: (ctx) => AlertDialog(
+              title: Text(title),
+              content: Text(message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(cancelText),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(confirmText),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+    }
+
+    return {'confirmed': confirmed};
+  }
+}
+
+class SetNavigationBarTitleHandler implements NativeActionHandler {
+  @override
+  String get actionName => 'ui.setNavigationBarTitle';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final title = payload['title']?.toString() ?? '';
+    return {
+      'success': true,
+      'title': title,
+    };
+  }
+}
+
 class VibrateHandler implements NativeActionHandler {
   @override
   String get actionName => 'device.vibrate';

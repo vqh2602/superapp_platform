@@ -65,7 +65,10 @@ Bảng `review_audits` và một số cột/trạng thái lịch sử được g
 
 ## API
 
-Base URL `http://localhost:3000/api/v1`. JSON body được whitelist và từ chối field lạ. API upload gói dùng multipart.
+- **Cục bộ (Local)**: `http://localhost:3000/api/v1`
+- **Môi trường Cloud Production (Alwaysdata)**: `https://superappplatfrom.alwaysdata.net/api/v1`
+
+JSON body được whitelist và từ chối field lạ qua ValidationPipe. API upload gói dùng multipart. CORS được cấu hình mở (`*`) hỗ trợ Flutter Master App và Web Builder kết nối.
 
 ### Tài khoản và token
 
@@ -157,21 +160,51 @@ npm run start:prod
 
 Hoặc dùng `npm run start:dev` để chạy ts-node. Script này không tự watch; khởi động lại sau thay đổi mã nguồn. TypeORM `synchronize: true` tự tạo/cập nhật bảng trong môi trường demo. Không có user hoặc mật khẩu mặc định, gọi `/auth/register` để tạo tài khoản.
 
+Ứng dụng tự động nạp file `.env` khi khởi chạy (qua thư viện `dotenv` với chế độ `override: true`).
+
 Biến môi trường:
 
-| Biến | Mặc định |
-| --- | --- |
-| `PORT` | `3000` |
-| `DB_HOST` | `localhost` |
-| `DB_PORT` | `5432` |
-| `DB_USERNAME` | User hệ điều hành |
-| `DB_PASSWORD` | Rỗng |
-| `DB_DATABASE` | `superapp_registry` |
-| `MINIAPP_STORAGE_DIR` | `storage/miniapps` theo thư mục chạy backend |
+| Biến | Mặc định | Mô tả |
+| --- | --- | --- |
+| `PORT` | `3000` | Cổng HTTP lắng nghe (trên Alwaysdata tự động nhận từ process host) |
+| `IP` / `HOST` | `::` | Địa chỉ mạng lắng nghe (hỗ trợ dual-stack IPv4/IPv6 cho reverse proxy) |
+| `DB_HOST` | `localhost` | Địa chỉ host PostgreSQL (trên Alwaysdata: `postgresql-[account].alwaysdata.net`) |
+| `DB_PORT` | `5432` | Cổng kết nối PostgreSQL |
+| `DB_USERNAME` | User hệ điều hành | Tên đăng nhập cơ sở dữ liệu |
+| `DB_PASSWORD` | Rỗng | Mật khẩu cơ sở dữ liệu |
+| `DB_DATABASE` | `superapp_registry` | Tên cơ sở dữ liệu |
+| `DB_SSL` | `false` | Bật mã hóa SSL (`true`/`false`) cho kết nối PostgreSQL |
+| `DB_SYNCHRONIZE` | `true` | Tự động đồng bộ schema database qua TypeORM |
+| `MINIAPP_STORAGE_DIR` | `storage/miniapps` | Thư mục lưu trữ các gói ZIP Mini App giải nén |
 
-Ứng dụng đọc biến môi trường của tiến trình; không tự load `.env`. Ví dụ cấu hình bằng `export DB_USERNAME=...` trước khi chạy. Token opaque được kiểm tra qua DB, không cần JWT secret. Access TTL Super App 1 giờ/Mini App 15 phút, refresh tối đa 30 ngày, auth code 60 giây.
+Token opaque được kiểm tra qua DB, không cần JWT secret. Access TTL Super App 1 giờ/Mini App 15 phút, refresh tối đa 30 ngày, auth code 60 giây.
 
-Terminal khác:
+## Triển khai Cloud (Alwaysdata)
+
+Backend đã được cấu hình sẵn cơ chế tự động triển khai (1-Click Deploy) lên nền tảng Alwaysdata:
+
+- **Endpoint chính thức**: `https://superappplatfrom.alwaysdata.net/api/v1`
+- **Tài khoản SSH**: `superappplatfrom@ssh-superappplatfrom.alwaysdata.net`
+- **PostgreSQL**: `postgresql-superappplatfrom.alwaysdata.net` (`superappplatfrom_superapp_registry`)
+
+### Lệnh deploy tự động:
+
+```sh
+cd backend
+npm run deploy:alwaysdata
+```
+
+Script [deploy-alwaysdata.cjs](../backend/scripts/deploy-alwaysdata.cjs) sẽ tự động:
+1. Chạy `npm run build` cục bộ để sinh bundle `dist/`.
+2. Đóng gói `release.tar.gz` chứa `dist`, `package.json`, `package-lock.json`.
+3. Tải lên máy chủ Alwaysdata qua SSH/SCP (đã tích hợp khóa SSH key xác thực).
+4. Cài đặt các thư viện sản xuất (`npm install --omit=dev`) và áp dụng cấu hình `.env` an toàn.
+5. Gửi tín hiệu khởi động lại service tới supervisor Alwaysdata.
+6. Thực hiện tự động Health check endpoint `https://superappplatfrom.alwaysdata.net/api/v1/catalog/apps`.
+
+Xem tài liệu chi tiết: [Hướng dẫn Deploy Alwaysdata](alwaysdata-deployment.md).
+
+Terminal khác (chạy Web Builder):
 
 ```sh
 cd builder

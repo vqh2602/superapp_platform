@@ -23,22 +23,27 @@ import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
 import 'package:file_picker_linux/file_picker_linux.dart' as file_picker_linux;
 import 'package:file_selector_linux/file_selector_linux.dart' as file_selector_linux;
 import 'package:image_picker_linux/image_picker_linux.dart' as image_picker_linux;
+import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:path_provider_linux/path_provider_linux.dart' as path_provider_linux;
 import 'package:url_launcher_linux/url_launcher_linux.dart' as url_launcher_linux;
+import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:webview_all_linux/webview_all_linux.dart' as webview_all_linux;
 import 'package:file_picker_darwin/file_picker_darwin.dart' as file_picker_darwin;
 import 'package:file_selector_macos/file_selector_macos.dart' as file_selector_macos;
 import 'package:image_picker_macos/image_picker_macos.dart' as image_picker_macos;
 import 'package:path_provider_foundation/path_provider_foundation.dart' as path_provider_foundation;
 import 'package:url_launcher_macos/url_launcher_macos.dart' as url_launcher_macos;
+import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:webview_all_wkwebview/webview_all_wkwebview.dart' as webview_all_wkwebview;
 import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
 import 'package:file_selector_windows/file_selector_windows.dart' as file_selector_windows;
 import 'package:flutter_secure_storage_windows/flutter_secure_storage_windows.dart' as flutter_secure_storage_windows;
 import 'package:image_picker_windows/image_picker_windows.dart' as image_picker_windows;
+import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:path_provider_windows/path_provider_windows.dart' as path_provider_windows;
 import 'package:speech_to_text_windows/speech_to_text_windows.dart' as speech_to_text_windows;
 import 'package:url_launcher_windows/url_launcher_windows.dart' as url_launcher_windows;
+import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:webview_all_windows/webview_all_windows.dart' as webview_all_windows;
 import 'package:windows_file_picker/windows_file_picker.dart' as windows_file_picker;
 
@@ -204,6 +209,15 @@ class _PluginRegistrant {
       }
 
       try {
+        package_info_plus.PackageInfoPlusLinuxPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`package_info_plus` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
         path_provider_linux.PathProviderLinux.registerWith();
       } catch (err) {
         print(
@@ -217,6 +231,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`url_launcher_linux` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        wakelock_plus.WakelockPlusLinuxPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`wakelock_plus` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -277,6 +300,15 @@ class _PluginRegistrant {
       }
 
       try {
+        wakelock_plus.WakelockPlusMacOSPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`wakelock_plus` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
         webview_all_wkwebview.WebKitWebViewPlatform.registerWith();
       } catch (err) {
         print(
@@ -323,6 +355,15 @@ class _PluginRegistrant {
       }
 
       try {
+        package_info_plus.PackageInfoPlusWindowsPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`package_info_plus` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
         path_provider_windows.PathProviderWindows.registerWith();
       } catch (err) {
         print(
@@ -345,6 +386,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`url_launcher_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        wakelock_plus.WakelockPlusWindowsPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`wakelock_plus` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }

@@ -178,6 +178,62 @@ class PickImagesHandler implements NativeActionHandler {
   }
 }
 
+class ChooseImageHandler implements NativeActionHandler {
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  String get actionName => 'media.chooseImage';
+
+  @override
+  String? get requiredCapability => 'device.pickImage';
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final count = (payload['count'] as num?)?.toInt() ?? 1;
+
+    if (context.buildContext != null) {
+      try {
+        if (count > 1) {
+          final List<XFile> pickedFiles = await _picker.pickMultiImage(limit: count);
+          if (pickedFiles.isNotEmpty) {
+            final paths = pickedFiles.map((f) => f.path).toList();
+            return {
+              'tempFilePaths': paths,
+              'count': paths.length,
+            };
+          }
+          throw BridgeError.cancelled('Người dùng đã huỷ chọn ảnh');
+        } else {
+          final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
+          if (file != null) {
+            return {
+              'tempFilePaths': [file.path],
+              'count': 1,
+            };
+          }
+          throw BridgeError.cancelled('Người dùng đã huỷ chọn ảnh');
+        }
+      } catch (e) {
+        if (e is BridgeError) rethrow;
+        debugPrint('ChooseImageHandler error: $e');
+      }
+    }
+
+    // Headless / mock fallback
+    final mockPaths = List.generate(
+      count.clamp(1, 5),
+      (i) => 'content://media/photos/photo_demo_${i + 1}.jpg',
+    );
+    return {
+      'tempFilePaths': mockPaths,
+      'count': mockPaths.length,
+    };
+  }
+}
+
 class SaveImageToGalleryHandler implements NativeActionHandler {
   @override
   String get actionName => 'media.saveImageToGallery';

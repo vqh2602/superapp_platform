@@ -33,6 +33,12 @@ migrate_working_dir/
 build/
 /build/
 
+# Environment secrets
+.env
+.env.*
+!.env.example
+!.env.alwaysdata.example
+
 # Node related
 node_modules/
 dist/

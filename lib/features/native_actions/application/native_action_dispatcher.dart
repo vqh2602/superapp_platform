@@ -99,6 +99,7 @@ class NativeActionDispatcher {
       StorageGetSecureItemHandler(secureStorageRepo: secureStorageRepo),
       StorageRemoveSecureItemHandler(secureStorageRepo: secureStorageRepo),
       StorageClearHandler(secureStorageRepo: secureStorageRepo),
+      StorageGetAllHandler(secureStorageRepo: secureStorageRepo),
       StorageSetCredentialsHandler(secureStorageRepo: secureStorageRepo),
       StorageGetCredentialsHandler(secureStorageRepo: secureStorageRepo),
       StorageDeleteCredentialsHandler(secureStorageRepo: secureStorageRepo),
@@ -118,6 +119,9 @@ class NativeActionDispatcher {
 
       // UI & Controls
       ShowToastHandler(),
+      ShowAlertHandler(),
+      ShowConfirmHandler(),
+      SetNavigationBarTitleHandler(),
       VibrateHandler(),
       CopyToClipboardHandler(),
       SetBrightnessHandler(),
@@ -130,6 +134,7 @@ class NativeActionDispatcher {
 
       // Media & Files
       ScanQrHandler(),
+      ChooseImageHandler(),
       GetPhotoHandler(),
       PickImagesHandler(),
       SaveImageToGalleryHandler(),
@@ -163,6 +168,13 @@ class NativeActionDispatcher {
     _handlers['storage.setItem'] = setItemHandler;
     _handlers['storage.getItem'] = getItemHandler;
     _handlers['storage.removeItem'] = removeItemHandler;
+    _handlers['storage.clear'] = StorageClearHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['storage.getAll'] = StorageGetAllHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['getStorage'] = getItemHandler;
+    _handlers['setStorage'] = setItemHandler;
+    _handlers['removeStorage'] = removeItemHandler;
+    _handlers['clearStorage'] = StorageClearHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['getAllStorage'] = StorageGetAllHandler(secureStorageRepo: secureStorageRepo);
     _handlers['credentials.setCredentials'] = setCredHandler;
     _handlers['credentials.getCredentials'] = getCredHandler;
     _handlers['credentials.deleteCredentials'] = delCredHandler;
@@ -173,11 +185,17 @@ class NativeActionDispatcher {
     _handlers['getDeviceLanguage'] = GetDeviceLanguageHandler();
     _handlers['getSuperAppSettings'] = GetSuperAppSettingsHandler();
     _handlers['getSystemInfo'] = GetSystemInfoHandler();
+    _handlers['device.getDeviceInfo'] = GetSystemInfoHandler();
+    _handlers['getDeviceInfo'] = GetSystemInfoHandler();
     _handlers['getAppInfo'] = GetAppInfoHandler();
     _handlers['getBatteryInfo'] = GetBatteryInfoHandler();
     _handlers['getContacts'] = GetContactsHandler(permissionRepo: permissionRepo);
 
     _handlers['showToast'] = ShowToastHandler();
+    _handlers['showAlert'] = ShowAlertHandler();
+    _handlers['showConfirm'] = ShowConfirmHandler();
+    _handlers['setNavigationBarTitle'] = SetNavigationBarTitleHandler();
+    _handlers['setTitle'] = SetNavigationBarTitleHandler();
     _handlers['vibrate'] = VibrateHandler();
     _handlers['copyToClipboard'] = CopyToClipboardHandler();
     _handlers['setBrightness'] = SetBrightnessHandler();
@@ -190,8 +208,10 @@ class NativeActionDispatcher {
 
     _handlers['scanQr'] = ScanQrHandler();
     _handlers['scanQRCode'] = ScanQrHandler();
+    _handlers['media.scanQRCode'] = ScanQrHandler();
     _handlers['scanBarcode'] = ScanQrHandler();
     _handlers['device.scanBarcode'] = ScanQrHandler();
+    _handlers['chooseImage'] = ChooseImageHandler();
     _handlers['getPhoto'] = GetPhotoHandler();
     _handlers['pickImages'] = PickImagesHandler();
     _handlers['saveImageToGallery'] = SaveImageToGalleryHandler();
@@ -200,6 +220,11 @@ class NativeActionDispatcher {
     _handlers['saveFile'] = SaveFileHandler();
     _handlers['pickFile'] = PickFileHandler();
     _handlers['filePreview'] = FilePreviewHandler();
+
+    // User & Auth aliases
+    final userProfileHandler = UserGetProfileHandler(userRepo: userRepo);
+    _handlers['auth.getUserProfile'] = userProfileHandler;
+    _handlers['getUserProfile'] = userProfileHandler;
 
     // Secret Data aliases for Keychain/Keystore
     _handlers['setSecretData'] = setItemHandler;

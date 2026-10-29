@@ -476,6 +476,18 @@
       "languageVersion": "3.11"
     },
     {
+      "name": "package_info_plus",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/package_info_plus-10.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "package_info_plus_platform_interface",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/package_info_plus_platform_interface-4.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "path",
       "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
@@ -768,6 +780,18 @@
       "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/vm_service-15.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "wakelock_plus",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/wakelock_plus-1.8.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
+      "name": "wakelock_plus_platform_interface",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/wakelock_plus_platform_interface-1.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
     },
     {
       "name": "web",
