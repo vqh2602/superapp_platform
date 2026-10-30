@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/errors/bridge_error.dart';
-import '../../authentication/data/mock_auth_repository.dart';
-import '../../authentication/data/mock_auth_code_service.dart';
-import '../../authentication/data/mock_token_service.dart';
+import '../../authentication/data/auth_repository_impl.dart';
+import '../../authentication/data/auth_code_service_shim.dart';
+import '../../authentication/data/token_service_shim.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
@@ -19,8 +19,8 @@ Future<dynamic> _post(http.Client? provided, String url, Map<String, dynamic> bo
   } finally { if (provided == null) client.close(); }
 }
 class AuthRequestCodeHandler implements NativeActionHandler {
-  final MockAuthRepository authRepo;
-  final MockAuthCodeService authCodeService;
+  final AuthRepositoryImpl authRepo;
+  final AuthCodeServiceShim authCodeService;
   final http.Client? httpClient;
   final String? miniappUrl;
   AuthRequestCodeHandler({required this.authRepo, required this.authCodeService, this.httpClient, this.miniappUrl});
@@ -38,7 +38,7 @@ class AuthRequestCodeHandler implements NativeActionHandler {
   }
 }
 class AuthExchangeCodeHandler implements NativeActionHandler {
-  final MockTokenService tokenService; final http.Client? httpClient; final String? miniappUrl;
+  final TokenServiceShim tokenService; final http.Client? httpClient; final String? miniappUrl;
   AuthExchangeCodeHandler({required this.tokenService, this.httpClient, this.miniappUrl});
   @override String get actionName => 'auth.exchangeCode';
   @override String? get requiredCapability => null;
@@ -50,7 +50,7 @@ class AuthExchangeCodeHandler implements NativeActionHandler {
   }
 }
 class AuthRefreshTokenHandler implements NativeActionHandler {
-  final MockTokenService tokenService; final http.Client? httpClient; final String? authUrl;
+  final TokenServiceShim tokenService; final http.Client? httpClient; final String? authUrl;
   AuthRefreshTokenHandler({required this.tokenService, this.httpClient, this.authUrl});
   @override String get actionName => 'auth.refreshToken';
   @override String? get requiredCapability => null;
@@ -62,7 +62,7 @@ class AuthRefreshTokenHandler implements NativeActionHandler {
   }
 }
 class AuthLogoutHandler implements NativeActionHandler {
-  final MockAuthRepository authRepo;
+  final AuthRepositoryImpl authRepo;
   AuthLogoutHandler({required this.authRepo});
   @override String get actionName => 'auth.logout';
   @override String? get requiredCapability => null;

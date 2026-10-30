@@ -1,10 +1,10 @@
 import '../../../../core/errors/bridge_error.dart';
-import '../../storage/data/mock_secure_storage_repository.dart';
+import '../../storage/data/secure_storage_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
 class StorageSetSecureItemHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageSetSecureItemHandler({required this.secureStorageRepo});
 
@@ -44,7 +44,7 @@ class StorageSetSecureItemHandler implements NativeActionHandler {
 }
 
 class StorageGetSecureItemHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageGetSecureItemHandler({required this.secureStorageRepo});
 
@@ -77,7 +77,7 @@ class StorageGetSecureItemHandler implements NativeActionHandler {
 }
 
 class StorageRemoveSecureItemHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageRemoveSecureItemHandler({required this.secureStorageRepo});
 
@@ -110,7 +110,7 @@ class StorageRemoveSecureItemHandler implements NativeActionHandler {
 }
 
 class StorageClearHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageClearHandler({required this.secureStorageRepo});
 
@@ -134,7 +134,7 @@ class StorageClearHandler implements NativeActionHandler {
 }
 
 class StorageGetAllHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageGetAllHandler({required this.secureStorageRepo});
 
@@ -161,7 +161,7 @@ class StorageGetAllHandler implements NativeActionHandler {
 }
 
 class StorageSetCredentialsHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageSetCredentialsHandler({required this.secureStorageRepo});
 
@@ -200,7 +200,7 @@ class StorageSetCredentialsHandler implements NativeActionHandler {
 }
 
 class StorageGetCredentialsHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageGetCredentialsHandler({required this.secureStorageRepo});
 
@@ -228,7 +228,7 @@ class StorageGetCredentialsHandler implements NativeActionHandler {
 }
 
 class StorageDeleteCredentialsHandler implements NativeActionHandler {
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   StorageDeleteCredentialsHandler({required this.secureStorageRepo});
 

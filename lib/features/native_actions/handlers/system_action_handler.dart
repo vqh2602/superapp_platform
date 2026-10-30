@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -9,7 +8,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/errors/bridge_error.dart';
-import '../../permissions/data/mock_permission_repository.dart';
+import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
@@ -48,14 +47,18 @@ class GetNetworkInfoHandler implements NativeActionHandler {
     if (cleaned.isEmpty ||
         cleaned == '<unknown ssid>' ||
         cleaned.startsWith('<') ||
-        cleaned == 'null') return null;
+        cleaned == 'null') {
+      return null;
+    }
     return cleaned;
   }
 
   String? _cleanBssid(String? raw) {
     if (raw == null) return null;
     var cleaned = raw.replaceAll(RegExp(r'^\"|\"$'), '').trim();
-    if (cleaned.isEmpty || cleaned == '02:00:00:00:00:00' || cleaned == 'null') return null;
+    if (cleaned.isEmpty || cleaned == '02:00:00:00:00:00' || cleaned == 'null') {
+      return null;
+    }
     return cleaned;
   }
 
@@ -220,8 +223,9 @@ class GetAppInfoHandler implements NativeActionHandler {
     ActionContext context,
   ) async {
     final m = context.manifest;
-    if (m == null)
+    if (m == null) {
       throw BridgeError.invalidParams('Mini App manifest is unavailable');
+    }
     return {
       'appId': context.appId,
       'name': m.name,
@@ -262,7 +266,7 @@ class GetBatteryInfoHandler implements NativeActionHandler {
 }
 
 class GetContactsHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
   final Future<bool> Function() requestAccess;
   final Future<List<Contact>> Function() readContacts;
   GetContactsHandler({
@@ -286,6 +290,9 @@ class GetContactsHandler implements NativeActionHandler {
     Map<String, dynamic> payload,
     ActionContext context,
   ) async {
+    if (!permissionRepo.isGranted(context.appId, 'contacts')) {
+      throw BridgeError.permissionDenied('contacts');
+    }
     if (!await requestAccess()) {
       throw BridgeError.permissionDenied('contacts');
     }

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../../core/errors/bridge_error.dart';
-import '../../permissions/data/mock_permission_repository.dart';
+import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
@@ -498,7 +498,7 @@ class KeepScreenHandler implements NativeActionHandler {
 }
 
 class RequestSendNotificationHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
 
   RequestSendNotificationHandler({required this.permissionRepo});
 

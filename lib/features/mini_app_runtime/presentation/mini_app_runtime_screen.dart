@@ -13,10 +13,10 @@ import '../../mini_app_bridge/bridge_channel.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';
 import '../../mini_app_bridge/bridge_event_emitter.dart';
 import '../../native_actions/application/native_action_dispatcher.dart';
-import '../../user_profile/data/mock_user_repository.dart';
-import '../../device/data/mock_device_adapter.dart';
-import '../../permissions/data/mock_permission_repository.dart';
-import '../../storage/data/mock_secure_storage_repository.dart';
+import '../../user_profile/data/user_repository_impl.dart';
+import '../../device/data/device_adapter_impl.dart';
+import '../../permissions/data/permission_repository_impl.dart';
+import '../../storage/data/secure_storage_repository_impl.dart';
 import '../../native_actions/domain/mini_app_ui_delegate.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/web_log_entry.dart';
@@ -250,7 +250,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
 
     // Refresh saved consent on every launch, before WebView startup actions run.
-    final permissionRepo = ref.read(mockPermissionRepositoryProvider);
+    final permissionRepo = ref.read(permissionRepositoryProvider);
     try {
       await permissionRepo.fetchPermissionsFromBackend(_currentAppId);
     } catch (_) {
@@ -278,14 +278,14 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     final endpoint = ref.read(backendEndpointProvider);
     final actionDispatcher = NativeActionDispatcher(
-      authRepo: ref.read(mockAuthRepositoryProvider),
-      authCodeService: ref.read(mockAuthCodeServiceProvider),
-      tokenService: ref.read(mockTokenServiceProvider),
-      userRepo: ref.read(mockUserRepositoryProvider),
+      authRepo: ref.read(authRepositoryProvider),
+      authCodeService: ref.read(authCodeServiceProvider),
+      tokenService: ref.read(tokenServiceProvider),
+      userRepo: ref.read(userRepositoryProvider),
       deviceAdapter: ref.read(deviceAdapterProvider),
       permissionRepo: permissionRepo,
       debugLogRepo: ref.read(debugLogRepositoryProvider),
-      secureStorageRepo: ref.read(mockSecureStorageRepositoryProvider),
+      secureStorageRepo: ref.read(secureStorageRepositoryProvider),
       miniappUrl: endpoint.miniappUrl,
       authUrl: endpoint.authUrl,
       onSwitchMiniApp: (targetAppId) {

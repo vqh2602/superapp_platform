@@ -1,15 +1,15 @@
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
-import '../../authentication/data/mock_auth_repository.dart';
-import '../../authentication/data/mock_auth_code_service.dart';
-import '../../authentication/data/mock_token_service.dart';
+import '../../authentication/data/auth_repository_impl.dart';
+import '../../authentication/data/auth_code_service_shim.dart';
+import '../../authentication/data/token_service_shim.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
-import '../../device/data/mock_device_adapter.dart';
-import '../../permissions/data/mock_permission_repository.dart';
+import '../../device/data/device_adapter_impl.dart';
+import '../../permissions/data/permission_repository_impl.dart';
 import '../../permissions/presentation/permission_prompt_dialog.dart';
-import '../../user_profile/data/mock_user_repository.dart';
+import '../../user_profile/data/user_repository_impl.dart';
 import '../../debug_center/data/debug_log_repository.dart';
-import '../../storage/data/mock_secure_storage_repository.dart';
+import '../../storage/data/secure_storage_repository_impl.dart';
 import '../domain/action_context.dart';
 import '../domain/action_definition.dart';
 import '../handlers/auth_action_handler.dart';
@@ -26,14 +26,14 @@ import '../handlers/phone_utility_action_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NativeActionDispatcher {
-  final MockAuthRepository authRepo;
-  final MockAuthCodeService authCodeService;
-  final MockTokenService tokenService;
-  final MockUserRepository userRepo;
-  final MockDeviceAdapter deviceAdapter;
-  final MockPermissionRepository permissionRepo;
+  final AuthRepositoryImpl authRepo;
+  final AuthCodeServiceShim authCodeService;
+  final TokenServiceShim tokenService;
+  final UserRepositoryImpl userRepo;
+  final DeviceAdapterImpl deviceAdapter;
+  final PermissionRepositoryImpl permissionRepo;
   final DebugLogRepository debugLogRepo;
-  final MockSecureStorageRepository secureStorageRepo;
+  final SecureStorageRepositoryImpl secureStorageRepo;
 
   final Map<String, NativeActionHandler> _handlers = {};
 
@@ -45,11 +45,11 @@ class NativeActionDispatcher {
     required this.deviceAdapter,
     required this.permissionRepo,
     required this.debugLogRepo,
-    MockSecureStorageRepository? secureStorageRepo,
+    SecureStorageRepositoryImpl? secureStorageRepo,
     String? miniappUrl,
     String? authUrl,
     Function(String appId)? onSwitchMiniApp,
-  }) : secureStorageRepo = secureStorageRepo ?? MockSecureStorageRepository() {
+  }) : secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
     _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
   }
 
@@ -318,14 +318,14 @@ class NativeActionDispatcher {
 final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
   return NativeActionDispatcher(
-    authRepo: ref.watch(mockAuthRepositoryProvider),
-    authCodeService: ref.watch(mockAuthCodeServiceProvider),
-    tokenService: ref.watch(mockTokenServiceProvider),
-    userRepo: ref.watch(mockUserRepositoryProvider),
+    authRepo: ref.watch(authRepositoryProvider),
+    authCodeService: ref.watch(authCodeServiceProvider),
+    tokenService: ref.watch(tokenServiceProvider),
+    userRepo: ref.watch(userRepositoryProvider),
     deviceAdapter: ref.watch(deviceAdapterProvider),
-    permissionRepo: ref.watch(mockPermissionRepositoryProvider),
+    permissionRepo: ref.watch(permissionRepositoryProvider),
     debugLogRepo: ref.watch(debugLogRepositoryProvider),
-    secureStorageRepo: ref.watch(mockSecureStorageRepositoryProvider),
+    secureStorageRepo: ref.watch(secureStorageRepositoryProvider),
     miniappUrl: endpoint.miniappUrl,
     authUrl: endpoint.authUrl,
   );

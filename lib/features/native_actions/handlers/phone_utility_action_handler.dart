@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/errors/bridge_error.dart';
-import '../../permissions/data/mock_permission_repository.dart';
+import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
@@ -38,8 +38,9 @@ class OpenPhoneHandler implements NativeActionHandler {
       }
     } catch (_) {}
 
-    if (!launched)
+    if (!launched) {
       throw BridgeError.unsupported('No application can open $uri');
+    }
     return {
       'success': launched,
       'phoneNumber': cleanPhone,
@@ -84,8 +85,9 @@ class OpenSmsHandler implements NativeActionHandler {
       }
     } catch (_) {}
 
-    if (!launched)
+    if (!launched) {
       throw BridgeError.unsupported('No application can open $uri');
+    }
     return {
       'success': launched,
       'phoneNumber': cleanPhone,
@@ -125,8 +127,9 @@ class OpenExternalBrowserHandler implements NativeActionHandler {
       }
     } catch (_) {}
 
-    if (!launched)
+    if (!launched) {
       throw BridgeError.unsupported('No application can open $uri');
+    }
     return {
       'success': launched,
       'url': rawUrl,
@@ -164,8 +167,9 @@ class OpenDeepLinkHandler implements NativeActionHandler {
       }
     } catch (_) {}
 
-    if (!launched)
+    if (!launched) {
       throw BridgeError.unsupported('No application can open $uri');
+    }
     return {
       'success': launched,
       'url': rawUrl,
@@ -176,7 +180,7 @@ class OpenDeepLinkHandler implements NativeActionHandler {
 }
 
 class SpeechToTextHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
   SpeechToTextHandler({required this.permissionRepo});
   @override
   String get actionName => 'utility.speechToText';
@@ -189,10 +193,12 @@ class SpeechToTextHandler implements NativeActionHandler {
     Map<String, dynamic> payload,
     ActionContext context,
   ) async {
-    if (!permissionRepo.isGranted(context.appId, 'microphone'))
+    if (!permissionRepo.isGranted(context.appId, 'microphone')) {
       throw BridgeError.permissionDenied('microphone');
-    if (context.buildContext == null)
+    }
+    if (context.buildContext == null) {
       throw BridgeError.unsupported('Speech recognition requires native UI');
+    }
     final lang =
         payload['lang']?.toString() ??
         Localizations.localeOf(context.buildContext!).toLanguageTag();
@@ -201,10 +207,12 @@ class SpeechToTextHandler implements NativeActionHandler {
       isScrollControlled: true,
       builder: (_) => _SpeechRecordBottomSheet(lang: lang),
     );
-    if (result == null)
+    if (result == null) {
       throw BridgeError.cancelled('Người dùng huỷ nhận diện giọng nói');
-    if (result['error'] != null)
+    }
+    if (result['error'] != null) {
       throw BridgeError.unsupported(result['error'] as String);
+    }
     return {
       ...result,
       'lang': lang,
@@ -252,10 +260,11 @@ class _SpeechRecordBottomSheetState extends State<_SpeechRecordBottomSheet> {
   Future<void> _start() async {
     try {
       if (!await _speech.initialize()) {
-        if (mounted)
+        if (mounted) {
           Navigator.pop(context, {
             'error': 'Speech recognition is unavailable',
           });
+        }
         return;
       }
       await _speech.listen(
@@ -263,13 +272,14 @@ class _SpeechRecordBottomSheetState extends State<_SpeechRecordBottomSheet> {
           localeId: widget.lang.replaceAll('-', '_'),
         ),
         onResult: (result) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _text = result.recognizedWords;
               _confidence = result.hasConfidenceRating
                   ? result.confidence
                   : null;
             });
+          }
         },
       );
     } catch (e) {

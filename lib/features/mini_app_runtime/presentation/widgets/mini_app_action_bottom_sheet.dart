@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../../../mini_app_catalog/presentation/controllers/favorite_apps_provider.dart';
-import '../../../permissions/data/mock_permission_repository.dart';
+import '../../../permissions/data/permission_repository_impl.dart';
 
 class MiniAppActionBottomSheet extends ConsumerWidget {
   final MiniAppManifest? manifest;
@@ -696,7 +696,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            final repo = ref.read(mockPermissionRepositoryProvider);
+            final repo = ref.read(permissionRepositoryProvider);
             final capabilities = manifest?.capabilities ?? [
               'user.getBasicInfo',
               'navigation.close',

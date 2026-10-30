@@ -1,11 +1,11 @@
 import '../../../../core/errors/bridge_error.dart';
-import '../../permissions/data/mock_permission_repository.dart';
+import '../../permissions/data/permission_repository_impl.dart';
 import '../../permissions/presentation/permission_prompt_dialog.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
 class PermissionRequestHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
 
   PermissionRequestHandler({required this.permissionRepo});
 
@@ -50,7 +50,7 @@ class PermissionRequestHandler implements NativeActionHandler {
 }
 
 class PermissionCheckHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
 
   PermissionCheckHandler({required this.permissionRepo});
 
@@ -79,7 +79,7 @@ class PermissionCheckHandler implements NativeActionHandler {
 }
 
 class PermissionGetPermissionsHandler implements NativeActionHandler {
-  final MockPermissionRepository permissionRepo;
+  final PermissionRepositoryImpl permissionRepo;
 
   PermissionGetPermissionsHandler({required this.permissionRepo});
 

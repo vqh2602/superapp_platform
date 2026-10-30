@@ -1,9 +1,9 @@
-import '../../user_profile/data/mock_user_repository.dart';
+import '../../user_profile/data/user_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
 class UserGetProfileHandler implements NativeActionHandler {
-  final MockUserRepository userRepo;
+  final UserRepositoryImpl userRepo;
 
   UserGetProfileHandler({required this.userRepo});
 
@@ -24,7 +24,7 @@ class UserGetProfileHandler implements NativeActionHandler {
 }
 
 class UserGetBasicInfoHandler implements NativeActionHandler {
-  final MockUserRepository userRepo;
+  final UserRepositoryImpl userRepo;
 
   UserGetBasicInfoHandler({required this.userRepo});
 

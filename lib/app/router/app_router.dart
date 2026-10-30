@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/animations/app_motion.dart';
 import '../../features/authentication/presentation/screens/splash_screen.dart';
-import '../../features/authentication/presentation/screens/mock_login_screen.dart';
+import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/mini_app_catalog/presentation/mini_app_catalog_screen.dart';
 import '../../features/mini_app_runtime/presentation/mini_app_runtime_screen.dart';
@@ -26,7 +26,7 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) => buildSlideUpTransitionPage(
         context: context,
         state: state,
-        child: const MockLoginScreen(),
+        child: const LoginScreen(),
       ),
     ),
     GoRoute(

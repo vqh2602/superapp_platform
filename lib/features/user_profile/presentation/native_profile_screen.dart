@@ -73,7 +73,7 @@ class NativeProfileScreen extends ConsumerWidget {
                         _buildInfoRow('Vai trò', user.role),
                         _buildInfoRow(
                           'Trạng thái xác thực',
-                          'Đã xác thực (Mock Session)',
+                          'Đã xác thực',
                         ),
                       ],
                     ),

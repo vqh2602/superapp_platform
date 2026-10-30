@@ -26,8 +26,9 @@ class TestAuthRepository extends MockAuthRepository {
   TestAuthRepository()
     : super(
         httpClient: MockClient((request) async {
-          if (request.url.path.endsWith('/logout'))
+          if (request.url.path.endsWith('/logout')) {
             return http.Response('{}', 200);
+          }
           final id = jsonDecode(request.body)['email'];
           final user = id == TestUsers.userB.id
               ? TestUsers.userB

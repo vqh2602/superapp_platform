@@ -1,29 +1,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/endpoint_config.dart';
 import '../../domain/models/auth_session.dart';
-import '../../domain/models/mock_user.dart';
-import '../../data/mock_auth_repository.dart';
-import '../../data/mock_auth_code_service.dart';
-import '../../data/mock_token_service.dart';
+import '../../domain/models/platform_user.dart';
+import '../../data/auth_repository_impl.dart';
+import '../../data/auth_code_service_shim.dart';
+import '../../data/token_service_shim.dart';
 
-/// Core provider for MockAuthRepository connected to backend endpoint
-final mockAuthRepositoryProvider = Provider<MockAuthRepository>((ref) {
+/// Core provider for AuthRepositoryImpl connected to backend endpoint
+final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
-  final repo = MockAuthRepository(authUrl: endpoint.authUrl);
+  final repo = AuthRepositoryImpl(authUrl: endpoint.authUrl);
   ref.onDispose(() => repo.dispose());
   return repo;
 });
 
-/// Core provider for MockAuthCodeService
-final mockAuthCodeServiceProvider = Provider<MockAuthCodeService>((ref) {
-  return MockAuthCodeService();
+final mockAuthRepositoryProvider = authRepositoryProvider;
+
+/// Core provider for AuthCodeServiceShim
+final authCodeServiceProvider = Provider<AuthCodeServiceShim>((ref) {
+  return AuthCodeServiceShim();
 });
 
-/// Core provider for MockTokenService
-final mockTokenServiceProvider = Provider<MockTokenService>((ref) {
-  final authCodeService = ref.watch(mockAuthCodeServiceProvider);
-  return MockTokenService(authCodeService: authCodeService);
+final mockAuthCodeServiceProvider = authCodeServiceProvider;
+
+/// Core provider for TokenServiceShim
+final tokenServiceProvider = Provider<TokenServiceShim>((ref) {
+  final authCodeService = ref.watch(authCodeServiceProvider);
+  return TokenServiceShim(authCodeService: authCodeService);
 });
+
+final mockTokenServiceProvider = tokenServiceProvider;
 
 /// Auth state holder
 class AuthState {
@@ -38,7 +44,7 @@ class AuthState {
   });
 
   bool get isAuthenticated => session != null && !session!.isExpired;
-  MockUser? get currentUser => session?.user;
+  PlatformUser? get currentUser => session?.user;
 
   AuthState copyWith({
     AuthSession? session,
@@ -56,7 +62,7 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  final MockAuthRepository _repository;
+  final AuthRepositoryImpl _repository;
 
   AuthNotifier(this._repository) : super(const AuthState()) {
     // Listen to repository stream
@@ -65,7 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     });
   }
 
-  /// Login with email and password to backend, or legacy mock login with userId
+  /// Login with email and password to backend
   Future<bool> login(String emailOrUserId, [String? password]) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -113,6 +119,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repo = ref.watch(mockAuthRepositoryProvider);
+  final repo = ref.watch(authRepositoryProvider);
   return AuthNotifier(repo);
 });

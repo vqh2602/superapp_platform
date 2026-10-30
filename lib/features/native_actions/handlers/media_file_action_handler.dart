@@ -12,8 +12,9 @@ import '../domain/action_context.dart';
 import '../presentation/qr_scanner_screen.dart';
 
 void requireNativeUI(ActionContext context) {
-  if (context.buildContext == null)
+  if (context.buildContext == null) {
     throw BridgeError.unsupported('Native UI is unavailable');
+  }
 }
 
 Future<Map<String, dynamic>> imageMetadata(XFile file) async {
@@ -47,8 +48,9 @@ class ScanQrHandler implements NativeActionHandler {
   ) async {
     requireNativeUI(context);
     final result = await QrScannerScreen.open(context.buildContext!);
-    if (result == null)
+    if (result == null) {
       throw BridgeError.cancelled('Người dùng đã huỷ quét mã');
+    }
     return result;
   }
 }
@@ -68,12 +70,15 @@ class GetPhotoHandler implements NativeActionHandler {
   ) async {
     requireNativeUI(context);
     final source = payload['source']?.toString() ?? 'camera';
-    if (!['camera', 'gallery'].contains(source))
+    if (!['camera', 'gallery'].contains(source)) {
       throw BridgeError.invalidParams('source must be camera or gallery');
+    }
     final file = await _picker.pickImage(
       source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
     );
-    if (file == null) throw BridgeError.cancelled('Người dùng đã huỷ chọn ảnh');
+    if (file == null) {
+      throw BridgeError.cancelled('Người dùng đã huỷ chọn ảnh');
+    }
     return {
       ...await imageMetadata(file),
       'source': source,
@@ -104,8 +109,9 @@ class PickImagesHandler implements NativeActionHandler {
               f,
           ]
         : await _picker.pickMultiImage(limit: count);
-    if (files.isEmpty)
+    if (files.isEmpty) {
       throw BridgeError.cancelled('Người dùng đã huỷ chọn ảnh');
+    }
     final images = await Future.wait(files.map(imageMetadata));
     return {'images': images, 'count': images.length};
   }
@@ -144,13 +150,15 @@ class SaveImageToGalleryHandler implements NativeActionHandler {
     ActionContext context,
   ) async {
     final uri = payload['uri']?.toString();
-    if (uri == null || uri.isEmpty)
+    if (uri == null || uri.isEmpty) {
       throw BridgeError.invalidParams('Image uri is required');
+    }
     try {
       await Gal.putImage(uri);
     } on GalException catch (e) {
-      if (e.type == GalExceptionType.accessDenied)
+      if (e.type == GalExceptionType.accessDenied) {
         throw BridgeError.permissionDenied('photos');
+      }
       rethrow;
     }
     return {
@@ -175,8 +183,9 @@ class PickVideoHandler implements NativeActionHandler {
   ) async {
     requireNativeUI(context);
     final file = await _picker.pickVideo(source: ImageSource.gallery);
-    if (file == null)
+    if (file == null) {
       throw BridgeError.cancelled('Người dùng đã huỷ chọn video');
+    }
     return {
       'uri': file.path,
       'mimeType': file.mimeType ?? lookupMimeType(file.name),
@@ -202,13 +211,15 @@ class SaveVideoToGalleryHandler implements NativeActionHandler {
     ActionContext context,
   ) async {
     final uri = payload['uri']?.toString();
-    if (uri == null || uri.isEmpty)
+    if (uri == null || uri.isEmpty) {
       throw BridgeError.invalidParams('Video uri is required');
+    }
     try {
       await Gal.putVideo(uri);
     } on GalException catch (e) {
-      if (e.type == GalExceptionType.accessDenied)
+      if (e.type == GalExceptionType.accessDenied) {
         throw BridgeError.permissionDenied('photos');
+      }
       rethrow;
     }
     return {
@@ -270,8 +281,9 @@ class PickFileHandler implements NativeActionHandler {
     final files = payload['allowMultiple'] == true
         ? await FilePicker.pickFiles()
         : [if (await FilePicker.pickFile() case final PlatformFile f) f];
-    if (files.isEmpty)
+    if (files.isEmpty) {
       throw BridgeError.cancelled('Người dùng đã huỷ chọn file');
+    }
     final entries = files
         .map(
           (f) => {
@@ -303,8 +315,9 @@ class FilePreviewHandler implements NativeActionHandler {
     if (uri == null || !['https', 'http', 'file'].contains(uri.scheme)) {
       throw BridgeError.invalidParams('A valid fileUrl is required');
     }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication))
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw BridgeError.unsupported('File viewer');
+    }
     return {'success': true, 'fileUrl': url, 'fileName': payload['fileName']};
   }
 }

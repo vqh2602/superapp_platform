@@ -7,7 +7,7 @@ import '../../../../core/config/app_theme.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/widgets/backend_endpoint_selector_sheet.dart';
-import '../../../permissions/data/mock_permission_repository.dart';
+import '../../../permissions/data/permission_repository_impl.dart';
 
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key});
@@ -267,7 +267,7 @@ class ProfileTab extends ConsumerWidget {
       ),
       builder: (ctx) {
         return FutureBuilder(
-          future: ref.read(mockPermissionRepositoryProvider).fetchUserAppsFromBackend(),
+          future: ref.read(permissionRepositoryProvider).fetchUserAppsFromBackend(),
           builder: (context, snapshot) {
             final apps = snapshot.data ?? [];
             return Container(
@@ -330,7 +330,7 @@ class ProfileTab extends ConsumerWidget {
                             trailing: TextButton(
                               style: TextButton.styleFrom(foregroundColor: Colors.red),
                               onPressed: () async {
-                                ref.read(mockPermissionRepositoryProvider).revokeAll(appId);
+                                ref.read(permissionRepositoryProvider).revokeAll(appId);
                                 Navigator.pop(ctx);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Đã thu hồi toàn bộ quyền của $appId')),

@@ -1,8 +1,8 @@
-import 'mock_user.dart';
+import 'platform_user.dart';
 
-/// Simulated authentication session for Master App.
+/// Authentication session for SuperApp.
 class AuthSession {
-  final MockUser user;
+  final PlatformUser user;
   final String accessToken;
   final String refreshToken;
   final DateTime expiresAt;
@@ -20,7 +20,7 @@ class AuthSession {
     final userJson = (json['user'] as Map<String, dynamic>?) ?? {};
     final expiresIn = json['expiresIn'] as int? ?? 3600;
     return AuthSession(
-      user: MockUser.fromBackendJson(userJson),
+      user: PlatformUser.fromBackendJson(userJson),
       accessToken: json['accessToken'] as String? ?? '',
       refreshToken: json['refreshToken'] as String? ?? '',
       expiresAt: DateTime.now().add(Duration(seconds: expiresIn)),
@@ -28,7 +28,7 @@ class AuthSession {
   }
 
   AuthSession copyWith({
-    MockUser? user,
+    PlatformUser? user,
     String? accessToken,
     String? refreshToken,
     DateTime? expiresAt,
