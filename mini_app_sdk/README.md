@@ -214,3 +214,7 @@ npm publish --access public
 Chạy `npm test` trong `mini_app_sdk` để kiểm tra native callbacks, JS gọi trực tiếp dùng chung bridge, nhiều SDK instance, lifecycle events, simulator, browser mock, bridge được gắn muộn và timeout. SDK giữ nguyên callback registry `_callbacks` của host; không thay global bridge bằng dispatcher riêng. Playground sử dụng transport chính thức cho native và simulator.
 
 Sau khi sửa SDK trong repository, chạy `npm run build:miniapps` từ thư mục gốc để build và đồng bộ SDK vào các ví dụ trước khi deploy backend. Lệnh này không phát hành package lên npm.
+
+### Timeout khi chờ người dùng
+
+Native và simulator mặc định chờ tối đa 5 phút cho quét QR/mã vạch, camera, chọn ảnh/video/file, ghi âm, hộp thoại quyền và checkout; các action khác chờ tối đa 60 giây. Huỷ thao tác từ giao diện native vẫn trả lỗi `CANCELLED` ngay. `timeoutMs` khi khởi tạo SDK hoặc tham số thứ ba của `transport.invoke` sẽ ghi đè mặc định này. Playground dùng chính sách của SDK, không ép timeout 8 giây.

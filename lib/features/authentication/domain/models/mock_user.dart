@@ -1,4 +1,4 @@
-/// Mock user representation for the Super App platform.
+/// Backend user representation for the Super App platform.
 class MockUser {
   final String id;
   final String name;
@@ -15,26 +15,6 @@ class MockUser {
     required this.email,
     this.avatarUrl,
   });
-
-  static const MockUser userA = MockUser(
-    id: 'user_001',
-    name: 'Nguyễn Văn A',
-    phone: '0900000001',
-    role: 'customer',
-    email: 'nguyenvana@example.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
-  );
-
-  static const MockUser userB = MockUser(
-    id: 'user_002',
-    name: 'Trần Thị B',
-    phone: '0900000002',
-    role: 'customer',
-    email: 'tranthib@example.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150',
-  );
-
-  static const List<MockUser> demoUsers = [userA, userB];
 
   factory MockUser.fromBackendJson(Map<String, dynamic> json) {
     return MockUser(

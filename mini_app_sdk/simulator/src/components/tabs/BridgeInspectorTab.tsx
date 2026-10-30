@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ChevronDown, ChevronRight, Clock, Trash2, XCircle } from 'lucide-react';
 import { useSimulator } from '../../context/SimulatorContext.js';
-import { MockLogEntry } from '@vqh2602/sdk-mock-engine';
+import type { BridgeLogEntry } from '../../context/SimulatorContext.js';
 
 export const BridgeInspectorTab: React.FC = () => {
   const { logs, clearLogs } = useSimulator();
-  const [selectedLog, setSelectedLog] = useState<MockLogEntry | null>(null);
+  const [selectedLog, setSelectedLog] = useState<BridgeLogEntry | null>(null);
   const [filterAction, setFilterAction] = useState<string>('');
 
   const filteredLogs = logs.filter((log) =>

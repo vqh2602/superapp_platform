@@ -3,7 +3,7 @@ import { BridgeTransport } from '../bridgeTransport';
 export class DeviceModule {
   constructor(private transport: BridgeTransport) {}
 
-  public async scanQRCode(): Promise<{ content: string; format: string; timestamp: number; isMock: boolean }> {
+  public async scanQRCode(): Promise<{ content: string; format: string; timestamp: number }> {
     return this.transport.invoke('device.scanQRCode');
   }
 
@@ -14,7 +14,6 @@ export class DeviceModule {
     country?: string;
     accuracy?: number;
     timestamp: number;
-    isMock: boolean;
   }> {
     return this.transport.invoke('device.getLocation');
   }
@@ -27,7 +26,6 @@ export class DeviceModule {
     sizeBytes: number;
     fileName: string;
     timestamp: number;
-    isMock: boolean;
   }> {
     return this.transport.invoke('device.pickImage');
   }

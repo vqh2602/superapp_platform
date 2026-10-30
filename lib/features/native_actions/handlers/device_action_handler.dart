@@ -1,3 +1,4 @@
+import 'media_file_action_handler.dart';
 import '../../device/domain/device_adapter.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
@@ -18,7 +19,7 @@ class DeviceScanQrHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    return deviceAdapter.scanQRCode();
+    return ScanQrHandler().handle(payload, context);
   }
 }
 
@@ -58,6 +59,6 @@ class DevicePickImageHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    return deviceAdapter.pickImage();
+    return GetPhotoHandler().handle({...payload, 'source': payload['source'] ?? 'gallery'}, context);
   }
 }

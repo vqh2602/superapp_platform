@@ -27,27 +27,28 @@ export interface AccessTokenResult {
 }
 
 export interface BatteryInfo {
-  batteryLevel: number;
+  level: number;
+  status: string;
+  temperature: number | null;
+  timestamp: number;
   isCharging: boolean;
 }
 
 export interface NetworkInfo {
-  isConnected: boolean;
-  networkType: string;
-  isWifi: boolean;
-  isMobile: boolean;
+  isConnected: boolean; networkType: string; isWifi: boolean; isMobile: boolean;
+  ssid: string | null; bssid: string | null; ipAddress: string | null;
+  signalStrength: string | null; timestamp: number;
 }
-
 export interface DeviceInfo {
-  model: string;
-  platform: string;
-  systemName: string;
-  systemVersion: string;
-  language: string;
-  screenWidth: number;
-  screenHeight: number;
-  pixelRatio: number;
+  platform: string; osVersion: string | null; deviceModel: string | null; brand: string | null;
+  screenWidth: number | null; screenHeight: number | null; pixelRatio: number | null;
+  statusBarHeight: number | null; safeAreaBottom: number | null; timestamp: number;
 }
+export interface ContactInfo {
+  id: string; displayName: string; phoneNumber: string | null; email: string | null;
+  phoneNumbers: string[]; emails: string[]; department: string | null;
+}
+export interface ContactsResult { contacts: ContactInfo[]; total: number; }
 
 export interface ToastOptions {
   message: string;

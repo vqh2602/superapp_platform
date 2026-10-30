@@ -15,32 +15,31 @@ export class UIModule {
   /**
    * Hiển thị thông báo Toast nhanh
    */
-  public async showToast(options: ToastOptions | string): Promise<void> {
+  public async showToast(options: ToastOptions | string): Promise<any> {
     const payload = typeof options === 'string' ? { message: options } : options;
-    await this.transport.invoke('ui.showToast', payload);
+    return this.transport.invoke('ui.showToast', payload);
   }
 
   /**
    * Hiển thị hộp thoại cảnh báo (Alert Dialog)
    */
-  public async showAlert(options: AlertOptions): Promise<void> {
-    await this.transport.invoke('ui.showAlert', options);
+  public async showAlert(options: AlertOptions): Promise<any> {
+    return this.transport.invoke('ui.showAlert', options);
   }
 
   /**
    * Hiển thị hộp thoại xác nhận (Confirm Dialog)
    */
-  public async showConfirm(options: ConfirmOptions): Promise<boolean> {
-    const res = await this.transport.invoke<{ confirmed: boolean }>('ui.showConfirm', options);
-    return !!res?.confirmed;
+  public async showConfirm(options: ConfirmOptions): Promise<{ confirmed: boolean }> {
+    return this.transport.invoke<{ confirmed: boolean }>('ui.showConfirm', options);
   }
 
   /**
    * Đặt lại tiêu đề trên thanh điều hướng của trang hiện tại
    */
-  public async setNavigationBarTitle(title: string | { title: string }): Promise<void> {
+  public async setNavigationBarTitle(title: string | { title: string }): Promise<any> {
     const payload = typeof title === 'string' ? { title } : title;
-    await this.transport.invoke('ui.setNavigationBarTitle', payload);
+    return this.transport.invoke('ui.setNavigationBarTitle', payload);
   }
 
   /**
@@ -54,7 +53,7 @@ export class UIModule {
   /**
    * @deprecated Gộp chung vào configAppView({ headerColor: ... })
    */
-  public async setNavigationBarColor(options: SetNavigationBarColorOptions | string): Promise<void> {
+  public async setNavigationBarColor(options: SetNavigationBarColorOptions | string): Promise<any> {
     const payload: ConfigAppViewOptions = typeof options === 'string'
       ? { headerColor: options }
       : {
@@ -62,21 +61,21 @@ export class UIModule {
           textColor: options.textColor,
           statusBarColor: options.statusBarColor,
         };
-    await this.configAppView(payload);
+    return this.configAppView(payload);
   }
 
   /**
    * @deprecated Gộp chung vào configAppView({ statusBarColor: color })
    */
-  public async setStatusBarColor(color: string): Promise<void> {
-    await this.configAppView({ statusBarColor: color });
+  public async setStatusBarColor(color: string): Promise<any> {
+    return this.configAppView({ statusBarColor: color });
   }
 
   /**
    * @deprecated Gộp chung vào configAppView({ statusBar: style, textColor: ... })
    */
-  public async setStatusBarStyle(style: 'light' | 'dark'): Promise<void> {
-    await this.configAppView({ statusBar: style, textColor: style === 'light' ? 'white' : 'black' });
+  public async setStatusBarStyle(style: 'light' | 'dark'): Promise<any> {
+    return this.configAppView({ statusBar: style, textColor: style === 'light' ? 'white' : 'black' });
   }
 
   /**

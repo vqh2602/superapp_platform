@@ -106,7 +106,7 @@ class NativeActionDispatcher {
 
       // Debug
       DebugEchoHandler(),
-      DebugSimulateFailureHandler(),
+
 
       // System & Device Info
       GetNetworkInfoHandler(),
@@ -258,21 +258,6 @@ class NativeActionDispatcher {
     Map<String, dynamic> payload,
     ActionContext context,
   ) async {
-    // 0. Simulation hooks from Debug Center
-    if (debugLogRepo.simulateTimeout) {
-      await Future.delayed(const Duration(milliseconds: 3000));
-      throw BridgeError.timeout('Bridge simulation: Request timed out');
-    }
-    if (debugLogRepo.simulateUnauthorized) {
-      throw BridgeError.authRequired('Bridge simulation: Authentication required');
-    }
-    if (debugLogRepo.simulatePermissionDenied) {
-      throw BridgeError.permissionDenied('Bridge simulation: Permission denied');
-    }
-    if (debugLogRepo.simulateNativeFailure) {
-      throw BridgeError.internal('Bridge simulation: Forced native failure');
-    }
-
     // 1. Mini App identity verification
     if (context.appId.isEmpty) {
       throw BridgeError.invalidParams('Mini App identifier (appId) is missing');
@@ -294,6 +279,9 @@ class NativeActionDispatcher {
         );
       }
     }
+
+    // Restore this user's saved grants before handlers inspect or prompt.
+    await permissionRepo.ensurePermissionsLoaded(context.appId);
 
     // 4. Runtime permission check
     if (handler.requiredCapability != null) {

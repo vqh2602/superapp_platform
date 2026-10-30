@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
@@ -9,12 +8,12 @@ import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../domain/user_profile_model.dart';
 
-class MockUserRepository {
+class UserRepositoryImpl {
   final MockAuthRepository authRepository;
   final http.Client? httpClient;
   final String? authUrl;
 
-  MockUserRepository({
+  UserRepositoryImpl({
     required this.authRepository,
     this.httpClient,
     this.authUrl,
@@ -80,7 +79,7 @@ class MockUserRepository {
           );
         }
       } catch (e) {
-        debugPrint('[MockUserRepository] Remote profile fetch failed: $e');
+        rethrow;
       }
     }
 
@@ -114,7 +113,7 @@ class MockUserRepository {
 
         return response.statusCode == 200;
       } catch (e) {
-        debugPrint('[MockUserRepository] Remote updateProfile failed: $e');
+        rethrow;
         return false;
       }
     }
@@ -123,11 +122,13 @@ class MockUserRepository {
   }
 }
 
-final mockUserRepositoryProvider = Provider<MockUserRepository>((ref) {
+final mockUserRepositoryProvider = Provider<UserRepositoryImpl>((ref) {
   final authRepo = ref.watch(mockAuthRepositoryProvider);
   final endpoint = ref.watch(backendEndpointProvider);
-  return MockUserRepository(
+  return UserRepositoryImpl(
     authRepository: authRepo,
     authUrl: endpoint.authUrl,
   );
 });
+
+typedef MockUserRepository = UserRepositoryImpl;

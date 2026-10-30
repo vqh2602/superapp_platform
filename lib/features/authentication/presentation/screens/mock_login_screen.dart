@@ -32,9 +32,7 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
     super.initState();
     final currentEndpoint = ref.read(backendEndpointProvider);
     _endpointController = TextEditingController(text: currentEndpoint.baseUrl);
-    // Pre-fill default demo account for convenient testing
-    _emailController.text = 'test_demo@example.com';
-    _passwordController.text = 'demo-password-123';
+
   }
 
   @override
@@ -428,27 +426,6 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
                   ),
 
                   const SizedBox(height: 12),
-
-                  // Demo Credentials Quick Fill Chip
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF2563EB)),
-                        label: const Text(
-                          'Tài khoản mẫu: test_demo@example.com',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF)),
-                        ),
-                        backgroundColor: const Color(0xFFEFF6FF),
-                        side: const BorderSide(color: Color(0xFFBFDBFE)),
-                        onPressed: () {
-                          _emailController.text = 'test_demo@example.com';
-                          _passwordController.text = 'demo-password-123';
-                        },
-                      ),
-                    ],
-                  ),
 
                   const SizedBox(height: 20),
 

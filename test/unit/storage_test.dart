@@ -1,10 +1,11 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../support/auth_fixtures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/features/storage/data/mock_secure_storage_repository.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
 import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
 import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
 import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
@@ -13,6 +14,8 @@ import 'package:superapp_platform/features/permissions/data/mock_permission_repo
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   group('MockSecureStorageRepository Tests', () {
     late MockSecureStorageRepository repository;
 
@@ -163,7 +166,7 @@ void main() {
     );
 
     setUp(() {
-      final authRepo = MockAuthRepository();
+      final authRepo = TestAuthRepository();
       final authCodeService = MockAuthCodeService();
       final tokenService = MockTokenService(authCodeService: authCodeService);
       final userRepo = MockUserRepository(authRepository: authRepo);

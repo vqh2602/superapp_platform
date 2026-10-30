@@ -132,7 +132,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   }
 
   void _showManualInputDialog() {
-    final textController = TextEditingController(text: '8935001700125');
+    final textController = TextEditingController();
     String selectedFormat = 'EAN_13';
 
     showModalBottomSheet(

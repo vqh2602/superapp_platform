@@ -218,6 +218,12 @@
       "languageVersion": "3.10"
     },
     {
+      "name": "flutter_contacts",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/flutter_contacts-1.1.9+2",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_launcher_icons",
       "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/flutter_launcher_icons-0.14.4",
       "packageUri": "lib/",
@@ -290,10 +296,70 @@
       "languageVersion": "3.10"
     },
     {
+      "name": "gal",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/gal-2.3.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "geoclue",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geoclue-0.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.16"
+    },
+    {
+      "name": "geolocator",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator-14.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_android",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_android-5.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_apple",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_apple-2.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_linux",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_linux-0.2.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_platform_interface",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_platform_interface-4.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_web",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_web-4.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "geolocator_windows",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/geolocator_windows-0.2.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
       "name": "go_router",
       "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/go_router-14.8.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "gsettings",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/gsettings-0.2.8",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "hooks",
@@ -456,6 +522,18 @@
       "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/mobile_scanner-7.4.2",
       "packageUri": "lib/",
       "languageVersion": "3.7"
+    },
+    {
+      "name": "network_info_plus",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/network_info_plus-8.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "network_info_plus_platform_interface",
+      "rootUri": "file:///Users/vuongquanghuy/.pub-cache/hosted/pub.dev/network_info_plus_platform_interface-3.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "nm",

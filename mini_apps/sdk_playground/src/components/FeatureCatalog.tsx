@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSDK, RunnerConfig } from '../context/SDKContext';
-import { superApp, mockAuthBackend } from '../sdk';
+import { superApp, authBackend } from '../sdk';
 import { FeatureItem } from './FeatureItem';
 import {
   Key,
@@ -478,12 +478,12 @@ export const FeatureCatalog: React.FC = () => {
     id: 'auth_exchange_code',
     category: 'A. Authentication',
     title: 'Flow B — Exchange Token',
-    description: 'Đổi authCode lấy Mini App Access Token và Refresh Token qua Mock Backend',
-    actionCode: 'mockAuthBackend.exchangeCode(authCode)',
+    description: 'Đổi authCode lấy Mini App Access Token và Refresh Token qua Backend API',
+    actionCode: 'authBackend.exchangeCode(authCode)',
     hasParams: true,
-    defaultParams: { authCode: authCode || 'AUTH_SDK_PLAYGROUND_DEMO' },
+    defaultParams: { authCode: authCode || '' },
     run: async (p) => {
-      const res = await mockAuthBackend.exchangeCode(p.authCode);
+      const res = await authBackend.exchangeCode(p.authCode);
       setAccessToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       return res;
@@ -495,14 +495,13 @@ export const FeatureCatalog: React.FC = () => {
     category: 'A. Authentication',
     title: 'Flow C — Refresh Token',
     description: 'Yêu cầu cấp lại Access Token mới khi token cũ hết hạn',
-    actionCode: 'mockAuthBackend.refreshToken(refreshToken)',
+    actionCode: 'authBackend.refreshToken(refreshToken)',
     hasParams: true,
     defaultParams: {
-      refreshToken: refreshToken || 'mini_rt_demo_example',
-      simulateError: false,
+      refreshToken: refreshToken || '',
     },
     run: async (p) => {
-      const res = await mockAuthBackend.refreshToken(p.refreshToken, p.simulateError);
+      const res = await authBackend.refreshToken(p.refreshToken);
       setAccessToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       return res;
@@ -523,7 +522,7 @@ export const FeatureCatalog: React.FC = () => {
     id: 'user_profile',
     category: 'B. User & Profile',
     title: 'Get User Profile',
-    description: 'Lấy đầy đủ thông tin cá nhân của user đang active từ MockAuthRepository',
+    description: 'Lấy đầy đủ thông tin cá nhân của user đang active từ Backend API',
     actionCode: 'superApp.user.getProfile()',
     hasParams: false,
     run: async () => superApp.user.getProfile(),
@@ -563,7 +562,7 @@ export const FeatureCatalog: React.FC = () => {
     id: 'pay_create_order',
     category: 'E. Payment & Business Flows',
     title: '1. Create Order',
-    description: 'Khởi tạo đơn hàng giả lập trong MockOrderRepository',
+    description: 'Yêu cầu tạo đơn hàng qua Backend API',
     actionCode: 'superApp.payment.createOrder(params)',
     hasParams: true,
     defaultParams: {
@@ -595,7 +594,7 @@ export const FeatureCatalog: React.FC = () => {
     id: 'perm_get_all',
     category: 'F. Permissions',
     title: 'getPermissions',
-    description: 'Lấy danh sách quyền đã được cấp cho Mini App từ MockPermissionRepository',
+    description: 'Lấy danh sách quyền đã được cấp cho Mini App từ Backend API',
     actionCode: 'superApp.permission.getPermissions()',
     hasParams: false,
     run: async () => superApp.permission.getPermissions(),
@@ -616,7 +615,7 @@ export const FeatureCatalog: React.FC = () => {
     id: 'perm_check',
     category: 'F. Permissions',
     title: 'Check Permission State',
-    description: 'Kiểm tra trạng thái quyền hiện tại trong MockPermissionRepository',
+    description: 'Kiểm tra trạng thái quyền hiện tại trong Backend API',
     actionCode: "superApp.permission.check('device.scanQRCode')",
     hasParams: true,
     defaultParams: { capability: 'device.scanQRCode' },

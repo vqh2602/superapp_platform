@@ -2,23 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:uuid/uuid.dart';
 import '../domain/models/auth_session.dart';
 import '../domain/models/mock_user.dart';
 import '../domain/repositories/auth_repository.dart';
 
-class MockAuthRepository implements AuthRepository {
+class AuthRepositoryImpl implements AuthRepository {
   final http.Client? httpClient;
   final String _authUrl;
-  final _uuid = const Uuid();
 
   AuthSession? _currentSession;
   final _sessionController = StreamController<AuthSession?>.broadcast();
 
-  MockAuthRepository({
-    this.httpClient,
-    String? authUrl,
-  }) : _authUrl = authUrl ?? 'http://localhost:3000/api/v1/auth';
+  AuthRepositoryImpl({this.httpClient, String? authUrl})
+    : _authUrl = authUrl ?? 'http://localhost:3000/api/v1/auth';
 
   @override
   AuthSession? get currentSession => _currentSession;
@@ -35,33 +31,10 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<AuthSession> login(String emailOrUserId, [String? password]) async {
-    // If password is provided, perform real HTTP login against Backend API
-    if (password != null) {
-      return _loginToBackend(email: emailOrUserId, password: password);
+    if (password == null || password.isEmpty) {
+      throw ArgumentError('Email and password are required for backend login');
     }
-
-    // Fallback for mock unit tests where only userId was supplied
-    final user = MockUser.demoUsers.firstWhere(
-      (u) => u.id == emailOrUserId,
-      orElse: () => MockUser(
-        id: emailOrUserId,
-        name: 'Demo User',
-        phone: '0900000000',
-        role: 'customer',
-        email: emailOrUserId.contains('@') ? emailOrUserId : '$emailOrUserId@example.com',
-      ),
-    );
-
-    final session = AuthSession(
-      user: user,
-      accessToken: 'master_mock_at_${_uuid.v4()}',
-      refreshToken: 'master_mock_rt_${_uuid.v4()}',
-      expiresAt: DateTime.now().add(const Duration(hours: 8)),
-    );
-
-    _currentSession = session;
-    _sessionController.add(_currentSession);
-    return session;
+    return _loginToBackend(email: emailOrUserId, password: password);
   }
 
   Future<AuthSession> _loginToBackend({
@@ -76,10 +49,7 @@ class MockAuthRepository implements AuthRepository {
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'email': email.trim(),
-              'password': password,
-            }),
+            body: jsonEncode({'email': email.trim(), 'password': password}),
           )
           .timeout(const Duration(seconds: 6));
 
@@ -96,13 +66,24 @@ class MockAuthRepository implements AuthRepository {
       }
 
       final errorBody = _parseErrorMessage(response.body);
-      throw Exception(errorBody.isNotEmpty ? errorBody : 'Đăng nhập thất bại (${response.statusCode})');
+      throw Exception(
+        errorBody.isNotEmpty
+            ? errorBody
+            : 'Đăng nhập thất bại (${response.statusCode})',
+      );
     } catch (e) {
-      if (e is Exception && !e.toString().contains('ClientException') && !e.toString().contains('SocketException') && !e.toString().contains('TimeoutException')) {
+      if (e is Exception &&
+          !e.toString().contains('ClientException') &&
+          !e.toString().contains('SocketException') &&
+          !e.toString().contains('TimeoutException')) {
         rethrow;
       }
-      debugPrint('[MockAuthRepository] Network error connecting to $_authUrl: $e');
-      throw Exception('Không thể kết nối đến máy chủ Backend tại $_authUrl. Vui lòng kiểm tra lại Endpoint.');
+      debugPrint(
+        '[MockAuthRepository] Network error connecting to $_authUrl: $e',
+      );
+      throw Exception(
+        'Không thể kết nối đến máy chủ Backend tại $_authUrl. Vui lòng kiểm tra lại Endpoint.',
+      );
     }
   }
 
@@ -141,13 +122,24 @@ class MockAuthRepository implements AuthRepository {
       }
 
       final errorBody = _parseErrorMessage(response.body);
-      throw Exception(errorBody.isNotEmpty ? errorBody : 'Đăng ký thất bại (${response.statusCode})');
+      throw Exception(
+        errorBody.isNotEmpty
+            ? errorBody
+            : 'Đăng ký thất bại (${response.statusCode})',
+      );
     } catch (e) {
-      if (e is Exception && !e.toString().contains('ClientException') && !e.toString().contains('SocketException') && !e.toString().contains('TimeoutException')) {
+      if (e is Exception &&
+          !e.toString().contains('ClientException') &&
+          !e.toString().contains('SocketException') &&
+          !e.toString().contains('TimeoutException')) {
         rethrow;
       }
-      debugPrint('[MockAuthRepository] Network error connecting to $_authUrl: $e');
-      throw Exception('Không thể kết nối đến máy chủ Backend tại $_authUrl. Vui lòng kiểm tra lại Endpoint.');
+      debugPrint(
+        '[MockAuthRepository] Network error connecting to $_authUrl: $e',
+      );
+      throw Exception(
+        'Không thể kết nối đến máy chủ Backend tại $_authUrl. Vui lòng kiểm tra lại Endpoint.',
+      );
     }
   }
 
@@ -169,17 +161,21 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     final session = _currentSession;
-    if (session != null && session.accessToken.isNotEmpty && !session.accessToken.startsWith('master_mock_')) {
+    if (session != null &&
+        session.accessToken.isNotEmpty &&
+        !session.accessToken.startsWith('master_mock_')) {
       try {
         final client = httpClient ?? http.Client();
         final url = Uri.parse('$_authUrl/logout');
-        await client.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${session.accessToken}',
-          },
-        ).timeout(const Duration(seconds: 2));
+        await client
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ${session.accessToken}',
+              },
+            )
+            .timeout(const Duration(seconds: 2));
       } catch (_) {}
     }
 
@@ -196,3 +192,5 @@ class MockAuthRepository implements AuthRepository {
     _sessionController.close();
   }
 }
+
+typedef MockAuthRepository = AuthRepositoryImpl;

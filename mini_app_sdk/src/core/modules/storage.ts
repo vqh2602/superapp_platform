@@ -6,36 +6,30 @@ export class StorageModule {
   /**
    * Lưu trữ dữ liệu cách ly theo Mini App
    */
-  public async setItem(key: string, value: any): Promise<void> {
+  public async setItem(key: string, value: any): Promise<any> {
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-    await this.transport.invoke('storage.setItem', { key, value: serialized });
+    return this.transport.invoke('storage.setItem', { key, value: serialized });
   }
 
   /**
    * Lấy dữ liệu đã lưu
    */
-  public async getItem<T = any>(key: string): Promise<T | null> {
-    const res = await this.transport.invoke<{ key: string; value: string | null }>('storage.getItem', { key });
-    if (!res || res.value === null) return null;
-    try {
-      return JSON.parse(res.value) as T;
-    } catch {
-      return res.value as unknown as T;
-    }
+  public async getItem(key: string): Promise<{key: string; value: string | null; exists: boolean; domain: string; securityLevel: string}> {
+    return this.transport.invoke('storage.getItem', { key });
   }
 
   /**
    * Xoá một khoá lưu trữ
    */
-  public async removeItem(key: string): Promise<void> {
-    await this.transport.invoke('storage.removeItem', { key });
+  public async removeItem(key: string): Promise<any> {
+    return this.transport.invoke('storage.removeItem', { key });
   }
 
   /**
    * Xoá toàn bộ dữ liệu của Mini App
    */
-  public async clear(): Promise<void> {
-    await this.transport.invoke('storage.clear');
+  public async clear(): Promise<any> {
+    return this.transport.invoke('storage.clear');
   }
 
   /**

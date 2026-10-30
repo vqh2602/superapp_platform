@@ -4,9 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/debug_log_repository.dart';
 import '../domain/bridge_log_entry.dart';
-import '../../authentication/presentation/controllers/auth_controller.dart';
-import '../../permissions/data/mock_permission_repository.dart';
-import '../../device/data/mock_device_adapter.dart';
 
 class NativeDebugScreen extends ConsumerStatefulWidget {
   const NativeDebugScreen({super.key});
@@ -20,7 +17,6 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
   Widget build(BuildContext context) {
     final debugRepo = ref.watch(debugLogRepositoryProvider);
     final logs = debugRepo.logs;
-    final deviceAdapter = ref.watch(deviceAdapterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +35,7 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
             },
           ),
           IconButton(
-            tooltip: 'Reset Demo Data',
+            tooltip: 'Xoá nhật ký',
             icon: const Icon(Icons.refresh_rounded, color: Colors.amber),
             onPressed: () => _resetAllData(),
           ),
@@ -47,59 +43,7 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
       ),
       body: Column(
         children: [
-          // Simulation Controls Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: const Color(0xFFF1F5F9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'MÔ PHỎNG LỖI / TRẠNG THÁI (SIMULATION)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilterChip(
-                      label: const Text('Simulate Timeout'),
-                      selected: debugRepo.simulateTimeout,
-                      onSelected: (val) => setState(() => debugRepo.simulateTimeout = val),
-                    ),
-                    FilterChip(
-                      label: const Text('Simulate Unauthorized'),
-                      selected: debugRepo.simulateUnauthorized,
-                      onSelected: (val) => setState(() => debugRepo.simulateUnauthorized = val),
-                    ),
-                    FilterChip(
-                      label: const Text('Simulate Denied'),
-                      selected: debugRepo.simulatePermissionDenied,
-                      onSelected: (val) => setState(() => debugRepo.simulatePermissionDenied = val),
-                    ),
-                    FilterChip(
-                      label: const Text('Simulate Native Failure'),
-                      selected: debugRepo.simulateNativeFailure,
-                      onSelected: (val) => setState(() => debugRepo.simulateNativeFailure = val),
-                    ),
-                    FilterChip(
-                      label: const Text('Real Device Mode'),
-                      selected: deviceAdapter.useRealDeviceMode,
-                      onSelected: (val) => setState(() => deviceAdapter.useRealDeviceMode = val),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
 
-          // Log list
           Expanded(
             child: logs.isEmpty
                 ? const Center(
@@ -234,17 +178,12 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
   }
 
   void _resetAllData() {
-    ref.read(mockAuthRepositoryProvider).reset();
-    ref.read(mockAuthCodeServiceProvider).reset();
-    ref.read(mockTokenServiceProvider).reset();
-    ref.read(mockPermissionRepositoryProvider).reset();
     ref.read(debugLogRepositoryProvider).clear();
-    ref.read(debugLogRepositoryProvider).resetSimulations();
 
     setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã reset toàn bộ Mock Data và permissions')),
+      const SnackBar(content: Text('Đã xoá nhật ký bridge')),
     );
   }
 }

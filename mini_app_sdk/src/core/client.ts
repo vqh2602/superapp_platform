@@ -1,5 +1,4 @@
-import { AdaptiveBridgeTransport, ITransport, MockBridgeTransport, TransportResolver, TransportType } from '../transport/index.js';
-import { SDKMockEngine } from '../mock/index.js';
+import { ITransport, TransportResolver, TransportType } from '../transport/index.js';
 import { AuthModule } from './modules/auth.js';
 import { DeviceModule } from './modules/device.js';
 import { StorageModule } from './modules/storage.js';
@@ -22,9 +21,9 @@ import {
 } from './types/index.js';
 
 export class SuperAppSDK {
-  public readonly version = '1.0.6';
+  public readonly version = '1.0.7';
   public readonly transport: ITransport;
-  public readonly mockEngine?: SDKMockEngine;
+
 
   // Domain modules
   public readonly auth: AuthModule;
@@ -36,34 +35,12 @@ export class SuperAppSDK {
   public readonly lifecycle: LifecycleModule;
 
   constructor(options: SDKInitOptions & { forceTransport?: TransportType } = {}) {
-    // If running in pure mock environment, setup local engine
-    let mockEngine: SDKMockEngine | undefined;
-    let mockDispatcher;
-
-    // Detect if need fallback mock dispatcher
-    const needsMock = options.forceTransport === 'mock' ||
-      (typeof window === 'undefined' || (!(window as any).FlutterBridge && window.parent === window));
-
-    if (needsMock) {
-      mockEngine = new SDKMockEngine({ autoApprovePayment: true });
-      mockDispatcher = (req: any) => mockEngine!.dispatch(req);
-    }
-
-    this.mockEngine = mockEngine;
     this.transport = TransportResolver.resolve({
       appId: options.appId,
       debug: options.debug,
       timeoutMs: options.timeoutMs,
       forceTransport: options.forceTransport,
-      mockDispatcher,
     });
-
-    // If AdaptiveBridgeTransport or MockBridgeTransport was created and we have mockEngine, attach
-    if (this.transport instanceof AdaptiveBridgeTransport && mockDispatcher) {
-      this.transport.setMockDispatcher(mockDispatcher);
-    } else if (this.transport instanceof MockBridgeTransport && mockDispatcher) {
-      this.transport.setDispatcher(mockDispatcher);
-    }
 
     this.auth = new AuthModule(this.transport);
     this.device = new DeviceModule(this.transport);
@@ -74,6 +51,11 @@ export class SuperAppSDK {
     this.lifecycle = new LifecycleModule(this.transport);
   }
 
+  public getNetworkInfo() { return this.device.getNetworkInfo(); }
+  public getSystemInfo() { return this.device.getSystemInfo(); }
+  public getBatteryInfo() { return this.device.getBatteryInfo(); }
+  public getContacts(options: { query?: string } = {}) { return this.device.getContacts(options); }
+
   // Top-level shortcuts
   public login(options?: AuthLoginOptions): Promise<AuthLoginResult> {
     return this.auth.login(options);
@@ -83,11 +65,11 @@ export class SuperAppSDK {
     return this.auth.getUserProfile();
   }
 
-  public showToast(options: ToastOptions | string): Promise<void> {
+  public showToast(options: ToastOptions | string): Promise<any> {
     return this.ui.showToast(options);
   }
 
-  public vibrate(style?: 'light' | 'medium' | 'heavy'): Promise<void> {
+  public vibrate(style?: 'light' | 'medium' | 'heavy'): Promise<any> {
     return this.device.vibrate(style);
   }
 
@@ -99,7 +81,7 @@ export class SuperAppSDK {
     return this.navigation.openMiniApp(appId, params);
   }
 
-  public closeApp(): Promise<void> {
+  public closeApp(): Promise<any> {
     return this.navigation.closeApp();
   }
 
@@ -111,11 +93,11 @@ export class SuperAppSDK {
     return this.ui.configAppView(options);
   }
 
-  public setNavigationBarTitle(title: string | { title: string }): Promise<void> {
+  public setNavigationBarTitle(title: string | { title: string }): Promise<any> {
     return this.ui.setNavigationBarTitle(title);
   }
 
-  public setNavigationBarColor(options: SetNavigationBarColorOptions | string): Promise<void> {
+  public setNavigationBarColor(options: SetNavigationBarColorOptions | string): Promise<any> {
     return this.ui.setNavigationBarColor(options);
   }
 

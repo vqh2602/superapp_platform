@@ -2,10 +2,9 @@ import React from 'react';
 import { useSimulator } from '../context/SimulatorContext.js';
 import { TopStatusBar } from './TopStatusBar.js';
 import { AppHeaderBar } from './AppHeaderBar.js';
-import { MockPaymentModal } from './modals/MockPaymentModal.js';
 
 export const DeviceFrame: React.FC = () => {
-  const { deviceType, scale, miniAppUrl, iframeKey, sendEventToMiniApp, user } = useSimulator();
+  const { deviceType, scale, miniAppUrl, iframeKey } = useSimulator();
 
   const width = deviceType === 'iphone' ? 390 : 412;
   const height = deviceType === 'iphone' ? 844 : 880;
@@ -62,22 +61,10 @@ export const DeviceFrame: React.FC = () => {
                 backgroundColor: '#f8fafc',
               }}
               allow="geolocation; camera; microphone"
-              onLoad={() => {
-                setTimeout(() => {
-                  sendEventToMiniApp('miniapp.ready', {
-                    appId: 'mini_app',
-                    timestamp: Date.now(),
-                  });
-                  sendEventToMiniApp('session.changed', {
-                    user,
-                    status: 'LOGGED_IN',
-                  });
-                }, 150);
-              }}
+
             />
 
-            {/* Interactive Mock Payment Modal */}
-            <MockPaymentModal />
+
           </div>
 
           {/* iPhone Home Indicator bar */}

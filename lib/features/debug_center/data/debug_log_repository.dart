@@ -6,12 +6,6 @@ class DebugLogRepository {
   final List<BridgeLogEntry> _logs = [];
   final _logController = StreamController<List<BridgeLogEntry>>.broadcast();
 
-  // Simulation flags for debugging
-  bool simulateTimeout = false;
-  bool simulateUnauthorized = false;
-  bool simulatePermissionDenied = false;
-  bool simulateNativeFailure = false;
-
   List<BridgeLogEntry> get logs => List.unmodifiable(_logs);
   Stream<List<BridgeLogEntry>> get stream => _logController.stream;
 
@@ -26,13 +20,6 @@ class DebugLogRepository {
   void clear() {
     _logs.clear();
     _logController.add(List.unmodifiable(_logs));
-  }
-
-  void resetSimulations() {
-    simulateTimeout = false;
-    simulateUnauthorized = false;
-    simulatePermissionDenied = false;
-    simulateNativeFailure = false;
   }
 
   void dispose() {

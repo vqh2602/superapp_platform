@@ -10,7 +10,6 @@ export class MediaModule {
     content: string;
     format: string;
     timestamp: number;
-    isMock: boolean;
   }> {
     return this.transport.invoke('scanQr', options);
   }

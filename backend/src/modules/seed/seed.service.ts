@@ -5,7 +5,6 @@ import { MiniAppEntity } from '../../entities/mini-app.entity';
 import { MiniAppVersionEntity } from '../../entities/mini-app-version.entity';
 import { UserEntity } from '../../entities/user.entity';
 import { MiniAppStatus, MiniAppRuntimeType } from '../../entities/enums';
-import { hashPassword } from '../auth/auth.crypto';
 import { sampleSchemas } from './sample-schemas';
 import { PackageService, ValidatedPackage } from '../registry/packages/package.service';
 import { createHash } from 'crypto';
@@ -30,24 +29,6 @@ export class SeedService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.seedExistingApps();
-    await this.seedDemoUser();
-  }
-
-  async seedDemoUser() {
-    const email = 'test_demo@example.com';
-    const existingUser = await this.userRepo.findOne({ where: { email } });
-    if (!existingUser) {
-      this.logger.log(`Seeding demo user: ${email}...`);
-      const passwordHash = await hashPassword('demo-password-123');
-      const user = this.userRepo.create({
-        email,
-        passwordHash,
-        displayName: 'Demo User',
-        avatarUrl: '',
-      });
-      await this.userRepo.save(user);
-      this.logger.log(`Demo user ${email} seeded successfully.`);
-    }
   }
 
   private getMiniAppBundle(appId: string): { html: Buffer; icon: Buffer } {

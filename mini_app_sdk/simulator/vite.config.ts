@@ -14,7 +14,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@vqh2602/sdk-transport': path.resolve(__dirname, '../src/transport'),
-      '@vqh2602/sdk-mock-engine': path.resolve(__dirname, '../src/mock'),
     },
   },
   build: {

@@ -4,7 +4,6 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../../permissions/data/mock_permission_repository.dart';
-import '../../permissions/presentation/permission_prompt_dialog.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
@@ -53,6 +52,7 @@ class ShowToastHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    if (context.buildContext == null) throw BridgeError.unsupported('Native UI is unavailable');
     final message = payload['message']?.toString();
     if (message == null || message.isEmpty) {
       throw BridgeError.invalidParams('Toast message is required');
@@ -92,6 +92,7 @@ class ShowAlertHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    if (context.buildContext == null) throw BridgeError.unsupported('Native UI is unavailable');
     final title = payload['title']?.toString() ?? 'Thông báo';
     final message = payload['message']?.toString() ?? '';
     final buttonText = payload['buttonText']?.toString() ?? 'Đóng';
@@ -128,6 +129,7 @@ class ShowConfirmHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    if (context.buildContext == null) throw BridgeError.unsupported('Native UI is unavailable');
     final title = payload['title']?.toString() ?? 'Xác nhận';
     final message = payload['message']?.toString() ?? '';
     final confirmText = payload['confirmText']?.toString() ?? 'Xác nhận';
@@ -258,9 +260,7 @@ class SetBrightnessHandler implements NativeActionHandler {
     try {
       await ScreenBrightness.instance.setApplicationScreenBrightness(brightness);
     } catch (_) {
-      try {
-        await ScreenBrightness.instance.setSystemScreenBrightness(brightness);
-      } catch (_) {}
+      await ScreenBrightness.instance.setSystemScreenBrightness(brightness);
     }
 
     return {
@@ -485,7 +485,7 @@ class KeepScreenHandler implements NativeActionHandler {
         await WakelockPlus.disable();
       }
     } catch (e) {
-      debugPrint('[KeepScreenHandler] WakelockPlatform notice: $e');
+      rethrow;
     }
 
     context.uiDelegate?.keepScreen(keepScreenOn: keepScreenOn);
@@ -513,57 +513,7 @@ class RequestSendNotificationHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final templateId = payload['templateId']?.toString();
-    final reason = payload['reason']?.toString();
-
-    // 1. Check if already granted
-    final isAlreadyGranted = permissionRepo.isGranted(context.appId, 'notification');
-    if (isAlreadyGranted) {
-      final subId = 'sub_${context.appId}_${DateTime.now().millisecondsSinceEpoch}';
-      final token = 'notif_tok_${context.appId}_${DateTime.now().microsecondsSinceEpoch}';
-      return {
-        'success': true,
-        'granted': true,
-        'subscriptionId': subId,
-        'token': token,
-        if (templateId != null) 'templateId': templateId,
-      };
-    }
-
-    // 2. Prompt user via UI
-    var granted = false;
-    if (context.buildContext != null) {
-      granted = await PermissionPromptDialog.show(
-        context.buildContext!,
-        appName: context.manifest?.name ?? context.appId,
-        capabilityKey: 'notification',
-      );
-    } else {
-      // In headless unit-test mode or when auto-approved
-      granted = true;
-    }
-
-    permissionRepo.setPermission(context.appId, 'notification', granted);
-
-    if (granted) {
-      final subId = 'sub_${context.appId}_${DateTime.now().millisecondsSinceEpoch}';
-      final token = 'notif_tok_${context.appId}_${DateTime.now().microsecondsSinceEpoch}';
-      return {
-        'success': true,
-        'granted': true,
-        'subscriptionId': subId,
-        'token': token,
-        if (templateId != null) 'templateId': templateId,
-        if (reason != null) 'reason': reason,
-      };
-    } else {
-      return {
-        'success': false,
-        'granted': false,
-        'error': 'USER_REJECTED',
-        'message': 'Người dùng từ chối cấp quyền gửi thông báo',
-      };
-    }
+    throw BridgeError.unsupported('Push notification service is not configured');
   }
 }
 

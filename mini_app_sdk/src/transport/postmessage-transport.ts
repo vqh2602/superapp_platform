@@ -1,3 +1,4 @@
+import { bridgeTimeoutMs } from './timeout-policy.js';
 import { ITransport } from './transport.interface.js';
 import { BridgeError, BridgeEventListener, BridgeRequest, BridgeResponse, TransportConfig, TransportType } from './types.js';
 
@@ -5,7 +6,7 @@ let requestSequence = 1;
 
 export class PostMessageTransport implements ITransport {
   private appId: string;
-  private defaultTimeoutMs: number;
+  private defaultTimeoutMs?: number;
   private debug: boolean;
   private callbacks: Map<string, { resolve: (val: any) => void; reject: (err: any) => void; timer: any }> = new Map();
   private listeners: Map<string, Set<BridgeEventListener>> = new Map();
@@ -13,7 +14,7 @@ export class PostMessageTransport implements ITransport {
 
   constructor(config: TransportConfig = {}) {
     this.appId = config.appId || 'mini_app_simulator';
-    this.defaultTimeoutMs = config.timeoutMs ?? 10000;
+    this.defaultTimeoutMs = config.timeoutMs;
     this.debug = config.debug ?? false;
     this.initMessageListener();
   }
@@ -62,7 +63,7 @@ export class PostMessageTransport implements ITransport {
 
   public invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs?: number): Promise<T> {
     const id = `req_${Date.now()}_${requestSequence++}`;
-    const timeout = timeoutMs ?? this.defaultTimeoutMs;
+    const timeout = bridgeTimeoutMs(action, timeoutMs ?? this.defaultTimeoutMs);
 
     const request: BridgeRequest = {
       id,

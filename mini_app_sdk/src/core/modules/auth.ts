@@ -3,6 +3,12 @@ import { AccessTokenResult, AuthLoginOptions, AuthLoginResult, UserProfile } fro
 
 export class AuthModule {
   constructor(private transport: ITransport) {}
+  public requestCode(options: {codeChallenge: string; scopes?: string[]}): Promise<any> {
+    return this.transport.invoke('auth.requestCode', {...options, codeChallengeMethod: 'S256'});
+  }
+  public exchangeCode(options: {authCode: string; codeVerifier: string}): Promise<any> {
+    return this.transport.invoke('auth.exchangeCode', options);
+  }
 
   /**
    * Yêu cầu người dùng đăng nhập & cấp quyền truy cập
@@ -35,7 +41,7 @@ export class AuthModule {
   /**
    * Đăng xuất phiên làm việc hiện tại
    */
-  public async logout(): Promise<{ success: boolean; message: string }> {
-    return this.transport.invoke<{ success: boolean; message: string }>('auth.logout');
+  public async logout(): Promise<{ status: string; timestamp: string }> {
+    return this.transport.invoke<{ status: string; timestamp: string }>('auth.logout');
   }
 }

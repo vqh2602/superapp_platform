@@ -21,15 +21,15 @@ export class NavigationModule {
   /**
    * Đóng Mini App và quay lại màn hình SuperApp chính
    */
-  public async closeApp(): Promise<void> {
-    await this.transport.invoke('navigation.closeApp');
+  public async closeApp(): Promise<any> {
+    return this.transport.invoke('navigation.closeApp');
   }
 
   /**
    * Alias cho closeApp()
    */
-  public async close(): Promise<void> {
-    await this.transport.invoke('navigation.close');
+  public async close(): Promise<any> {
+    return this.transport.invoke('navigation.close');
   }
 
   /**
@@ -42,7 +42,7 @@ export class NavigationModule {
   /**
    * Mở liên kết trình duyệt ngoài
    */
-  public async openUrl(url: string): Promise<void> {
-    await this.transport.invoke('phone.openExternalBrowser', { url });
+  public async openUrl(url: string): Promise<any> {
+    return this.transport.invoke('phone.openExternalBrowser', { url });
   }
 }

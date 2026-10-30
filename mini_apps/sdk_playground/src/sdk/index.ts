@@ -1,7 +1,7 @@
 import officialSuperApp, { SuperAppSDK as BaseSuperAppSDK } from '@vqh2602/mini-app-sdk';
 export { BaseSuperAppSDK };
 import { BridgeTransport } from './bridgeTransport';
-import { AuthModule, MockAuthBackend } from './modules/auth';
+import { AuthModule, AuthBackend } from './modules/auth';
 import { UserModule } from './modules/user';
 import { NavigationModule } from './modules/navigation';
 import { DeviceModule } from './modules/device';
@@ -121,7 +121,7 @@ export class SuperAppSDK {
 
 // Global default instances
 export const superApp = new SuperAppSDK('sdk_playground');
-export const mockAuthBackend = new MockAuthBackend(superApp.transport);
+export const authBackend = new AuthBackend(superApp.transport);
 export { officialSuperApp };
 
 if (typeof window !== 'undefined') {

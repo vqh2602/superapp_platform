@@ -249,6 +249,20 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       return;
     }
 
+    // Refresh saved consent on every launch, before WebView startup actions run.
+    final permissionRepo = ref.read(mockPermissionRepositoryProvider);
+    try {
+      await permissionRepo.fetchPermissionsFromBackend(_currentAppId);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError = 'Không thể tải quyền Mini App đã lưu. Vui lòng thử lại.';
+      });
+      return;
+    }
+    if (!mounted) return;
+
     final validManifest = manifest;
     if (mounted) {
       setState(() {
@@ -269,7 +283,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       tokenService: ref.read(mockTokenServiceProvider),
       userRepo: ref.read(mockUserRepositoryProvider),
       deviceAdapter: ref.read(deviceAdapterProvider),
-      permissionRepo: ref.read(mockPermissionRepositoryProvider),
+      permissionRepo: permissionRepo,
       debugLogRepo: ref.read(debugLogRepositoryProvider),
       secureStorageRepo: ref.read(mockSecureStorageRepositoryProvider),
       miniappUrl: endpoint.miniappUrl,

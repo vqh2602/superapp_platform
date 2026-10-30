@@ -76,10 +76,11 @@ test('shared events reach both SDK and direct JS listeners once', async () => {
   assert.deepEqual(hits, [1, 2, 2]);
 });
 
-test('standalone browser uses mock instead of mistaking its own shim for native', async () => {
+test('standalone browser rejects calls instead of returning synthetic data', async () => {
   const sdk = new SuperAppSDK();
-  assert.equal(sdk.transport.getType(), 'mock');
-  assert.equal((await sdk.transport.invoke('user.getProfile')).displayName !== undefined || sdk.mockEngine !== undefined, true);
+  assert.equal(sdk.transport.getType(), 'unavailable');
+  assert.equal(sdk.transport.isConnected(), false);
+  await assert.rejects(sdk.transport.invoke('user.getProfile'), error => error.code === 'NATIVE_NOT_AVAILABLE');
   assert.deepEqual(requests, []);
 });
 
@@ -94,7 +95,7 @@ test('iframe uses simulator transport when no native channel is present', async 
 
 test('native channel attaching after import is detected dynamically', async () => {
   const sdk = new SuperAppSDK({ appId: 'late' });
-  assert.equal(sdk.transport.getType(), 'mock');
+  assert.equal(sdk.transport.getType(), 'unavailable');
   attachHost();
   assert.equal(sdk.transport.getType(), 'native');
   assert.deepEqual(await sdk.transport.invoke('user.getProfile'), { action: 'user.getProfile', appId: 'late' });
@@ -136,3 +137,97 @@ for (const order of ['host-first', 'sdk-first']) {
     assert.deepEqual(Object.keys(win.SuperAppBridge._callbacks), []);
   });
 }
+
+const { INTERACTIVE_BRIDGE_ACTIONS, bridgeTimeoutMs } = await import('../dist/transport/timeout-policy.js');
+const { PostMessageTransport } = await import('../dist/transport/postmessage-transport.js');
+test('camera/QR native calls still resolve after the previous 10s deadline', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let request;
+  win.FlutterBridge = { postMessage(raw) { request = JSON.parse(raw); } };
+  const transport = new NativeBridgeTransport();
+  for (const action of ['device.scanQRCode', 'scanQr', 'getPhoto', 'device.pickImage']) {
+    const pending = transport.invoke(action);
+    t.mock.timers.tick(15000);
+    win.SuperAppBridge.dispatchResponse({ id: request.id, success: true, data: { completed: action } });
+    assert.deepEqual(await pending, { completed: action });
+  }
+});
+
+test('interactive defaults match native, simulator and Flutter raw-JS bridge', async (t) => {
+  const scheduled = [];
+  const originalSetTimeout = globalThis.setTimeout;
+  t.mock.method(globalThis, 'setTimeout', (fn, ms) => {
+    scheduled.push(ms);
+    return originalSetTimeout(fn, ms);
+  });
+  attachHost();
+  const native = new NativeBridgeTransport();
+  for (const action of INTERACTIVE_BRIDGE_ACTIONS) {
+    await native.invoke(action);
+    assert.equal(scheduled.pop(), 300000, action);
+  }
+  let receiver;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  win.parent = { postMessage({ request }) {
+    receiver({ data: { type: 'SUPERAPP_BRIDGE_RESPONSE', response: { id: request.id, success: true } } });
+  } };
+  const simulator = new PostMessageTransport();
+  for (const action of INTERACTIVE_BRIDGE_ACTIONS) {
+    await simulator.invoke(action);
+    assert.equal(scheduled.pop(), 300000, action);
+  }
+  vm.runInNewContext(flutterHostPolyfill, { window: win, console,
+    setTimeout: globalThis.setTimeout, clearTimeout });
+  for (const action of INTERACTIVE_BRIDGE_ACTIONS) {
+    await win.bridge.invoke(action);
+    assert.equal(scheduled.pop(), 300000, action);
+  }
+  assert.equal(bridgeTimeoutMs('getSystemInfo'), 60000);
+  assert.equal(bridgeTimeoutMs('scanQr', 2000), 2000);
+});
+
+test('explicit per-call and client timeouts still override interactive defaults', async (t) => {
+  const scheduled = [];
+  const originalSetTimeout = globalThis.setTimeout;
+  t.mock.method(globalThis, 'setTimeout', (fn, ms) => {
+    scheduled.push(ms);
+    return originalSetTimeout(fn, ms);
+  });
+  attachHost();
+  const native = new NativeBridgeTransport({ timeoutMs: 9000 });
+  await native.invoke('scanQr');
+  assert.equal(scheduled.pop(), 9000);
+  await native.invoke('getPhoto', {}, 120000);
+  assert.equal(scheduled.pop(), 120000);
+});
+
+test('typed SDK methods preserve the native JSON response without flattening or dropping fields', async () => {
+  const responses = {
+    'device.getNetworkInfo': {networkType: 'wifi', isConnected: true, isWifi: true, isMobile: false, ssid: null, bssid: null, ipAddress: '10.0.0.2', signalStrength: null, timestamp: 123},
+    'device.getBatteryInfo': {level: 42, isCharging: false, status: 'discharging', temperature: null, timestamp: 123},
+    'getContacts': {contacts: [], total: 0},
+    'ui.showConfirm': {confirmed: false},
+    'ui.showToast': {success: true, message: 'Hello', durationMs: 2000},
+    'storage.getItem': {key: 'test', value: '{"a":1}', exists: true, domain: 'default', securityLevel: 'KEYCHAIN_OR_KEYSTORE'},
+  };
+  win.FlutterBridge = {postMessage(raw) {
+    const req = JSON.parse(raw);
+    win.SuperAppBridge.dispatchResponse({id: req.id, success: true, data: responses[req.action]});
+  }};
+  const sdk = new SuperAppSDK();
+  assert.deepEqual(await sdk.getNetworkInfo(), responses['device.getNetworkInfo']);
+  assert.deepEqual(await sdk.getBatteryInfo(), responses['device.getBatteryInfo']);
+  assert.deepEqual(await sdk.getContacts(), responses['getContacts']);
+  assert.deepEqual(await sdk.ui.showConfirm({message: 'Continue?'}), responses['ui.showConfirm']);
+  assert.deepEqual(await sdk.showToast('Hello'), responses['ui.showToast']);
+  assert.deepEqual(await sdk.storage.getItem('test'), responses['storage.getItem']);
+});
+
+test('legacy mock-engine import cannot generate fake native responses', async () => {
+  const {SDKMockEngine, MOCK_USER_PRESETS} = await import('../dist/mock/index.js');
+  assert.deepEqual(MOCK_USER_PRESETS, {});
+  const result = await new SDKMockEngine().dispatch({id: 'test', action: 'getContacts'});
+  assert.equal(result.success, false);
+  assert.equal(result.error.code, 'NATIVE_NOT_AVAILABLE');
+  assert.equal(result.data, undefined);
+});

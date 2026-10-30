@@ -6,12 +6,7 @@ export class SystemModule {
   /**
    * Lấy thông tin kết nối mạng hiện tại (wifi, cellular, none)
    */
-  public async getNetworkInfo(): Promise<{
-    networkType: string;
-    isConnected: boolean;
-    signalStrength?: string;
-    ipAddress?: string;
-  }> {
+  public async getNetworkInfo(): Promise<import('@vqh2602/mini-app-sdk').NetworkInfo> {
     return this.transport.invoke('getNetworkInfo');
   }
 
@@ -84,16 +79,7 @@ export class SystemModule {
   /**
    * Lấy danh sách danh bạ máy (yêu cầu quyền 'contacts')
    */
-  public async getContacts(): Promise<{
-    contacts: Array<{
-      id: string;
-      name: string;
-      phone: string;
-      email?: string;
-      department?: string;
-    }>;
-    total: number;
-  }> {
+  public async getContacts(): Promise<import('@vqh2602/mini-app-sdk').ContactsResult> {
     return this.transport.invoke('getContacts');
   }
 

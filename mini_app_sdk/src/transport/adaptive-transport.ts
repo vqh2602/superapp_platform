@@ -46,11 +46,11 @@ export class AdaptiveBridgeTransport implements ITransport {
   public getType(): TransportType {
     if (this.isNativeAvailable()) return 'native';
     if (this.isSimulatorAvailable()) return 'postmessage';
-    return 'mock';
+    return 'unavailable';
   }
 
   public isConnected(): boolean {
-    return this.isNativeAvailable() || this.isSimulatorAvailable() || this.mockTransport.isConnected();
+    return this.isNativeAvailable() || this.isSimulatorAvailable();
   }
 
   public getActiveTransport(): ITransport {
@@ -60,7 +60,7 @@ export class AdaptiveBridgeTransport implements ITransport {
     if (this.isSimulatorAvailable()) {
       return this.postmessageTransport;
     }
-    return this.mockTransport;
+    return this.nativeTransport;
   }
 
   public async invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs?: number): Promise<T> {

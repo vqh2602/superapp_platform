@@ -1,3 +1,4 @@
+import { bridgeTimeoutMs } from './timeout-policy.js';
 import { ITransport } from './transport.interface.js';
 import { BridgeError, BridgeEventListener, BridgeRequest, BridgeResponse, NativeWindowBridge, TransportConfig, TransportType } from './types.js';
 
@@ -15,14 +16,14 @@ export function isNativeBridgeAvailable(): boolean {
 export class NativeBridgeTransport implements ITransport {
   private installedBridges = new WeakSet<object>();
   private appId: string;
-  private defaultTimeoutMs: number;
+  private defaultTimeoutMs?: number;
   private debug: boolean;
   private callbacks: Map<string, { resolve: (val: any) => void; reject: (err: any) => void; timer: any }> = new Map();
   private listeners: Map<string, Set<BridgeEventListener>> = new Map();
 
   constructor(config: TransportConfig = {}) {
     this.appId = config.appId || 'mini_app_default';
-    this.defaultTimeoutMs = config.timeoutMs ?? 10000;
+    this.defaultTimeoutMs = config.timeoutMs;
     this.debug = config.debug ?? false;
     this.initNativeGlobalBridge();
   }
@@ -117,7 +118,7 @@ export class NativeBridgeTransport implements ITransport {
 
   public invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs?: number): Promise<T> {
     const id = `sdk_req_${Date.now()}_${requestSequence++}`;
-    const timeout = timeoutMs ?? this.defaultTimeoutMs;
+    const timeout = bridgeTimeoutMs(action, timeoutMs ?? this.defaultTimeoutMs);
 
     const request: BridgeRequest = {
       id,

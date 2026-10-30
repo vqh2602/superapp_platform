@@ -50,6 +50,12 @@ dependencies:
   device_info_plus: ^13.3.0
   screen_brightness: ^2.1.11
   wakelock_plus: ^1.8.0
+  network_info_plus: ^8.2.1
+  flutter_contacts: 1.1.9+2
+  geolocator: ^14.1.2
+  package_info_plus: ^10.2.2
+  gal: ^2.3.3
+  mime: ^2.1.0
 
 dev_dependencies:
   flutter_test:

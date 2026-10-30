@@ -5,58 +5,82 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../../permissions/data/mock_permission_repository.dart';
-import '../../permissions/presentation/permission_prompt_dialog.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
 class GetNetworkInfoHandler implements NativeActionHandler {
-  final Connectivity _connectivity = Connectivity();
-
+  final Future<List<ConnectivityResult>> Function() checkConnectivity;
+  final Future<String?> Function() wifiName;
+  final Future<String?> Function() wifiIP;
+  final Future<String?> Function() wifiBSSID;
+  GetNetworkInfoHandler({
+    Future<List<ConnectivityResult>> Function()? checkConnectivity,
+    Future<String?> Function()? wifiName,
+    Future<String?> Function()? wifiIP,
+    Future<String?> Function()? wifiBSSID,
+  }) : checkConnectivity =
+           checkConnectivity ?? Connectivity().checkConnectivity,
+       wifiName = wifiName ?? NetworkInfo().getWifiName,
+       wifiIP = wifiIP ?? NetworkInfo().getWifiIP,
+       wifiBSSID = wifiBSSID ?? NetworkInfo().getWifiBSSID;
   @override
   String get actionName => 'device.getNetworkInfo';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
+  Future<String?> _optional(Future<String?> Function() read) async {
+    try {
+      return await read();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _cleanSsid(String? raw) {
+    if (raw == null) return null;
+    var cleaned = raw.replaceAll(RegExp(r'^\"|\"$'), '').trim();
+    if (cleaned.isEmpty ||
+        cleaned == '<unknown ssid>' ||
+        cleaned.startsWith('<') ||
+        cleaned == 'null') return null;
+    return cleaned;
+  }
+
+  String? _cleanBssid(String? raw) {
+    if (raw == null) return null;
+    var cleaned = raw.replaceAll(RegExp(r'^\"|\"$'), '').trim();
+    if (cleaned.isEmpty || cleaned == '02:00:00:00:00:00' || cleaned == 'null') return null;
+    return cleaned;
+  }
 
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    String networkType = 'wifi';
-    bool isConnected = true;
-
-    try {
-      final List<ConnectivityResult> results = await _connectivity.checkConnectivity();
-      if (results.contains(ConnectivityResult.none)) {
-        networkType = 'none';
-        isConnected = false;
-      } else if (results.contains(ConnectivityResult.wifi)) {
-        networkType = 'wifi';
-        isConnected = true;
-      } else if (results.contains(ConnectivityResult.mobile)) {
-        networkType = 'cellular';
-        isConnected = true;
-      } else if (results.contains(ConnectivityResult.ethernet)) {
-        networkType = 'ethernet';
-        isConnected = true;
-      } else if (results.contains(ConnectivityResult.vpn)) {
-        networkType = 'vpn';
-        isConnected = true;
-      } else if (results.isNotEmpty) {
-        networkType = results.first.name;
-        isConnected = true;
-      }
-    } catch (_) {}
-
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    final results = await checkConnectivity();
+    final active = results.where((r) => r != ConnectivityResult.none).toList();
+    final wifi = active.contains(ConnectivityResult.wifi);
+    final mobile = active.contains(ConnectivityResult.mobile);
+    final String type = wifi
+        ? 'wifi'
+        : mobile
+        ? 'cellular'
+        : active.firstOrNull?.name ?? 'none';
+    final ssid = wifi ? await _optional(wifiName) : null;
     return {
-      'networkType': networkType,
-      'isConnected': isConnected,
-      'signalStrength': isConnected ? 'good' : 'none',
-      'ssid': networkType == 'wifi' ? 'SuperApp_WiFi' : null,
-      'ipAddress': isConnected ? '192.168.1.105' : null,
+      'networkType': type, 'isConnected': active.isNotEmpty,
+      'isWifi': wifi, 'isMobile': mobile,
+      'ssid': _cleanSsid(ssid),
+      'bssid': _cleanBssid(wifi ? await _optional(wifiBSSID) : null),
+      'ipAddress': wifi ? await _optional(wifiIP) : null,
+      'signalStrength': null, // Not exposed by the platform plugin.
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
   }
@@ -65,24 +89,21 @@ class GetNetworkInfoHandler implements NativeActionHandler {
 class GetDeviceLanguageHandler implements NativeActionHandler {
   @override
   String get actionName => 'device.getDeviceLanguage';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
     final locale = PlatformDispatcher.instance.locale;
-    final langCode = locale.languageCode.isNotEmpty ? locale.languageCode : 'vi';
-    final country = locale.countryCode ?? 'VN';
-
     return {
-      'language': '$langCode-$country',
-      'languageCode': langCode,
-      'countryCode': country,
-      'locale': '${langCode}_$country',
+      'language': locale.toLanguageTag(),
+      'languageCode': locale.languageCode,
+      'countryCode': locale.countryCode,
+      'locale': locale.toString(),
     };
   }
 }
@@ -90,104 +111,97 @@ class GetDeviceLanguageHandler implements NativeActionHandler {
 class GetSuperAppSettingsHandler implements NativeActionHandler {
   @override
   String get actionName => 'app.getSuperAppSettings';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    final info = await PackageInfo.fromPlatform();
+    final now = DateTime.now();
+    final brightness = context.buildContext != null
+        ? Theme.of(context.buildContext!).brightness
+        : PlatformDispatcher.instance.platformBrightness;
+    final offset = now.timeZoneOffset;
     return {
-      'theme': 'light',
-      'language': 'vi',
-      'timezone': 'Asia/Ho_Chi_Minh',
-      'gmtOffset': '+07:00',
-      'appName': 'SuperApp',
-      'shellVersion': '2.4.0',
-      'env': 'production',
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'theme': brightness.name,
+      'language': PlatformDispatcher.instance.locale.toLanguageTag(),
+      'timezone': now.timeZoneName,
+      'gmtOffset':
+          '${offset.isNegative ? '-' : '+'}${offset.inHours.abs().toString().padLeft(2, '0')}:${(offset.inMinutes.abs() % 60).toString().padLeft(2, '0')}',
+      'appName': info.appName,
+      'shellVersion': info.version,
+      'buildNumber': info.buildNumber,
+      'env': kReleaseMode
+          ? 'production'
+          : kProfileMode
+          ? 'profile'
+          : 'debug',
+      'timestamp': now.millisecondsSinceEpoch,
     };
   }
 }
 
 class GetSystemInfoHandler implements NativeActionHandler {
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
-
   @override
   String get actionName => 'device.getSystemInfo';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final size = context.buildContext != null
-        ? MediaQuery.of(context.buildContext!).size
-        : const Size(390, 844);
-    final pixelRatio = context.buildContext != null
-        ? MediaQuery.of(context.buildContext!).devicePixelRatio
-        : 3.0;
-
-    String platformName = 'web';
-    String osVersion = '17.5';
-    String deviceModel = 'iPhone 15 Pro';
-    String brand = 'Apple';
-
-    try {
-      if (!kIsWeb) {
-        if (Platform.isAndroid) {
-          platformName = 'android';
-          final info = await _deviceInfo.androidInfo;
-          deviceModel = info.model;
-          brand = info.brand;
-          osVersion = 'Android ${info.version.release} (SDK ${info.version.sdkInt})';
-        } else if (Platform.isIOS) {
-          platformName = 'ios';
-          final info = await _deviceInfo.iosInfo;
-          deviceModel = '${info.name} (${info.utsname.machine})';
-          brand = 'Apple';
-          osVersion = 'iOS ${info.systemVersion}';
-        } else if (Platform.isMacOS) {
-          platformName = 'macos';
-          final info = await _deviceInfo.macOsInfo;
-          deviceModel = info.model;
-          brand = 'Apple';
-          osVersion = 'macOS ${info.osRelease}';
-        } else if (Platform.isWindows) {
-          platformName = 'windows';
-          final info = await _deviceInfo.windowsInfo;
-          deviceModel = info.computerName;
-          brand = 'Microsoft';
-          osVersion = 'Windows ${info.productName}';
-        } else if (Platform.isLinux) {
-          platformName = 'linux';
-          final info = await _deviceInfo.linuxInfo;
-          deviceModel = info.name;
-          brand = 'Linux';
-          osVersion = info.version ?? 'Linux';
-        }
-      }
-    } catch (_) {}
-
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    String? model, brand;
+    String? osVersion = kIsWeb ? null : Platform.operatingSystemVersion;
+    if (!kIsWeb && Platform.isAndroid) {
+      final info = await _deviceInfo.androidInfo;
+      model = info.model;
+      brand = info.brand;
+      osVersion = info.version.release;
+    } else if (!kIsWeb && Platform.isIOS) {
+      final info = await _deviceInfo.iosInfo;
+      model = info.utsname.machine;
+      brand = 'Apple';
+      osVersion = info.systemVersion;
+    } else if (!kIsWeb && Platform.isMacOS) {
+      final info = await _deviceInfo.macOsInfo;
+      model = info.model;
+      brand = 'Apple';
+      osVersion = info.osRelease;
+    } else if (!kIsWeb && Platform.isWindows) {
+      final info = await _deviceInfo.windowsInfo;
+      model = info.computerName;
+      osVersion = info.productName;
+    } else if (!kIsWeb && Platform.isLinux) {
+      final info = await _deviceInfo.linuxInfo;
+      model = info.name;
+      osVersion = info.version;
+    }
+    final view = PlatformDispatcher.instance.views.firstOrNull;
+    final media = context.buildContext == null
+        ? null
+        : MediaQuery.maybeOf(context.buildContext!);
+    final ratio = media?.devicePixelRatio ?? view?.devicePixelRatio;
+    final size =
+        media?.size ??
+        (view == null ? null : view.physicalSize / view.devicePixelRatio);
     return {
-      'platform': platformName,
+      'platform': kIsWeb ? 'web' : Platform.operatingSystem,
       'osVersion': osVersion,
-      'deviceModel': deviceModel,
+      'deviceModel': model,
       'brand': brand,
-      'screenWidth': size.width.round(),
-      'screenHeight': size.height.round(),
-      'pixelRatio': pixelRatio,
-      'statusBarHeight': context.buildContext != null
-          ? MediaQuery.of(context.buildContext!).padding.top.round()
-          : 47,
-      'safeAreaBottom': context.buildContext != null
-          ? MediaQuery.of(context.buildContext!).padding.bottom.round()
-          : 34,
+      'screenWidth': size?.width.round(),
+      'screenHeight': size?.height.round(),
+      'pixelRatio': ratio,
+      'statusBarHeight': media?.padding.top.round(),
+      'safeAreaBottom': media?.padding.bottom.round(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
   }
@@ -196,64 +210,52 @@ class GetSystemInfoHandler implements NativeActionHandler {
 class GetAppInfoHandler implements NativeActionHandler {
   @override
   String get actionName => 'app.getAppInfo';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
     final m = context.manifest;
+    if (m == null)
+      throw BridgeError.invalidParams('Mini App manifest is unavailable');
     return {
       'appId': context.appId,
-      'name': m?.name ?? context.appId,
-      'version': m?.version ?? '1.0.0',
-      'category': m?.category ?? 'Utilities',
-      'runtimeType': m?.appRuntimeType ?? 'web',
-      'description': m?.description ?? '',
-      'isAsset': m?.isAsset ?? false,
-      'status': m?.status ?? 'PUBLISHED',
+      'name': m.name,
+      'version': m.version,
+      'category': m.category,
+      'runtimeType': m.appRuntimeType,
+      'description': m.description,
+      'isAsset': m.isAsset,
+      'status': m.status,
     };
   }
 }
 
 class GetBatteryInfoHandler implements NativeActionHandler {
   final Battery _battery = Battery();
-
   @override
   String get actionName => 'device.getBatteryInfo';
-
   @override
   String? get requiredCapability => null;
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    int level = 88;
-    bool isCharging = false;
-    String status = 'discharging';
-
-    try {
-      level = await _battery.batteryLevel;
-      final state = await _battery.batteryState;
-      isCharging = (state == BatteryState.charging || state == BatteryState.full);
-      status = switch (state) {
-        BatteryState.charging => 'charging',
-        BatteryState.discharging => 'discharging',
-        BatteryState.full => 'full',
-        _ => 'unknown',
-      };
-    } catch (_) {}
-
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    final level = await _battery.batteryLevel;
+    final state = await _battery.batteryState;
     return {
       'level': level,
-      'isCharging': isCharging,
-      'status': status,
-      'temperature': 28.5,
+      'isCharging':
+          state == BatteryState.charging || state == BatteryState.full,
+      'status': state.name,
+      'temperature': null,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
   }
@@ -261,76 +263,54 @@ class GetBatteryInfoHandler implements NativeActionHandler {
 
 class GetContactsHandler implements NativeActionHandler {
   final MockPermissionRepository permissionRepo;
-
-  GetContactsHandler({required this.permissionRepo});
-
+  final Future<bool> Function() requestAccess;
+  final Future<List<Contact>> Function() readContacts;
+  GetContactsHandler({
+    required this.permissionRepo,
+    Future<bool> Function()? requestAccess,
+    Future<List<Contact>> Function()? readContacts,
+  }) : requestAccess =
+           requestAccess ??
+           (() => FlutterContacts.requestPermission(readonly: true)),
+       readContacts =
+           readContacts ??
+           (() => FlutterContacts.getContacts(withProperties: true));
   @override
   String get actionName => 'contact.getContacts';
-
   @override
   String? get requiredCapability => 'contacts';
-
   @override
   bool get requiresAuth => false;
-
   @override
-  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final isGranted = permissionRepo.isGranted(context.appId, 'contacts');
-    if (!isGranted) {
-      if (context.buildContext != null) {
-        final granted = await PermissionPromptDialog.show(
-          context.buildContext!,
-          appName: context.manifest?.name ?? context.appId,
-          capabilityKey: 'contacts',
-        );
-        permissionRepo.setPermission(context.appId, 'contacts', granted);
-        if (!granted) {
-          throw BridgeError.permissionDenied('contacts');
-        }
-      } else {
-        throw BridgeError.permissionDenied('contacts');
-      }
+  Future<dynamic> handle(
+    Map<String, dynamic> payload,
+    ActionContext context,
+  ) async {
+    if (!await requestAccess()) {
+      throw BridgeError.permissionDenied('contacts');
     }
-
-    final query = payload['query']?.toString().toLowerCase();
-    final allContacts = [
-      {
-        'id': 'contact_01',
-        'displayName': 'Nguyễn Văn An',
-        'phoneNumber': '0988123456',
-        'email': 'an.nguyen@superapp.com',
-        'department': 'Product Development',
-        'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-      },
-      {
-        'id': 'contact_02',
-        'displayName': 'Trần Thị Bình',
-        'phoneNumber': '0912345678',
-        'email': 'binh.tran@superapp.com',
-        'department': 'Operations & Logistics',
-        'avatar': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100',
-      },
-      {
-        'id': 'contact_03',
-        'displayName': 'Lê Hoàng Cường',
-        'phoneNumber': '0977888999',
-        'email': 'cuong.le@superapp.com',
-        'department': 'Finance & Accounting',
-        'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-      },
-    ];
-
-    final filtered = query == null || query.isEmpty
-        ? allContacts
-        : allContacts.where((c) {
-            final name = c['displayName']!.toLowerCase();
-            final phone = c['phoneNumber']!;
-            return name.contains(query) || phone.contains(query);
-          }).toList();
-
-    return {
-      'contacts': filtered,
-      'total': filtered.length,
-    };
+    final query = payload['query']?.toString().toLowerCase() ?? '';
+    final entries = await readContacts();
+    final contacts = entries
+        .where(
+          (c) =>
+              query.isEmpty ||
+              c.displayName.toLowerCase().contains(query) ||
+              c.phones.any((p) => p.number.contains(query)) ||
+              c.emails.any((e) => e.address.toLowerCase().contains(query)),
+        )
+        .map(
+          (c) => {
+            'id': c.id,
+            'displayName': c.displayName,
+            'phoneNumber': c.phones.firstOrNull?.number,
+            'email': c.emails.firstOrNull?.address,
+            'phoneNumbers': c.phones.map((p) => p.number).toList(),
+            'emails': c.emails.map((e) => e.address).toList(),
+            'department': c.organizations.firstOrNull?.department,
+          },
+        )
+        .toList();
+    return {'contacts': contacts, 'total': contacts.length};
   }
 }

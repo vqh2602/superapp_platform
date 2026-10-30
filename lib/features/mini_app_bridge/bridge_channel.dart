@@ -159,17 +159,29 @@ class BridgeChannel {
       }
 
       // Universal MiniApp Promise Invocation Channel
+      var interactiveActions = [
+        'scanQr', 'scanQRCode', 'scanBarcode', 'device.scanQr', 'device.scanQRCode',
+        'device.scanBarcode', 'media.scanQRCode', 'getPhoto', 'pickImages', 'pickVideo',
+        'chooseImage', 'device.pickImage', 'media.chooseImage', 'media.getPhoto',
+        'media.pickImages', 'media.pickVideo', 'pickFile', 'saveFile', 'filePreview',
+        'saveImageToGallery', 'saveVideoToGallery', 'speechToText', 'utility.speechToText',
+        'permission.request', 'getContacts', 'device.getContacts', 'payment.openCheckout',
+        'payment.requestPayment', 'requestSendNotification', 'ui.requestSendNotification',
+        'notification.requestSendNotification', 'ui.showAlert', 'ui.showConfirm',
+        'showAlert', 'showConfirm',
+      ];
       var bridgeCallSeq = 1;
       function bridgeInvoke(action, payload) {
         payload = payload || {};
         return new Promise(function(resolve, reject) {
           var reqId = 'req_' + Date.now() + '_' + (bridgeCallSeq++);
+          var timeoutMs = interactiveActions.indexOf(action) >= 0 ? 300000 : 60000;
           var timer = setTimeout(function() {
             if (window.SuperAppBridge && window.SuperAppBridge._callbacks && window.SuperAppBridge._callbacks[reqId]) {
               delete window.SuperAppBridge._callbacks[reqId];
             }
-            reject({ code: 'TIMEOUT', message: 'Bridge request "' + action + '" timed out after 8000ms' });
-          }, 8000);
+            reject({ code: 'TIMEOUT', message: 'Bridge request "' + action + '" timed out after ' + timeoutMs + 'ms' });
+          }, timeoutMs);
 
           if (!window.SuperAppBridge._callbacks) window.SuperAppBridge._callbacks = {};
           window.SuperAppBridge._callbacks[reqId] = function(res) {

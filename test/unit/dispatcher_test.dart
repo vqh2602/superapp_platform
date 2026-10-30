@@ -1,9 +1,9 @@
+import '../support/auth_fixtures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
 import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
 import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
-import 'package:superapp_platform/features/authentication/domain/models/mock_user.dart';
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
 import 'package:superapp_platform/features/device/data/mock_device_adapter.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
@@ -34,7 +34,7 @@ void main() {
     );
 
     setUp(() {
-      authRepo = MockAuthRepository();
+      authRepo = TestAuthRepository();
       authCodeService = MockAuthCodeService();
       tokenService = MockTokenService(authCodeService: authCodeService);
       userRepo = MockUserRepository(authRepository: authRepo);
@@ -77,7 +77,7 @@ void main() {
     });
 
     test('Requires permission for capability', () async {
-      await authRepo.login(MockUser.userA.id);
+      await authRepo.login(TestUsers.userA.id);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 
       // Permission not yet granted
@@ -88,27 +88,17 @@ void main() {
     });
 
     test('Succeeds when authenticated and permission granted', () async {
-      await authRepo.login(MockUser.userA.id);
+      await authRepo.login(TestUsers.userA.id);
       permissionRepo.setPermission('sdk_playground', 'user.getProfile', true);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 
       final result = await dispatcher.dispatch('user.getProfile', {}, context);
-      expect(result['id'], equals(MockUser.userA.id));
+      expect(result['id'], equals(TestUsers.userA.id));
       expect(result['name'], equals('Nguyễn Văn A'));
       expect(result['role'], equals('customer'));
     });
 
-    test('Mock QR scan returns mock payload', () async {
-      permissionRepo.setPermission('sdk_playground', 'device.scanQRCode', true);
-      final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
-
-      final result = await dispatcher.dispatch('device.scanQRCode', {}, context);
-      expect(result['format'], equals('QR_CODE'));
-      expect(result['isMock'], isTrue);
-    });
-
     test('Real device mode returns UNSUPPORTED when no real hardware attached', () async {
-      deviceAdapter.useRealDeviceMode = true;
       permissionRepo.setPermission('sdk_playground', 'device.scanQRCode', true);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 

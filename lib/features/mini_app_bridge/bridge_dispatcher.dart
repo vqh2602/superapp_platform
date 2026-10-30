@@ -54,6 +54,7 @@ class BridgeDispatcher {
         requestId,
         resultData,
         stopwatch.elapsedMilliseconds,
+        actionName,
       );
 
       // Record log
@@ -75,6 +76,7 @@ class BridgeDispatcher {
         requestId,
         err,
         stopwatch.elapsedMilliseconds,
+        actionName,
       );
 
       debugLogRepo.addLog(BridgeLogEntry(
@@ -96,6 +98,7 @@ class BridgeDispatcher {
         requestId,
         bridgeErr,
         stopwatch.elapsedMilliseconds,
+        actionName,
       );
 
       debugLogRepo.addLog(BridgeLogEntry(

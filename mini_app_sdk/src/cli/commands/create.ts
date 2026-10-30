@@ -52,7 +52,7 @@ export async function createProject(projectName: string, options: CreateCommandO
       preview: 'vite preview',
     },
     dependencies: {
-      '@vqh2602/mini-app-sdk': '^1.0.6',
+      '@vqh2602/mini-app-sdk': '^1.0.7',
     },
     devDependencies: {
       typescript: '^5.6.3',

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>Đọc danh bạ thiết bị cho Mini App sau khi bạn cấp quyền.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Cung cấp vị trí và thông tin Wi-Fi cho Mini App khi bạn cho phép.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần quyền sử dụng Camera để quét mã QR, mã vạch và chụp ảnh tài liệu.</string>
 	<key>NSMicrophoneUsageDescription</key>

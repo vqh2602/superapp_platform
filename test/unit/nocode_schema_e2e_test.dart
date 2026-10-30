@@ -1,3 +1,4 @@
+import '../support/auth_fixtures.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -53,7 +54,7 @@ void main() {
     );
 
     setUp(() async {
-      authRepo = MockAuthRepository();
+      authRepo = TestAuthRepository();
       authCodeService = MockAuthCodeService();
       tokenService = MockTokenService(authCodeService: authCodeService);
       userRepo = MockUserRepository(authRepository: authRepo);
@@ -185,29 +186,13 @@ void main() {
       expect(playgroundApp.isWebApp, isTrue);
     });
 
-    test('Scenario 6: Native action ui.showToast invoked by Schema App executes end-to-end', () async {
+    test('Schema calls requiring native UI fail rather than fabricating success', () async {
       final context = ActionContext(appId: 'coffee_shop', manifest: coffeeShopManifest);
-
-      final result = await dispatcher.dispatch(
-        'ui.showToast',
-        {
-          'message': 'Đã chọn Combo Cà Phê thành công!',
-        },
-        context,
-      );
-
-      expect(result['success'], isTrue);
-    });
-
-    test('Scenario 6 (Cont.): Device QR Code scan invoked by Schema App returns payload', () async {
       permissionRepo.setPermission('coffee_shop', 'device.scanQRCode', true);
-      final context = ActionContext(appId: 'coffee_shop', manifest: coffeeShopManifest);
-
-      final result = await dispatcher.dispatch('device.scanQRCode', {}, context);
-
-      expect(result['content'], isNotEmpty);
-      expect(result['format'], equals('QR_CODE'));
-      expect(result['isMock'], isTrue);
+      for (final action in ['ui.showToast', 'device.scanQRCode']) {
+        await expectLater(dispatcher.dispatch(action, {'message': 'Test'}, context),
+          throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.unsupported)));
+      }
     });
 
     test('Scenario 8: Catalog blocks access when Mini App is unpublished', () async {
@@ -252,8 +237,8 @@ void main() {
 
       // Flow A: Request Auth Code
       permissionRepo.setPermission('sdk_playground', 'auth.requestCode', true);
-      final authCodeRes = await dispatcher.dispatch('auth.requestCode', {}, context);
-      expect(authCodeRes['authCode'], isNotEmpty);
+      await expectLater(dispatcher.dispatch('auth.requestCode', {}, context),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.invalidParams)));
 
       // Flow B: User Profile
       permissionRepo.setPermission('sdk_playground', 'user.getProfile', true);
@@ -268,8 +253,7 @@ void main() {
 
       // Flow D: Device Location
       permissionRepo.setPermission('sdk_playground', 'device.getLocation', true);
-      final locRes = await dispatcher.dispatch('device.getLocation', {}, context);
-      expect(locRes['latitude'], isNotNull);
+      await expectLater(dispatcher.dispatch('device.getLocation', {}, context), throwsA(anything));
 
       // Flow E: Native Navigation allowlist requires BuildContext
       permissionRepo.setPermission('sdk_playground', 'navigation.openNativePage', true);

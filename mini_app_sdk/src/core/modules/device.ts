@@ -3,6 +3,9 @@ import { BatteryInfo, DeviceInfo, KeepScreenOptions, NetworkInfo } from '../type
 
 export class DeviceModule {
   constructor(private transport: ITransport) {}
+  public getContacts(options: { query?: string } = {}): Promise<import('../types/index.js').ContactsResult> {
+    return this.transport.invoke('getContacts', options);
+  }
 
   /**
    * Lấy mức pin và trạng thái sạc
@@ -35,8 +38,8 @@ export class DeviceModule {
   /**
    * Kích hoạt rung phản hồi xúc giác (Haptic Feedback)
    */
-  public async vibrate(style: 'light' | 'medium' | 'heavy' = 'light'): Promise<void> {
-    await this.transport.invoke('device.vibrate', { style });
+  public async vibrate(style: 'light' | 'medium' | 'heavy' = 'light'): Promise<any> {
+    return this.transport.invoke('device.vibrate', { style });
   }
 
   /**

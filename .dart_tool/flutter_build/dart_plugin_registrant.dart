@@ -7,11 +7,13 @@
 
 import 'dart:io'; // flutter_ignore: dart_io_import.
 import 'package:android_file_picker/android_file_picker.dart' as android_file_picker;
+import 'package:geolocator_android/geolocator_android.dart' as geolocator_android;
 import 'package:image_picker_android/image_picker_android.dart' as image_picker_android;
 import 'package:path_provider_android/path_provider_android.dart' as path_provider_android;
 import 'package:url_launcher_android/url_launcher_android.dart' as url_launcher_android;
 import 'package:webview_all_android/webview_all_android.dart' as webview_all_android;
 import 'package:file_picker_darwin/file_picker_darwin.dart' as file_picker_darwin;
+import 'package:geolocator_apple/geolocator_apple.dart' as geolocator_apple;
 import 'package:image_picker_ios/image_picker_ios.dart' as image_picker_ios;
 import 'package:path_provider_foundation/path_provider_foundation.dart' as path_provider_foundation;
 import 'package:pointer_interceptor_ios/pointer_interceptor_ios.dart' as pointer_interceptor_ios;
@@ -22,7 +24,9 @@ import 'package:connectivity_plus/connectivity_plus.dart' as connectivity_plus;
 import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
 import 'package:file_picker_linux/file_picker_linux.dart' as file_picker_linux;
 import 'package:file_selector_linux/file_selector_linux.dart' as file_selector_linux;
+import 'package:geolocator_linux/geolocator_linux.dart' as geolocator_linux;
 import 'package:image_picker_linux/image_picker_linux.dart' as image_picker_linux;
+import 'package:network_info_plus/network_info_plus.dart' as network_info_plus;
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:path_provider_linux/path_provider_linux.dart' as path_provider_linux;
 import 'package:url_launcher_linux/url_launcher_linux.dart' as url_launcher_linux;
@@ -30,6 +34,7 @@ import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:webview_all_linux/webview_all_linux.dart' as webview_all_linux;
 import 'package:file_picker_darwin/file_picker_darwin.dart' as file_picker_darwin;
 import 'package:file_selector_macos/file_selector_macos.dart' as file_selector_macos;
+import 'package:geolocator_apple/geolocator_apple.dart' as geolocator_apple;
 import 'package:image_picker_macos/image_picker_macos.dart' as image_picker_macos;
 import 'package:path_provider_foundation/path_provider_foundation.dart' as path_provider_foundation;
 import 'package:url_launcher_macos/url_launcher_macos.dart' as url_launcher_macos;
@@ -39,6 +44,7 @@ import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
 import 'package:file_selector_windows/file_selector_windows.dart' as file_selector_windows;
 import 'package:flutter_secure_storage_windows/flutter_secure_storage_windows.dart' as flutter_secure_storage_windows;
 import 'package:image_picker_windows/image_picker_windows.dart' as image_picker_windows;
+import 'package:network_info_plus/network_info_plus.dart' as network_info_plus;
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:path_provider_windows/path_provider_windows.dart' as path_provider_windows;
 import 'package:speech_to_text_windows/speech_to_text_windows.dart' as speech_to_text_windows;
@@ -58,6 +64,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`android_file_picker` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        geolocator_android.GeolocatorAndroid.registerWith();
+      } catch (err) {
+        print(
+          '`geolocator_android` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -104,6 +119,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`file_picker_darwin` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        geolocator_apple.GeolocatorApple.registerWith();
+      } catch (err) {
+        print(
+          '`geolocator_apple` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -200,10 +224,28 @@ class _PluginRegistrant {
       }
 
       try {
+        geolocator_linux.GeolocatorLinux.registerWith();
+      } catch (err) {
+        print(
+          '`geolocator_linux` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
         image_picker_linux.ImagePickerLinux.registerWith();
       } catch (err) {
         print(
           '`image_picker_linux` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        network_info_plus.NetworkInfoPlusLinuxPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`network_info_plus` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -268,6 +310,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`file_selector_macos` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        geolocator_apple.GeolocatorApple.registerWith();
+      } catch (err) {
+        print(
+          '`geolocator_apple` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -350,6 +401,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`image_picker_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        network_info_plus.NetworkInfoPlusWindowsPlugin.registerWith();
+      } catch (err) {
+        print(
+          '`network_info_plus` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
