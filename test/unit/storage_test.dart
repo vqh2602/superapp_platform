@@ -2,25 +2,25 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../support/auth_fixtures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
-import 'package:superapp_platform/features/storage/data/mock_secure_storage_repository.dart';
+import 'package:superapp_platform/features/storage/data/secure_storage_repository_impl.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
-import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
-import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
-import 'package:superapp_platform/features/device/data/mock_device_adapter.dart';
-import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
+import 'package:superapp_platform/features/authentication/data/auth_code_service_shim.dart';
+import 'package:superapp_platform/features/authentication/data/token_service_shim.dart';
+import 'package:superapp_platform/features/user_profile/data/user_repository_impl.dart';
+import 'package:superapp_platform/features/device/data/device_adapter_impl.dart';
+import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-  group('MockSecureStorageRepository Tests', () {
-    late MockSecureStorageRepository repository;
+  group('SecureStorageRepositoryImpl Tests', () {
+    late SecureStorageRepositoryImpl repository;
 
     setUp(() {
-      repository = MockSecureStorageRepository();
+      repository = SecureStorageRepositoryImpl();
     });
 
     test('Stores and retrieves key-value pair securely with default domain', () async {
@@ -143,8 +143,8 @@ void main() {
 
   group('NativeActionDispatcher Secure Storage Integration Tests', () {
     late NativeActionDispatcher dispatcher;
-    late MockSecureStorageRepository secureStorageRepo;
-    late MockPermissionRepository permissionRepo;
+    late SecureStorageRepositoryImpl secureStorageRepo;
+    late PermissionRepositoryImpl permissionRepo;
 
     final testManifest = const MiniAppManifest(
       id: 'sdk_playground',
@@ -167,13 +167,13 @@ void main() {
 
     setUp(() {
       final authRepo = TestAuthRepository();
-      final authCodeService = MockAuthCodeService();
-      final tokenService = MockTokenService(authCodeService: authCodeService);
-      final userRepo = MockUserRepository(authRepository: authRepo);
-      final deviceAdapter = MockDeviceAdapter();
-      permissionRepo = MockPermissionRepository();
+      final authCodeService = AuthCodeServiceShim();
+      final tokenService = TokenServiceShim(authCodeService: authCodeService);
+      final userRepo = UserRepositoryImpl(authRepository: authRepo);
+      final deviceAdapter = DeviceAdapterImpl();
+      permissionRepo = PermissionRepositoryImpl();
       final debugLogRepo = DebugLogRepository();
-      secureStorageRepo = MockSecureStorageRepository();
+      secureStorageRepo = SecureStorageRepositoryImpl();
 
       dispatcher = NativeActionDispatcher(
         authRepo: authRepo,

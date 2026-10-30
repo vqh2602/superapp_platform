@@ -5,9 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:superapp_platform/core/config/endpoint_config.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
-import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
+import 'package:superapp_platform/features/authentication/data/auth_repository_impl.dart';
+import 'package:superapp_platform/features/authentication/data/auth_code_service_shim.dart';
+import 'package:superapp_platform/features/authentication/data/token_service_shim.dart';
 
 void main() {
   group('EndpointConfig Tests', () {
@@ -25,7 +25,7 @@ void main() {
     });
   });
 
-  group('MockAuthRepository HTTP Backend Tests', () {
+  group('AuthRepositoryImpl HTTP Backend Tests', () {
     test('Login with email & password succeeds when backend returns 200', () async {
       final mockClient = MockClient((request) async {
         if (request.url.path.endsWith('/auth/login')) {
@@ -53,7 +53,7 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final repo = MockAuthRepository(
+      final repo = AuthRepositoryImpl(
         httpClient: mockClient,
         authUrl: 'http://localhost:3000/api/v1/auth',
       );
@@ -74,7 +74,7 @@ void main() {
         );
       });
 
-      final repo = MockAuthRepository(
+      final repo = AuthRepositoryImpl(
         httpClient: mockClient,
         authUrl: 'http://localhost:3000/api/v1/auth',
       );
@@ -114,7 +114,7 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final repo = MockAuthRepository(
+      final repo = AuthRepositoryImpl(
         httpClient: mockClient,
         authUrl: 'http://localhost:3000/api/v1/auth',
       );
@@ -140,7 +140,7 @@ void main() {
         );
       });
 
-      final repo = MockAuthRepository(
+      final repo = AuthRepositoryImpl(
         httpClient: mockClient,
         authUrl: 'http://localhost:3000/api/v1/auth',
       );
@@ -156,8 +156,8 @@ void main() {
     });
   });
 
-  group('MockAuthRepository Tests', () {
-    late MockAuthRepository repo;
+  group('AuthRepositoryImpl Tests', () {
+    late AuthRepositoryImpl repo;
 
     setUp(() {
       repo = TestAuthRepository();
@@ -200,11 +200,11 @@ void main() {
   });
 
   test('production auth cannot manufacture local codes or tokens', () async {
-    final codes = MockAuthCodeService();
+    final codes = AuthCodeServiceShim();
     expect(() => codes.generateCode(userId: 'u', appId: 'app'), throwsA(isA<BridgeError>()));
-    final tokens = MockTokenService(authCodeService: codes);
+    final tokens = TokenServiceShim(authCodeService: codes);
     await expectLater(tokens.exchangeCode(authCode: 'local', appId: 'app'), throwsA(isA<BridgeError>()));
-    final real = MockAuthRepository();
+    final real = AuthRepositoryImpl();
     addTearDown(real.dispose);
     await expectLater(real.login('u'), throwsArgumentError);
   });

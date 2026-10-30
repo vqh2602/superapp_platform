@@ -6,7 +6,7 @@ import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
 import 'package:superapp_platform/features/native_actions/handlers/system_action_handler.dart';
 import 'package:superapp_platform/features/native_actions/handlers/media_file_action_handler.dart';
-import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
+import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +34,7 @@ void main() {
     await expectLater(handler.handle({}, context), throwsA(isA<MissingPluginException>()));
   });
   test('contacts return actual fields and all phone numbers from the device adapter', () async {
-    final permissions = MockPermissionRepository()..setPermission(context.appId, 'contacts', true);
+    final permissions = PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true);
     final c = Contact(id: 'native-id', displayName: 'Device Contact', phones: [Phone('+84111'), Phone('+84222')], emails: [Email('contact@example.test')]);
     final handler = GetContactsHandler(permissionRepo: permissions, requestAccess: () async => true, readContacts: () async => [c]);
     final result = await handler.handle({}, context);
@@ -44,25 +44,25 @@ void main() {
     expect((await handler.handle({'query': 'missing'}, context))['contacts'], isEmpty);
   });
   test('empty device address book stays empty', () async {
-    final handler = GetContactsHandler(permissionRepo: MockPermissionRepository()..setPermission(context.appId, 'contacts', true),
+    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
       requestAccess: () async => true, readContacts: () async => []);
     expect(await handler.handle({}, context), {'contacts': [], 'total': 0});
   });
   test('OS permission denial does not return sample contacts or read the address book', () async {
     var reads = 0;
-    final handler = GetContactsHandler(permissionRepo: MockPermissionRepository()..setPermission(context.appId, 'contacts', true),
+    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
       requestAccess: () async => false, readContacts: () async { reads++; return []; });
     await expectLater(handler.handle({}, context), throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.permissionDenied)));
     expect(reads, 0);
   });
   test('app consent is required even if OS access was previously granted', () async {
     var prompts = 0;
-    final handler = GetContactsHandler(permissionRepo: MockPermissionRepository(),
+    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl(),
       requestAccess: () async { prompts++; return true; }, readContacts: () async => []);
     await expectLater(handler.handle({}, context), throwsA(isA<BridgeError>())); expect(prompts, 0);
   });
   test('contacts plugin errors are not replaced by fixtures', () async {
-    final handler = GetContactsHandler(permissionRepo: MockPermissionRepository()..setPermission(context.appId, 'contacts', true),
+    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
       requestAccess: () async => true, readContacts: () async => throw PlatformException(code: 'native_failure'));
     await expectLater(handler.handle({}, context), throwsA(isA<PlatformException>()));
   });

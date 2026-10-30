@@ -127,7 +127,3 @@ final userRepositoryProvider = Provider<UserRepositoryImpl>((ref) {
     authUrl: endpoint.authUrl,
   );
 });
-
-final mockUserRepositoryProvider = userRepositoryProvider;
-
-typedef MockUserRepository = UserRepositoryImpl;

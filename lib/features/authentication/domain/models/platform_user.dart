@@ -44,5 +44,3 @@ class PlatformUser {
     'avatarUrl': avatarUrl,
   };
 }
-
-typedef MockUser = PlatformUser;

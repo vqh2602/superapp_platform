@@ -14,22 +14,16 @@ final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
   return repo;
 });
 
-final mockAuthRepositoryProvider = authRepositoryProvider;
-
 /// Core provider for AuthCodeServiceShim
 final authCodeServiceProvider = Provider<AuthCodeServiceShim>((ref) {
   return AuthCodeServiceShim();
 });
-
-final mockAuthCodeServiceProvider = authCodeServiceProvider;
 
 /// Core provider for TokenServiceShim
 final tokenServiceProvider = Provider<TokenServiceShim>((ref) {
   final authCodeService = ref.watch(authCodeServiceProvider);
   return TokenServiceShim(authCodeService: authCodeService);
 });
-
-final mockTokenServiceProvider = tokenServiceProvider;
 
 /// Auth state holder
 class AuthState {

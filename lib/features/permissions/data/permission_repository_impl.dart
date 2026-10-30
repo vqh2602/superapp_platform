@@ -249,7 +249,3 @@ final permissionRepositoryProvider = Provider<PermissionRepositoryImpl>((ref) {
   ref.onDispose(repository.dispose);
   return repository;
 });
-
-final mockPermissionRepositoryProvider = permissionRepositoryProvider;
-
-typedef MockPermissionRepository = PermissionRepositoryImpl;

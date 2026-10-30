@@ -22,5 +22,3 @@ class TokenServiceShim implements TokenService {
   void revokeToken(String token) {}
   void reset() {}
 }
-
-typedef MockTokenService = TokenServiceShim;

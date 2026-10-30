@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
+import 'package:superapp_platform/features/authentication/data/auth_repository_impl.dart';
 import 'package:superapp_platform/features/authentication/domain/models/auth_session.dart';
-import 'package:superapp_platform/features/authentication/domain/models/mock_user.dart';
+import 'package:superapp_platform/features/authentication/domain/models/platform_user.dart';
 
 class TestUsers {
-  static const userA = MockUser(
+  static const userA = PlatformUser(
     id: 'user_001',
     name: 'Nguyễn Văn A',
     phone: '0900000001',
     role: 'customer',
     email: 'a@example.test',
   );
-  static const userB = MockUser(
+  static const userB = PlatformUser(
     id: 'user_002',
     name: 'Trần Thị B',
     phone: '0900000002',
@@ -22,7 +22,7 @@ class TestUsers {
   );
 }
 
-class TestAuthRepository extends MockAuthRepository {
+class TestAuthRepository extends AuthRepositoryImpl {
   TestAuthRepository()
     : super(
         httpClient: MockClient((request) async {

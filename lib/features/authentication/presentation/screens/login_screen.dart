@@ -540,5 +540,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-
-typedef MockLoginScreen = LoginScreen;

@@ -1,21 +1,21 @@
-import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
-import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
+import 'package:superapp_platform/features/authentication/data/auth_code_service_shim.dart';
+import 'package:superapp_platform/features/authentication/data/token_service_shim.dart';
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
-import 'package:superapp_platform/features/device/data/mock_device_adapter.dart';
+import 'package:superapp_platform/features/device/data/device_adapter_impl.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
-import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
+import 'package:superapp_platform/features/user_profile/data/user_repository_impl.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
-import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
+import 'package:superapp_platform/features/authentication/data/auth_repository_impl.dart';
+import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
 
 void main() {
-  late MockAuthRepository auth;
-  late MockPermissionRepository permissions;
+  late AuthRepositoryImpl auth;
+  late PermissionRepositoryImpl permissions;
   late Future<http.Response> Function(http.Request) permissionResponse;
   var reads = 0;
 
@@ -34,7 +34,7 @@ void main() {
 
   setUp(() async {
     reads = 0;
-    auth = MockAuthRepository(
+    auth = AuthRepositoryImpl(
       httpClient: MockClient(
         (request) async => http.Response(
           jsonEncode({
@@ -53,7 +53,7 @@ void main() {
     await login('alice');
     permissionResponse = (_) async =>
         state(['device.scanQRCode'], denied: ['contacts']);
-    permissions = MockPermissionRepository(
+    permissions = PermissionRepositoryImpl(
       authRepo: auth,
       usersUrl: 'https://example.test/api/v1/users',
       httpClient: MockClient((request) async {
@@ -165,14 +165,14 @@ void main() {
     () async {
       permissionResponse = (_) async => state(['user.getProfile']);
       final logs = DebugLogRepository();
-    final authCodes = MockAuthCodeService();
+      final authCodes = AuthCodeServiceShim();
       addTearDown(logs.dispose);
       final dispatcher = NativeActionDispatcher(
         authRepo: auth,
         authCodeService: authCodes,
-        tokenService: MockTokenService(authCodeService: authCodes),
-        userRepo: MockUserRepository(authRepository: auth),
-        deviceAdapter: MockDeviceAdapter(),
+        tokenService: TokenServiceShim(authCodeService: authCodes),
+        userRepo: UserRepositoryImpl(authRepository: auth),
+        deviceAdapter: DeviceAdapterImpl(),
         permissionRepo: permissions,
         debugLogRepo: logs,
       );

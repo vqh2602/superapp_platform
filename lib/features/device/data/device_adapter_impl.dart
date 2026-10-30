@@ -39,5 +39,3 @@ class DeviceAdapterImpl implements DeviceAdapter {
 final deviceAdapterProvider = Provider<DeviceAdapterImpl>(
   (ref) => DeviceAdapterImpl(),
 );
-
-typedef MockDeviceAdapter = DeviceAdapterImpl;

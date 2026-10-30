@@ -190,5 +190,3 @@ class AuthRepositoryImpl implements AuthRepository {
     _sessionController.close();
   }
 }
-
-typedef MockAuthRepository = AuthRepositoryImpl;

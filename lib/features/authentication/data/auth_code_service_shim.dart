@@ -9,5 +9,3 @@ class AuthCodeServiceShim {
       throw BridgeError.unsupported('Codes are validated by the backend');
   void reset() {}
 }
-
-typedef MockAuthCodeService = AuthCodeServiceShim;

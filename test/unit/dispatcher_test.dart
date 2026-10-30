@@ -1,25 +1,25 @@
 import '../support/auth_fixtures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_code_service.dart';
-import 'package:superapp_platform/features/authentication/data/mock_auth_repository.dart';
-import 'package:superapp_platform/features/authentication/data/mock_token_service.dart';
+import 'package:superapp_platform/features/authentication/data/auth_code_service_shim.dart';
+import 'package:superapp_platform/features/authentication/data/auth_repository_impl.dart';
+import 'package:superapp_platform/features/authentication/data/token_service_shim.dart';
 import 'package:superapp_platform/features/debug_center/data/debug_log_repository.dart';
-import 'package:superapp_platform/features/device/data/mock_device_adapter.dart';
+import 'package:superapp_platform/features/device/data/device_adapter_impl.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
 import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
-import 'package:superapp_platform/features/permissions/data/mock_permission_repository.dart';
-import 'package:superapp_platform/features/user_profile/data/mock_user_repository.dart';
+import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
+import 'package:superapp_platform/features/user_profile/data/user_repository_impl.dart';
 
 void main() {
   group('NativeActionDispatcher Tests', () {
-    late MockAuthRepository authRepo;
-    late MockAuthCodeService authCodeService;
-    late MockTokenService tokenService;
-    late MockUserRepository userRepo;
-    late MockDeviceAdapter deviceAdapter;
-    late MockPermissionRepository permissionRepo;
+    late AuthRepositoryImpl authRepo;
+    late AuthCodeServiceShim authCodeService;
+    late TokenServiceShim tokenService;
+    late UserRepositoryImpl userRepo;
+    late DeviceAdapterImpl deviceAdapter;
+    late PermissionRepositoryImpl permissionRepo;
     late DebugLogRepository debugLogRepo;
     late NativeActionDispatcher dispatcher;
 
@@ -35,11 +35,11 @@ void main() {
 
     setUp(() {
       authRepo = TestAuthRepository();
-      authCodeService = MockAuthCodeService();
-      tokenService = MockTokenService(authCodeService: authCodeService);
-      userRepo = MockUserRepository(authRepository: authRepo);
-      deviceAdapter = MockDeviceAdapter();
-      permissionRepo = MockPermissionRepository();
+      authCodeService = AuthCodeServiceShim();
+      tokenService = TokenServiceShim(authCodeService: authCodeService);
+      userRepo = UserRepositoryImpl(authRepository: authRepo);
+      deviceAdapter = DeviceAdapterImpl();
+      permissionRepo = PermissionRepositoryImpl();
       debugLogRepo = DebugLogRepository();
 
       dispatcher = NativeActionDispatcher(
