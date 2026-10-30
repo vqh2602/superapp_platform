@@ -1,5 +1,5 @@
 /// Backend user representation for the Super App platform.
-class MockUser {
+class PlatformUser {
   final String id;
   final String name;
   final String phone;
@@ -7,7 +7,7 @@ class MockUser {
   final String email;
   final String? avatarUrl;
 
-  const MockUser({
+  const PlatformUser({
     required this.id,
     required this.name,
     required this.phone,
@@ -16,8 +16,8 @@ class MockUser {
     this.avatarUrl,
   });
 
-  factory MockUser.fromBackendJson(Map<String, dynamic> json) {
-    return MockUser(
+  factory PlatformUser.fromBackendJson(Map<String, dynamic> json) {
+    return PlatformUser(
       id: json['id'] as String? ?? '',
       name: (json['displayName'] ?? json['name'] ?? '') as String,
       phone: (json['phone'] ?? '') as String,
@@ -44,3 +44,5 @@ class MockUser {
     'avatarUrl': avatarUrl,
   };
 }
+
+typedef MockUser = PlatformUser;

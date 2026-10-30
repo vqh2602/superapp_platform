@@ -1,0 +1,31 @@
+{
+  "manifestVersion": 1,
+  "appId": "flutter_scanner",
+  "name": "QR & Barcode Scanner (Flutter Web)",
+  "description": "Mini App viết bằng Flutter Web: Quét mã QR, mã vạch sản phẩm thông qua SuperApp Native Bridge",
+  "category": "Utilities",
+  "version": "1.0.5",
+  "runtimeType": "web",
+  "entry": "dist/index.html",
+  "icon": "icon.png",
+  "permissions": [
+    "media.scanQRCode",
+    "device.scanQRCode",
+    "scanQr",
+    "scanBarcode",
+    "device.scanBarcode",
+    "getPhoto",
+    "chooseImage",
+    "showToast",
+    "vibrate",
+    "copyToClipboard",
+    "navigation.close",
+    "navigation.openExternalBrowser",
+    "getNetworkInfo",
+    "getBatteryInfo"
+  ],
+  "developerName": "Flutter SuperApp Platform Team",
+  "supportEmail": "developer@superapp.vn",
+  "website": "https://superapp.vn",
+  "themeColor": "#0068FF"
+}

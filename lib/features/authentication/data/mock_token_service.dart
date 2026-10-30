@@ -3,9 +3,9 @@ import '../domain/repositories/token_service.dart';
 import 'mock_auth_code_service.dart';
 
 /// Compatibility shim. This class never generates or validates local tokens.
-class MockTokenService implements TokenService {
+class TokenServiceShim implements TokenService {
   final MockAuthCodeService authCodeService;
-  MockTokenService({required this.authCodeService});
+  TokenServiceShim({required this.authCodeService});
   @override
   Future<MiniAppTokenResult> exchangeCode({
     required String authCode,
@@ -22,3 +22,5 @@ class MockTokenService implements TokenService {
   void revokeToken(String token) {}
   void reset() {}
 }
+
+typedef MockTokenService = TokenServiceShim;

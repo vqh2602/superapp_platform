@@ -559,6 +559,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         case 'sdk_playground':
           brandColor = const Color(0xFF2563EB);
           break;
+        case 'flutter_scanner':
+          brandColor = const Color(0xFF0068FF);
+          break;
         case 'free_fire':
           brandColor = const Color(0xFFF59E0B);
           break;
@@ -971,6 +974,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       fallbackIcon = Icons.coffee_rounded;
     } else if (iconName == 'code' || iconName == 'terminal' || appId == 'sdk_playground') {
       fallbackIcon = Icons.code_rounded;
+    } else if (iconName == 'qr_code_scanner' || iconName == 'scanner' || appId == 'flutter_scanner') {
+      fallbackIcon = Icons.qr_code_scanner_rounded;
     } else if (iconName == 'utilities' || appId == 'viettel_tammi') {
       fallbackIcon = Icons.cell_tower_rounded;
     } else if (iconName == 'music' || appId == 'tiktok') {

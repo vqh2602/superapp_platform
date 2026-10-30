@@ -31,7 +31,7 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedExistingApps();
   }
 
-  private getMiniAppBundle(appId: string): { html: Buffer; icon: Buffer } {
+  private getMiniAppBundle(appId: string): { html: Buffer; icon: Buffer; allFiles: Map<string, Buffer> } {
     const candidates = [
       path.resolve(process.cwd(), 'seed-bundles', appId),
       path.resolve(process.cwd(), '../mini_apps', appId),
@@ -41,10 +41,28 @@ export class SeedService implements OnApplicationBootstrap {
     for (const dir of candidates) {
       const htmlPath = path.join(dir, 'dist/index.html');
       const iconPath = path.join(dir, 'icon.png');
+      const distDir = path.join(dir, 'dist');
       if (fs.existsSync(htmlPath)) {
         const html = fs.readFileSync(htmlPath);
         const icon = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : testIcon;
-        return { html, icon };
+        const allFiles = new Map<string, Buffer>();
+
+        const collectFiles = (curDir: string, relPrefix: string = '') => {
+          if (!fs.existsSync(curDir)) return;
+          const entries = fs.readdirSync(curDir, { withFileTypes: true });
+          for (const ent of entries) {
+            const full = path.join(curDir, ent.name);
+            const rel = relPrefix ? `${relPrefix}/${ent.name}` : ent.name;
+            if (ent.isDirectory()) {
+              collectFiles(full, rel);
+            } else if (ent.isFile()) {
+              allFiles.set(`dist/${rel}`, fs.readFileSync(full));
+            }
+          }
+        };
+
+        collectFiles(distDir);
+        return { html, icon, allFiles };
       }
     }
     throw new Error(`Missing built bundle for ${appId}. Run npm run build:miniapps before deploying the backend.`);
@@ -67,14 +85,21 @@ export class SeedService implements OnApplicationBootstrap {
       const files = new Map<string, Buffer>();
       files.set('app.json', Buffer.from(JSON.stringify(manifest, null, 2)));
       files.set('icon.png', bundle.icon);
-      files.set('dist/index.html', bundle.html);
+      for (const [filePath, content] of bundle.allFiles) {
+        files.set(filePath, content);
+      }
 
       const checksum = createHash('sha256').update(bundle.html).digest('hex');
+      let totalSize = bundle.icon.length;
+      for (const content of bundle.allFiles.values()) {
+        totalSize += content.length;
+      }
+
       const validatedPkg: ValidatedPackage = {
         manifest,
         files,
         checksum,
-        size: bundle.html.length + bundle.icon.length,
+        size: totalSize,
       };
 
       const packageKey = await this.packageService.store(validatedPkg);
@@ -381,6 +406,95 @@ export class SeedService implements OnApplicationBootstrap {
         await this.versionRepo.save(ver);
       } else if (storePkgKey && !ver.packageKey) {
         ver.packageKey = storePkgKey;
+        await this.versionRepo.save(ver);
+      }
+    }
+
+    // 2b. Seed Flutter Web Scanner (Native Bridge QR & Barcode Scanner)
+    const scannerManifest = {
+      manifestVersion: 1,
+      appId: 'flutter_scanner',
+      name: 'QR & Barcode Scanner (Flutter Web)',
+      description: 'Mini App quét mã QR và mã vạch viết bằng Flutter Web sử dụng SuperApp Native Bridge',
+      category: 'Utilities',
+      version: targetVersion,
+      runtimeType: MiniAppRuntimeType.WEB,
+      entry: 'dist/index.html',
+      icon: 'icon.png',
+      permissions: [
+        'media.scanQRCode',
+        'device.scanQRCode',
+        'scanQr',
+        'scanBarcode',
+        'device.scanBarcode',
+        'getPhoto',
+        'chooseImage',
+        'showToast',
+        'vibrate',
+        'copyToClipboard',
+        'navigation.close',
+        'navigation.openExternalBrowser',
+        'getNetworkInfo',
+        'getBatteryInfo',
+      ],
+    };
+    const scannerPkgKey = await this.ensurePackageStored('flutter_scanner', targetVersion, scannerManifest);
+
+    let existingScanner = await this.appRepo.findOne({ where: { id: 'flutter_scanner' } });
+    if (!existingScanner) {
+      this.logger.log(`Seeding existing Mini App: flutter_scanner (flutter web v${targetVersion})...`);
+      existingScanner = this.appRepo.create({
+        id: 'flutter_scanner',
+        name: 'QR & Barcode Scanner (Flutter)',
+        description: 'Mini App quét mã QR & mã vạch viết bằng Flutter Web thông qua SuperApp Native Bridge',
+        icon: 'qr_code_scanner',
+        category: 'Utilities',
+        tenantId: 'system_core',
+        runtimeType: MiniAppRuntimeType.WEB,
+        status: MiniAppStatus.PUBLISHED,
+        activePublishedVersion: targetVersion,
+        entryUrl: `/api/v1/miniapps/flutter_scanner/${targetVersion}/dist/index.html`,
+        isAsset: false,
+        capabilities: scannerManifest.permissions,
+      });
+      await this.appRepo.save(existingScanner);
+
+      const ver = this.versionRepo.create({
+        appId: 'flutter_scanner',
+        version: targetVersion,
+        schemaVersion: 1,
+        status: MiniAppStatus.PUBLISHED,
+        entryUrl: `/api/v1/miniapps/flutter_scanner/${targetVersion}/dist/index.html`,
+        capabilities: existingScanner.capabilities,
+        packageKey: scannerPkgKey,
+        manifest: scannerManifest,
+        reviewNotes: `Seeded system flutter scanner app v${targetVersion}`,
+        publishedAt: new Date(),
+      });
+      await this.versionRepo.save(ver);
+    } else {
+      existingScanner.activePublishedVersion = targetVersion;
+      existingScanner.entryUrl = `/api/v1/miniapps/flutter_scanner/${targetVersion}/dist/index.html`;
+      existingScanner.isAsset = false;
+      await this.appRepo.save(existingScanner);
+
+      let ver = await this.versionRepo.findOne({ where: { appId: 'flutter_scanner', version: targetVersion } });
+      if (!ver) {
+        ver = this.versionRepo.create({
+          appId: 'flutter_scanner',
+          version: targetVersion,
+          schemaVersion: 1,
+          status: MiniAppStatus.PUBLISHED,
+          entryUrl: `/api/v1/miniapps/flutter_scanner/${targetVersion}/dist/index.html`,
+          capabilities: existingScanner.capabilities,
+          packageKey: scannerPkgKey,
+          manifest: scannerManifest,
+          reviewNotes: `Seeded system flutter scanner app v${targetVersion}`,
+          publishedAt: new Date(),
+        });
+        await this.versionRepo.save(ver);
+      } else if (scannerPkgKey && !ver.packageKey) {
+        ver.packageKey = scannerPkgKey;
         await this.versionRepo.save(ver);
       }
     }

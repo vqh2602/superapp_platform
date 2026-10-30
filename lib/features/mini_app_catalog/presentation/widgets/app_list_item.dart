@@ -141,6 +141,10 @@ class AppListItem extends StatelessWidget {
         bgColor = const Color(0xFF2563EB);
         iconData = Icons.terminal_rounded;
         break;
+      case 'flutter_scanner':
+        bgColor = const Color(0xFF02569B);
+        iconData = Icons.qr_code_scanner_rounded;
+        break;
       case 'free_fire':
         bgColor = const Color(0xFFF59E0B);
         iconData = Icons.sports_esports_rounded;

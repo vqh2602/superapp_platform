@@ -114,7 +114,6 @@ class UserRepositoryImpl {
         return response.statusCode == 200;
       } catch (e) {
         rethrow;
-        return false;
       }
     }
 

@@ -4,8 +4,8 @@
  * 
  * Automates:
  * 1. Building the official TypeScript SDK monorepo (mini_app_sdk)
- * 2. Building each Mini App in mini_apps/ (sdk_playground, schema_runtime, sample_store)
- * 3. Packaging into SuperApp Standard Packages (app.json + icon.png + dist/index.html)
+ * 2. Building each Mini App in mini_apps/ (sdk_playground, schema_runtime, sample_store, flutter_scanner)
+ * 3. Packaging into SuperApp Standard Packages (app.json + icon.png + dist/*)
  * 4. Deploying to Backend storage and/or publishing via Registry API
  */
 
@@ -26,6 +26,23 @@ const { ZipFile } = require(yazlPath);
 
 function log(emoji, msg) {
   console.log(`${emoji}  ${msg}`);
+}
+
+function getFilesRecursively(dir, base = '') {
+  let results = [];
+  if (!fs.existsSync(dir)) return results;
+  const list = fs.readdirSync(dir);
+  for (const file of list) {
+    const fullPath = path.join(dir, file);
+    const relPath = base ? `${base}/${file}` : file;
+    const stat = fs.statSync(fullPath);
+    if (stat && stat.isDirectory()) {
+      results = results.concat(getFilesRecursively(fullPath, relPath));
+    } else {
+      results.push({ fullPath, relPath });
+    }
+  }
+  return results;
 }
 
 async function run() {
@@ -58,6 +75,7 @@ async function run() {
     { id: 'sdk_playground', dir: path.join(MINI_APPS_DIR, 'sdk_playground'), cmd: 'npm run build' },
     { id: 'schema_runtime', dir: path.join(MINI_APPS_DIR, 'schema_runtime'), cmd: 'npm run build' },
     { id: 'sample_store', dir: path.join(MINI_APPS_DIR, 'sample_store'), cmd: 'npm run build' },
+    { id: 'flutter_scanner', dir: path.join(MINI_APPS_DIR, 'flutter_scanner'), cmd: 'npm run build' },
   ];
 
   for (const app of appsToBuild) {
@@ -80,7 +98,8 @@ async function run() {
   for (const app of appsToBuild) {
     const appDir = app.dir;
     const manifestPath = path.join(appDir, 'app.json');
-    const distIndexPath = path.join(appDir, 'dist', 'index.html');
+    const distDir = path.join(appDir, 'dist');
+    const distIndexPath = path.join(distDir, 'index.html');
     const iconPath = path.join(appDir, 'icon.png');
 
     if (!fs.existsSync(manifestPath) || !fs.existsSync(distIndexPath) || !fs.existsSync(iconPath)) {
@@ -92,11 +111,15 @@ async function run() {
     const iconBuffer = fs.readFileSync(iconPath);
     const manifestBuffer = fs.readFileSync(manifestPath);
 
-    // Create zip bundle
+    // Create zip bundle containing all files in dist/
     const zip = new ZipFile();
     zip.addBuffer(manifestBuffer, 'app.json');
     zip.addBuffer(iconBuffer, 'icon.png');
-    zip.addBuffer(htmlBuffer, 'dist/index.html');
+
+    const distFiles = getFilesRecursively(distDir);
+    for (const df of distFiles) {
+      zip.addFile(df.fullPath, `dist/${df.relPath}`);
+    }
 
     const chunks = [];
     const zipBuffer = await new Promise((resolve, reject) => {
@@ -110,17 +133,17 @@ async function run() {
 
     // Store in backend storage under appId-version deterministic or standard folder
     const targetDir = path.join(BACKEND_STORAGE_DIR, `${app.id}-${manifest.version}`);
-    fs.mkdirSync(path.join(targetDir, 'dist'), { recursive: true });
+    fs.mkdirSync(targetDir, { recursive: true });
     fs.writeFileSync(path.join(targetDir, 'app.json'), manifestBuffer);
     fs.writeFileSync(path.join(targetDir, 'icon.png'), iconBuffer);
-    fs.writeFileSync(path.join(targetDir, 'dist', 'index.html'), htmlBuffer);
+    fs.cpSync(distDir, path.join(targetDir, 'dist'), { recursive: true });
 
     // Ship seed bundles separately from mutable uploaded package storage.
     const seedDir = path.join(BACKEND_SEED_DIR, app.id);
-    fs.mkdirSync(path.join(seedDir, 'dist'), { recursive: true });
+    fs.mkdirSync(seedDir, { recursive: true });
     fs.writeFileSync(path.join(seedDir, 'app.json'), manifestBuffer);
     fs.writeFileSync(path.join(seedDir, 'icon.png'), iconBuffer);
-    fs.writeFileSync(path.join(seedDir, 'dist', 'index.html'), htmlBuffer);
+    fs.cpSync(distDir, path.join(seedDir, 'dist'), { recursive: true });
 
     // Also write export zip
     const zipOut = path.join(targetDir, `${app.id}-${manifest.version}.zip`);

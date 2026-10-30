@@ -1,13 +1,14 @@
-import { BridgeTransport } from '../bridgeTransport';
+import { ITransport } from '../../transport/index.js';
+import { ContactsResult, DeviceInfo, NetworkInfo } from '../types/index.js';
 
 export class SystemModule {
-  constructor(private transport: BridgeTransport) {}
+  constructor(private transport: ITransport) {}
 
   /**
    * Lấy thông tin kết nối mạng hiện tại (wifi, cellular, none)
    */
-  public async getNetworkInfo(): Promise<import('@vqh2602/mini-app-sdk').NetworkInfo> {
-    return this.transport.invoke('getNetworkInfo');
+  public async getNetworkInfo(): Promise<NetworkInfo> {
+    return this.transport.invoke<NetworkInfo>('getNetworkInfo');
   }
 
   /**
@@ -39,16 +40,8 @@ export class SystemModule {
   /**
    * Lấy thông tin phần cứng và hệ điều hành thiết bị
    */
-  public async getSystemInfo(): Promise<{
-    platform: string;
-    osVersion: string;
-    deviceModel: string;
-    screenWidth: number;
-    screenHeight: number;
-    pixelRatio: number;
-    brand?: string;
-  }> {
-    return this.transport.invoke('getSystemInfo');
+  public async getSystemInfo(): Promise<DeviceInfo> {
+    return this.transport.invoke<DeviceInfo>('getSystemInfo');
   }
 
   /**
@@ -79,8 +72,8 @@ export class SystemModule {
   /**
    * Lấy danh sách danh bạ máy (yêu cầu quyền 'contacts')
    */
-  public async getContacts(): Promise<import('@vqh2602/mini-app-sdk').ContactsResult> {
-    return this.transport.invoke('getContacts');
+  public async getContacts(options: { query?: string } = {}): Promise<ContactsResult> {
+    return this.transport.invoke<ContactsResult>('getContacts', options);
   }
 
   /**

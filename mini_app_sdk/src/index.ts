@@ -1,7 +1,7 @@
-import { superApp, SuperAppSDK } from './core/index.js';
+import { superApp, authBackend, SuperAppSDK } from './core/index.js';
 
 export default superApp;
-export { superApp, SuperAppSDK };
+export { superApp, authBackend, SuperAppSDK };
 
 // Re-export all core modules and types
 export * from './core/index.js';

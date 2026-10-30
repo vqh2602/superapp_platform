@@ -142,6 +142,8 @@ class SecureStorageRepositoryImpl {
 }
 
 final mockSecureStorageRepositoryProvider =
-    Provider<MockSecureStorageRepository>(
-      (ref) => MockSecureStorageRepository(),
+    Provider<SecureStorageRepositoryImpl>(
+      (ref) => SecureStorageRepositoryImpl(),
     );
+
+typedef MockSecureStorageRepository = SecureStorageRepositoryImpl;

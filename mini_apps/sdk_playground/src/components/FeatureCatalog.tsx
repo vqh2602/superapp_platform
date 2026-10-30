@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSDK, RunnerConfig } from '../context/SDKContext';
-import { superApp, authBackend } from '../sdk';
+import { superApp, authBackend } from '@vqh2602/mini-app-sdk';
 import { FeatureItem } from './FeatureItem';
 import {
   Key,
@@ -485,7 +485,7 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => {
       const res = await authBackend.exchangeCode(p.authCode);
       setAccessToken(res.accessToken);
-      setRefreshToken(res.refreshToken);
+      setRefreshToken(res.refreshToken ?? null);
       return res;
     },
   };
@@ -503,7 +503,7 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => {
       const res = await authBackend.refreshToken(p.refreshToken);
       setAccessToken(res.accessToken);
-      setRefreshToken(res.refreshToken);
+      setRefreshToken(res.refreshToken ?? null);
       return res;
     },
   };

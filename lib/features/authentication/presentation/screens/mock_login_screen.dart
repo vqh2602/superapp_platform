@@ -9,14 +9,14 @@ import '../../../../core/config/endpoint_config.dart';
 import '../../../../features/mini_app_catalog/data/mini_app_repository.dart';
 import '../controllers/auth_controller.dart';
 
-class MockLoginScreen extends ConsumerStatefulWidget {
-  const MockLoginScreen({super.key});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  ConsumerState<MockLoginScreen> createState() => _MockLoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _endpointController;
   final TextEditingController _emailController = TextEditingController();
@@ -540,3 +540,5 @@ class _MockLoginScreenState extends ConsumerState<MockLoginScreen> {
     );
   }
 }
+
+typedef MockLoginScreen = LoginScreen;

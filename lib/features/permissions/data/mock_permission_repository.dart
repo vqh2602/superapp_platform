@@ -8,7 +8,7 @@ import '../../../../core/errors/bridge_error.dart';
 import '../../authentication/data/mock_auth_repository.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 
-class MockPermissionRepository {
+class PermissionRepositoryImpl {
   final http.Client? httpClient;
   final String? usersUrl;
   final MockAuthRepository? authRepo;
@@ -23,7 +23,7 @@ class MockPermissionRepository {
   String? _userId;
   int _generation = 0;
 
-  MockPermissionRepository({this.httpClient, this.usersUrl, this.authRepo}) {
+  PermissionRepositoryImpl({this.httpClient, this.usersUrl, this.authRepo}) {
     _userId = authRepo?.currentUser?.id;
     _sessionSubscription = authRepo?.sessionStream.listen((session) {
       _useUser(session?.user.id);
@@ -245,15 +245,17 @@ class MockPermissionRepository {
   }
 }
 
-final mockPermissionRepositoryProvider = Provider<MockPermissionRepository>((
+final mockPermissionRepositoryProvider = Provider<PermissionRepositoryImpl>((
   ref,
 ) {
   final endpoint = ref.watch(backendEndpointProvider);
   final authRepo = ref.watch(mockAuthRepositoryProvider);
-  final repository = MockPermissionRepository(
+  final repository = PermissionRepositoryImpl(
     usersUrl: endpoint.usersUrl,
     authRepo: authRepo,
   );
   ref.onDispose(repository.dispose);
   return repository;
 });
+
+typedef MockPermissionRepository = PermissionRepositoryImpl;

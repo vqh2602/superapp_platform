@@ -26,6 +26,13 @@ export interface AccessTokenResult {
   expiresIn: number;
 }
 
+export interface MiniAppTokenResult {
+  accessToken: string;
+  refreshToken?: string | null;
+  expiresIn: number;
+  tokenType: string;
+}
+
 export interface BatteryInfo {
   level: number;
   status: string;
@@ -149,3 +156,20 @@ export interface MinimizeAppResult {
   appId: string;
   timestamp?: number;
 }
+
+export interface BridgeLogRecord {
+  id: string;
+  method: string;
+  action?: string;
+  params?: any;
+  payload?: any;
+  response?: any;
+  result?: any;
+  error?: any;
+  timestamp: string;
+  executionTimeMs?: number;
+  durationMs?: number;
+  status: 'pending' | 'success' | 'error';
+}
+
+export type MockOrder = import('../modules/payment.js').PaymentOrder;

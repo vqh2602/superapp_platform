@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSDK } from '../context/SDKContext';
-import { superApp } from '../sdk';
+import { superApp } from '@vqh2602/mini-app-sdk';
 import { Bug, Trash2, Copy, Check, Clock, AlertTriangle, RefreshCcw } from 'lucide-react';
 
 export const DebugCenter: React.FC = () => {

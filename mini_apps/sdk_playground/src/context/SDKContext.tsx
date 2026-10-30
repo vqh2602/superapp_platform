@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { superApp, BridgeLogRecord } from '../sdk';
+import { superApp, BridgeLogRecord } from '@vqh2602/mini-app-sdk';
 
 export interface EventLogItem {
   id: string;

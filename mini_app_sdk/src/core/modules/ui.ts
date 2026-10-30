@@ -3,6 +3,7 @@ import {
   AlertOptions,
   ConfigAppViewOptions,
   ConfirmOptions,
+  MinimizeAppResult,
   NotificationResult,
   RequestSendNotificationOptions,
   SetNavigationBarColorOptions,
@@ -15,8 +16,8 @@ export class UIModule {
   /**
    * Hiển thị thông báo Toast nhanh
    */
-  public async showToast(options: ToastOptions | string): Promise<any> {
-    const payload = typeof options === 'string' ? { message: options } : options;
+  public async showToast(options: ToastOptions | string, duration?: number): Promise<any> {
+    const payload = typeof options === 'string' ? { message: options, duration } : options;
     return this.transport.invoke('ui.showToast', payload);
   }
 
@@ -44,10 +45,51 @@ export class UIModule {
 
   /**
    * Cấu hình hợp nhất giao diện: Ẩn/hiện, tuỳ chỉnh màu sắc, kiểu hiển thị của status bar, action bar, bottom navigation
-   * (Thay thế cho setStatusBarStyle, setStatusBarColor, setNavigationBarColor)
    */
   public async configAppView(options: ConfigAppViewOptions): Promise<any> {
     return this.transport.invoke('ui.configAppView', options);
+  }
+
+  /**
+   * Rung phản hồi xúc giác
+   */
+  public async vibrate(style: 'light' | 'medium' | 'heavy' = 'light'): Promise<any> {
+    return this.transport.invoke('vibrate', { style });
+  }
+
+  /**
+   * Sao chép văn bản vào bộ nhớ tạm
+   */
+  public async copyToClipboard(text: string): Promise<{ success: boolean; text: string }> {
+    return this.transport.invoke('copyToClipboard', { text });
+  }
+
+  /**
+   * Đặt độ sáng màn hình (0.0 - 1.0)
+   */
+  public async setBrightness(brightness: number): Promise<{ success: boolean; brightness: number }> {
+    return this.transport.invoke('setBrightness', { brightness });
+  }
+
+  /**
+   * Hiển thị menu hệ thống của Mini App
+   */
+  public async showMiniappMenu(): Promise<any> {
+    return this.transport.invoke('showMiniappMenu');
+  }
+
+  /**
+   * Thu nhỏ Mini App vào dạng floating window / background dock
+   */
+  public async minimizeApp(): Promise<MinimizeAppResult> {
+    return this.transport.invoke<MinimizeAppResult>('ui.minimizeApp');
+  }
+
+  /**
+   * Đóng Mini App và quay lại màn hình SuperApp chính
+   */
+  public async closeApp(): Promise<any> {
+    return this.transport.invoke('closeApp');
   }
 
   /**

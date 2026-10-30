@@ -456,6 +456,7 @@ class HomeTab extends ConsumerWidget {
 
   Widget _buildQuickServices(BuildContext context) {
     final services = [
+      {'name': 'Quét QR', 'icon': Icons.qr_code_scanner_rounded, 'color': const Color(0xFF0068FF), 'appId': 'flutter_scanner'},
       {'name': 'Đồ uống', 'icon': Icons.coffee_rounded, 'color': const Color(0xFFF59E0B), 'appId': 'sample_store'},
       {'name': 'Mua sắm', 'icon': Icons.shopping_bag_rounded, 'color': const Color(0xFFEE4D2D), 'appId': 'shopee'},
       {'name': 'Playground', 'icon': Icons.code_rounded, 'color': const Color(0xFF2563EB), 'appId': 'sdk_playground'},
@@ -463,7 +464,6 @@ class HomeTab extends ConsumerWidget {
       {'name': 'Video ngắn', 'icon': Icons.music_note_rounded, 'color': const Color(0xFF010101), 'appId': 'tiktok'},
       {'name': 'Trò chơi', 'icon': Icons.sports_esports_rounded, 'color': const Color(0xFF10B981), 'appId': 'free_fire'},
       {'name': 'Chụp ảnh', 'icon': Icons.camera_alt_rounded, 'color': const Color(0xFF8B5CF6), 'appId': 'capcut'},
-      {'name': 'Mạng XH', 'icon': Icons.forum_rounded, 'color': const Color(0xFF0084FF), 'appId': 'messenger'},
     ];
 
     return Padding(
