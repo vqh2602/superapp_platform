@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class DebugModeNotifier extends StateNotifier<bool> {
+class DebugModeNotifier extends Notifier<bool> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String _storageKey = 'superapp_debug_mode_enabled';
 
-  DebugModeNotifier() : super(false) {
+  @override
+  bool build() {
     _loadState();
+    return false;
   }
 
   Future<void> _loadState() async {
@@ -42,9 +44,8 @@ class DebugModeNotifier extends StateNotifier<bool> {
   }
 }
 
-final debugModeNotifierProvider = StateNotifierProvider<DebugModeNotifier, bool>((ref) {
-  return DebugModeNotifier();
-});
+final debugModeNotifierProvider =
+    NotifierProvider<DebugModeNotifier, bool>(DebugModeNotifier.new);
 
 /// Returns true if manual debug mode is enabled OR app is running in Flutter debug mode (kDebugMode)
 final isDebugModeEnabledProvider = Provider<bool>((ref) {

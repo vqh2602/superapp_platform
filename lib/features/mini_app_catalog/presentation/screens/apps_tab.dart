@@ -47,7 +47,7 @@ class _AppsTabState extends ConsumerState<AppsTab>
   @override
   Widget build(BuildContext context) {
     final catalogAsync = ref.watch(dynamicCatalogProvider);
-    final allApps = catalogAsync.valueOrNull ?? [];
+    final allApps = catalogAsync.value ?? [];
 
     return Scaffold(
       backgroundColor: Colors.white,

@@ -55,14 +55,17 @@ class AuthState {
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepositoryImpl _repository;
+class AuthNotifier extends Notifier<AuthState> {
+  AuthRepositoryImpl get _repository => ref.read(authRepositoryProvider);
 
-  AuthNotifier(this._repository) : super(const AuthState()) {
-    // Listen to repository stream
-    _repository.sessionStream.listen((session) {
+  @override
+  AuthState build() {
+    final repo = ref.watch(authRepositoryProvider);
+    final sub = repo.sessionStream.listen((session) {
       state = state.copyWith(session: session, clearSession: session == null);
     });
+    ref.onDispose(sub.cancel);
+    return const AuthState();
   }
 
   /// Login with email and password to backend
@@ -112,7 +115,5 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repo = ref.watch(authRepositoryProvider);
-  return AuthNotifier(repo);
-});
+final authStateProvider =
+    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

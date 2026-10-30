@@ -35,7 +35,7 @@ void main() {
   });
   test('contacts return actual fields and all phone numbers from the device adapter', () async {
     final permissions = PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true);
-    final c = Contact(id: 'native-id', displayName: 'Device Contact', phones: [Phone('+84111'), Phone('+84222')], emails: [Email('contact@example.test')]);
+    final c = Contact(id: 'native-id', displayName: 'Device Contact', phones: [Phone(number: '+84111'), Phone(number: '+84222')], emails: [Email(address: 'contact@example.test')]);
     final handler = GetContactsHandler(permissionRepo: permissions, requestAccess: () async => true, readContacts: () async => [c]);
     final result = await handler.handle({}, context);
     expect(result['total'], 1);

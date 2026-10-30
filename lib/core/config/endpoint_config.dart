@@ -56,15 +56,18 @@ class EndpointConfig {
   int get hashCode => baseUrl.hashCode;
 }
 
-class BackendEndpointNotifier extends StateNotifier<EndpointConfig> {
+class BackendEndpointNotifier extends Notifier<EndpointConfig> {
   final FlutterSecureStorage _storage;
   static const String storageKey = 'config_backend_endpoint';
   static const String defaultEndpoint = 'http://localhost:3000';
 
   BackendEndpointNotifier([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage(),
-        super(EndpointConfig(baseUrl: EndpointConfig.normalize(defaultEndpoint))) {
+      : _storage = storage ?? const FlutterSecureStorage();
+
+  @override
+  EndpointConfig build() {
     _loadStoredEndpoint();
+    return EndpointConfig(baseUrl: EndpointConfig.normalize(defaultEndpoint));
   }
 
   Future<void> _loadStoredEndpoint() async {
@@ -88,6 +91,6 @@ class BackendEndpointNotifier extends StateNotifier<EndpointConfig> {
 }
 
 final backendEndpointProvider =
-    StateNotifierProvider<BackendEndpointNotifier, EndpointConfig>((ref) {
-  return BackendEndpointNotifier();
-});
+    NotifierProvider<BackendEndpointNotifier, EndpointConfig>(
+  BackendEndpointNotifier.new,
+);

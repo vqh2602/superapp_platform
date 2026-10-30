@@ -1,12 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final favoriteAppsProvider =
-    StateNotifierProvider<FavoriteAppsNotifier, Set<String>>((ref) {
-  return FavoriteAppsNotifier();
-});
-
-class FavoriteAppsNotifier extends StateNotifier<Set<String>> {
-  FavoriteAppsNotifier() : super({'shopee', 'coffee_shop'});
+class FavoriteAppsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {'shopee', 'coffee_shop'};
 
   bool isFavorite(String appId) => state.contains(appId);
 
@@ -30,3 +26,8 @@ class FavoriteAppsNotifier extends StateNotifier<Set<String>> {
     }
   }
 }
+
+final favoriteAppsProvider =
+    NotifierProvider<FavoriteAppsNotifier, Set<String>>(
+  FavoriteAppsNotifier.new,
+);

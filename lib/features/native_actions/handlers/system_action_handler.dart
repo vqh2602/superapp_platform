@@ -275,10 +275,13 @@ class GetContactsHandler implements NativeActionHandler {
     Future<List<Contact>> Function()? readContacts,
   }) : requestAccess =
            requestAccess ??
-           (() => FlutterContacts.requestPermission(readonly: true)),
+           (() async {
+             final status = await FlutterContacts.permissions.request(PermissionType.read);
+             return status == PermissionStatus.granted || status == PermissionStatus.limited;
+           }),
        readContacts =
            readContacts ??
-           (() => FlutterContacts.getContacts(withProperties: true));
+           (() => FlutterContacts.getAll(properties: ContactProperties.allProperties));
   @override
   String get actionName => 'contact.getContacts';
   @override
@@ -302,7 +305,7 @@ class GetContactsHandler implements NativeActionHandler {
         .where(
           (c) =>
               query.isEmpty ||
-              c.displayName.toLowerCase().contains(query) ||
+              (c.displayName?.toLowerCase().contains(query) ?? false) ||
               c.phones.any((p) => p.number.contains(query)) ||
               c.emails.any((e) => e.address.toLowerCase().contains(query)),
         )
@@ -314,7 +317,7 @@ class GetContactsHandler implements NativeActionHandler {
             'email': c.emails.firstOrNull?.address,
             'phoneNumbers': c.phones.map((p) => p.number).toList(),
             'emails': c.emails.map((e) => e.address).toList(),
-            'department': c.organizations.firstOrNull?.department,
+            'department': c.organizations.firstOrNull?.departmentName,
           },
         )
         .toList();

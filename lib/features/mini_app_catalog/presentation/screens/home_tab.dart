@@ -23,7 +23,7 @@ class HomeTab extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.currentUser;
     final catalogAsync = ref.watch(dynamicCatalogProvider);
-    final allApps = catalogAsync.valueOrNull ?? [];
+    final allApps = catalogAsync.value ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

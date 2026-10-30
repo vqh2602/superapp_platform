@@ -173,10 +173,32 @@ final miniAppRepositoryProvider = Provider<MiniAppRepository>((ref) {
 });
 
 /// Selected category filter state
-final selectedCategoryProvider = StateProvider<String>((ref) => 'All');
+class SelectedCategoryNotifier extends Notifier<String> {
+  @override
+  String build() => 'All';
+
+  @override
+  set state(String value) => super.state = value;
+}
+
+final selectedCategoryProvider =
+    NotifierProvider<SelectedCategoryNotifier, String>(
+  SelectedCategoryNotifier.new,
+);
 
 /// Search query filter state
-final catalogSearchQueryProvider = StateProvider<String>((ref) => '');
+class CatalogSearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+
+final catalogSearchQueryProvider =
+    NotifierProvider<CatalogSearchQueryNotifier, String>(
+  CatalogSearchQueryNotifier.new,
+);
 
 /// Dynamic catalog query provider (FutureProvider for automatic async state & refresh)
 final dynamicCatalogProvider =

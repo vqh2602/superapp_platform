@@ -51,7 +51,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final catalogAsync = ref.watch(dynamicCatalogProvider);
-    final allApps = catalogAsync.valueOrNull ?? [];
+    final allApps = catalogAsync.value ?? [];
 
     final filteredApps = _currentQuery.trim().isEmpty
         ? <MiniAppManifest>[]
