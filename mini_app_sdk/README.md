@@ -208,3 +208,9 @@ npm pack --dry-run
 # Xuất bản trực tiếp lên npm
 npm publish --access public
 ```
+
+### Kiểm tra transport và ví dụ
+
+Chạy `npm test` trong `mini_app_sdk` để kiểm tra native callbacks, JS gọi trực tiếp dùng chung bridge, nhiều SDK instance, lifecycle events, simulator, browser mock, bridge được gắn muộn và timeout. SDK giữ nguyên callback registry `_callbacks` của host; không thay global bridge bằng dispatcher riêng. Playground sử dụng transport chính thức cho native và simulator.
+
+Sau khi sửa SDK trong repository, chạy `npm run build:miniapps` từ thư mục gốc để build và đồng bộ SDK vào các ví dụ trước khi deploy backend. Lệnh này không phát hành package lên npm.

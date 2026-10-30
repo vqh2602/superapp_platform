@@ -1,8 +1,8 @@
 import { ITransport } from './transport.interface.js';
-import { NativeBridgeTransport } from './native-transport.js';
+import { NativeBridgeTransport, isNativeBridgeAvailable } from './native-transport.js';
 import { PostMessageTransport } from './postmessage-transport.js';
 import { MockBridgeTransport, MockDispatcher } from './mock-transport.js';
-import { BridgeEventListener, NativeWindowBridge, TransportConfig, TransportType } from './types.js';
+import { BridgeEventListener, TransportConfig, TransportType } from './types.js';
 
 export interface AdaptiveTransportOptions extends TransportConfig {
   mockDispatcher?: MockDispatcher;
@@ -35,9 +35,7 @@ export class AdaptiveBridgeTransport implements ITransport {
   }
 
   public isNativeAvailable(): boolean {
-    if (typeof window === 'undefined') return false;
-    const win = window as unknown as NativeWindowBridge;
-    return !!(win.FlutterBridge?.postMessage || win.SuperAppBridge?.postMessage);
+    return isNativeBridgeAvailable();
   }
 
   public isSimulatorAvailable(): boolean {

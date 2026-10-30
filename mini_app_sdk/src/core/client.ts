@@ -22,7 +22,7 @@ import {
 } from './types/index.js';
 
 export class SuperAppSDK {
-  public readonly version = '1.0.5';
+  public readonly version = '1.0.6';
   public readonly transport: ITransport;
   public readonly mockEngine?: SDKMockEngine;
 

@@ -63,3 +63,6 @@ backend/storage/
 # Keep the small prebuilt release sample
 !examples/miniapps/web-demo/dist/
 !examples/miniapps/web-demo/dist/**
+
+# Generated system Mini App bundles shipped with backend releases
+backend/seed-bundles/

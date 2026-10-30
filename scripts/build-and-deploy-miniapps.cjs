@@ -18,6 +18,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const MINI_APPS_DIR = path.join(ROOT_DIR, 'mini_apps');
 const SDK_DIR = path.join(ROOT_DIR, 'mini_app_sdk');
 const BACKEND_DIR = path.join(ROOT_DIR, 'backend');
+const BACKEND_SEED_DIR = path.join(BACKEND_DIR, 'seed-bundles');
 const BACKEND_STORAGE_DIR = path.join(BACKEND_DIR, 'storage', 'miniapps');
 
 const yazlPath = path.join(BACKEND_DIR, 'node_modules', 'yazl');
@@ -113,6 +114,13 @@ async function run() {
     fs.writeFileSync(path.join(targetDir, 'app.json'), manifestBuffer);
     fs.writeFileSync(path.join(targetDir, 'icon.png'), iconBuffer);
     fs.writeFileSync(path.join(targetDir, 'dist', 'index.html'), htmlBuffer);
+
+    // Ship seed bundles separately from mutable uploaded package storage.
+    const seedDir = path.join(BACKEND_SEED_DIR, app.id);
+    fs.mkdirSync(path.join(seedDir, 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(seedDir, 'app.json'), manifestBuffer);
+    fs.writeFileSync(path.join(seedDir, 'icon.png'), iconBuffer);
+    fs.writeFileSync(path.join(seedDir, 'dist', 'index.html'), htmlBuffer);
 
     // Also write export zip
     const zipOut = path.join(targetDir, `${app.id}-${manifest.version}.zip`);

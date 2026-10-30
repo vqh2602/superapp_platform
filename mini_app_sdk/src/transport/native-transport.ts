@@ -2,8 +2,18 @@ import { ITransport } from './transport.interface.js';
 import { BridgeError, BridgeEventListener, BridgeRequest, BridgeResponse, NativeWindowBridge, TransportConfig, TransportType } from './types.js';
 
 let requestSequence = 1;
+// A forwarding shim is not evidence that a native host is connected.
+const forwardingShims = new WeakSet<Function>();
+export function isNativeBridgeAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  const win = window as unknown as NativeWindowBridge;
+  const send = win.SuperAppBridge?.postMessage;
+  return typeof win.FlutterBridge?.postMessage === 'function' ||
+    (typeof send === 'function' && !forwardingShims.has(send));
+}
 
 export class NativeBridgeTransport implements ITransport {
+  private installedBridges = new WeakSet<object>();
   private appId: string;
   private defaultTimeoutMs: number;
   private debug: boolean;
@@ -22,70 +32,62 @@ export class NativeBridgeTransport implements ITransport {
   }
 
   public isConnected(): boolean {
-    if (typeof window === 'undefined') return false;
-    const win = window as unknown as NativeWindowBridge;
-    return !!(win.FlutterBridge?.postMessage || win.SuperAppBridge?.postMessage);
+    return isNativeBridgeAvailable();
   }
 
   private initNativeGlobalBridge(): void {
     if (typeof window === 'undefined') return;
     const win = window as unknown as NativeWindowBridge;
-
     if (!win.SuperAppBridge) {
-      win.SuperAppBridge = {
-        _callbacks: {},
-        _listeners: {},
-        postMessage: (msg: any) => {
-          if (win.FlutterBridge?.postMessage) {
-            win.FlutterBridge.postMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
-          }
-        },
-        dispatchResponse: (res: BridgeResponse) => {
-          this.handleNativeResponse(res);
-        },
-        dispatchEvent: (evt: { event: string; payload: any }) => {
-          this.emit(evt.event, evt.payload);
-        },
-        addEventListener: (event: string, handler: BridgeEventListener) => {
-          this.on(event, handler);
-        },
-        removeEventListener: (event: string, handler: BridgeEventListener) => {
-          this.off(event, handler);
-        },
-      };
-    } else {
-      // win.SuperAppBridge already exists (e.g. from Flutter's bridgePolyfillScript)
-      win.SuperAppBridge._callbacks = win.SuperAppBridge._callbacks || {};
-      win.SuperAppBridge._listeners = win.SuperAppBridge._listeners || {};
-
-      const prevDispatch = win.SuperAppBridge.dispatchResponse;
-      win.SuperAppBridge.dispatchResponse = (res: BridgeResponse) => {
-        this.handleNativeResponse(res);
-        if (typeof prevDispatch === 'function' && prevDispatch !== win.SuperAppBridge!.dispatchResponse) {
-          try {
-            prevDispatch.call(win.SuperAppBridge, res);
-          } catch (_) {}
-        }
-      };
-
-      const prevDispatchEvent = win.SuperAppBridge.dispatchEvent;
-      win.SuperAppBridge.dispatchEvent = (evt: { event: string; payload: any }) => {
-        this.emit(evt.event, evt.payload);
-        if (typeof prevDispatchEvent === 'function' && prevDispatchEvent !== win.SuperAppBridge!.dispatchEvent) {
-          try {
-            prevDispatchEvent.call(win.SuperAppBridge, evt);
-          } catch (_) {}
-        }
-      };
-
-      if (!win.SuperAppBridge.postMessage) {
-        win.SuperAppBridge.postMessage = (msg: any) => {
-          if (win.FlutterBridge?.postMessage) {
-            win.FlutterBridge.postMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
-          }
-        };
-      }
+      // Keep the shared callback/listener contract used by the Flutter host and
+      // plain JS clients, even when this SDK is the first script to initialize.
+      win.SuperAppBridge = {} as NonNullable<NativeWindowBridge['SuperAppBridge']>;
     }
+    const bridge = win.SuperAppBridge;
+    bridge._callbacks ||= {};
+    bridge._listeners ||= {};
+    if (!bridge.postMessage) {
+      bridge.postMessage = (msg: any) => {
+        win.FlutterBridge?.postMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      };
+      forwardingShims.add(bridge.postMessage);
+    }
+    if (!bridge.dispatchResponse) {
+      bridge.dispatchResponse = (res: BridgeResponse) => {
+        const callback = bridge._callbacks[res.id];
+        if (callback) {
+          delete bridge._callbacks[res.id];
+          callback(res);
+        }
+      };
+    }
+    if (!bridge.dispatchEvent) {
+      bridge.dispatchEvent = (evt) => {
+        for (const listener of [...(bridge._listeners[evt.event] || [])]) {
+          try { listener(evt.payload); } catch (error) { console.error(error); }
+        }
+      };
+    }
+    bridge.addEventListener ||= (event, handler) => {
+      (bridge._listeners[event] ||= []).push(handler);
+    };
+    bridge.removeEventListener ||= (event, handler) => {
+      bridge._listeners[event] = (bridge._listeners[event] || []).filter(fn => fn !== handler);
+    };
+    // Install once per bridge object, rather than stacking new wrappers per call.
+    // Also reconnect if a host replaces the bridge after SDK initialization.
+    if (this.installedBridges.has(bridge)) return;
+    this.installedBridges.add(bridge);
+    const previousResponse = bridge.dispatchResponse;
+    bridge.dispatchResponse = (res) => {
+      this.handleNativeResponse(res);
+      previousResponse.call(bridge, res);
+    };
+    const previousEvent = bridge.dispatchEvent;
+    bridge.dispatchEvent = (evt) => {
+      this.emit(evt.event, evt.payload);
+      previousEvent.call(bridge, evt);
+    };
   }
 
   private handleNativeResponse(res: BridgeResponse): void {
@@ -114,7 +116,7 @@ export class NativeBridgeTransport implements ITransport {
   }
 
   public invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs?: number): Promise<T> {
-    const id = `req_${Date.now()}_${requestSequence++}`;
+    const id = `sdk_req_${Date.now()}_${requestSequence++}`;
     const timeout = timeoutMs ?? this.defaultTimeoutMs;
 
     const request: BridgeRequest = {
@@ -166,7 +168,7 @@ export class NativeBridgeTransport implements ITransport {
 
         if (win.FlutterBridge?.postMessage) {
           win.FlutterBridge.postMessage(JSON.stringify(request));
-        } else if (win.SuperAppBridge?.postMessage) {
+        } else if (isNativeBridgeAvailable() && win.SuperAppBridge?.postMessage) {
           win.SuperAppBridge.postMessage(request);
         } else {
           clearTimeout(timer);

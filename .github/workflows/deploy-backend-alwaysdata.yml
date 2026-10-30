@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - 'backend/**'
+      - 'mini_apps/**'
+      - 'mini_app_sdk/**'
+      - 'scripts/build-and-deploy-miniapps.cjs'
       - '.github/workflows/deploy-backend-alwaysdata.yml'
 
 jobs:
@@ -30,6 +33,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build bundled Mini Apps
+        run: |
+          npm ci --prefix ../mini_app_sdk
+          npm ci --prefix ../mini_apps/sdk_playground
+          npm ci --prefix ../mini_apps/schema_runtime
+          npm run build:miniapps --prefix ..
+
       - name: Build backend
         run: npm run build
 
@@ -50,7 +60,7 @@ jobs:
           SSH_HOST: ${{ secrets.ALWAYSDATA_SSH_HOST }}
           REMOTE_DIR: ${{ secrets.ALWAYSDATA_REMOTE_DIR || 'superapp_backend' }}
         run: |
-          tar -czf release.tar.gz dist package.json package-lock.json
+          tar -czf release.tar.gz dist package.json package-lock.json seed-bundles
           ssh $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_DIR/storage/miniapps"
           scp release.tar.gz $SSH_USER@$SSH_HOST:$REMOTE_DIR/release.tar.gz
           ssh $SSH_USER@$SSH_HOST "cd $REMOTE_DIR && tar -xzf release.tar.gz && rm release.tar.gz && npm install --omit=dev && pkill -f 'dist/main' || true"

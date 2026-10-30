@@ -77,8 +77,8 @@ Hệ thống đã được thiết lập sẵn script tự động hóa deployme
    ```
 
 Script sẽ tự động:
-- Build source code NestJS (`dist/`)
-- Đóng gói file cần thiết (`dist`, `package.json`, `package-lock.json`)
+- Build SDK và ba miniapp hệ thống (`sdk_playground`, `schema_runtime`, `sample_store`) vào `backend/seed-bundles/`, rồi build NestJS (`dist/`)
+- Đóng gói file cần thiết (`dist`, `seed-bundles`, `package.json`, `package-lock.json`); không đóng gói storage upload của người dùng
 - SCP lên máy chủ Alwaysdata
 - Giải nén, thiết lập `.env` bảo mật và cài đặt `node_modules`
 - Tự động restart site và kiểm tra HTTP Health check API.
@@ -97,3 +97,9 @@ Cấu hình các Secrets trong GitHub Repository (**Settings** > **Secrets and v
 - `ALWAYSDATA_SITE_ID`: ID Site từ Alwaysdata
 
 Workflow sẽ tự động build và deploy lên Alwaysdata.
+
+### Kiểm tra bundle miniapp sau deploy
+
+Release backend phải chứa `seed-bundles/<appId>/dist/index.html` và icon. Seed so sánh HTML đang lưu với bản build đi kèm và cập nhật package key khi khác nhau, kể cả các gói giữ chỗ cũ chỉ có dòng `sdk_playground loaded`. Thiếu bản build sẽ dừng bootstrap và báo lỗi thay vì tạo HTML giữ chỗ.
+
+Kiểm tra `GET /api/v1/miniapps/sdk_playground/1.0.5/dist/index.html`: nội dung phải chứa bundle JavaScript của Playground, không chỉ dòng `loaded`. Tương tự với `schema_runtime` và `sample_store`.

@@ -52,6 +52,7 @@ export class SeedService implements OnApplicationBootstrap {
 
   private getMiniAppBundle(appId: string): { html: Buffer; icon: Buffer } {
     const candidates = [
+      path.resolve(process.cwd(), 'seed-bundles', appId),
       path.resolve(process.cwd(), '../mini_apps', appId),
       path.resolve(process.cwd(), 'mini_apps', appId),
       path.resolve(__dirname, '../../../../mini_apps', appId),
@@ -65,26 +66,23 @@ export class SeedService implements OnApplicationBootstrap {
         return { html, icon };
       }
     }
-    return {
-      html: Buffer.from(`<!doctype html><html><head><meta charset="utf-8"><title>${appId}</title></head><body><div id="root"><h3>${appId} loaded</h3></div></body></html>`),
-      icon: testIcon,
-    };
+    throw new Error(`Missing built bundle for ${appId}. Run npm run build:miniapps before deploying the backend.`);
   }
 
   private async ensurePackageStored(appId: string, version: string, manifest: any): Promise<string | undefined> {
     if (!this.packageService) return undefined;
     try {
+      const bundle = this.getMiniAppBundle(appId);
       const existingVer = await this.versionRepo.findOne({ where: { appId, version } });
       if (existingVer?.packageKey) {
         try {
-          await this.packageService.file(existingVer.packageKey, 'dist/index.html');
-          return existingVer.packageKey;
+          const storedHtml = await this.packageService.file(existingVer.packageKey, 'dist/index.html');
+          if (storedHtml.equals(bundle.html)) return existingVer.packageKey;
         } catch (_) {
           // File missing from storage, proceed to re-store
         }
       }
 
-      const bundle = this.getMiniAppBundle(appId);
       const files = new Map<string, Buffer>();
       files.set('app.json', Buffer.from(JSON.stringify(manifest, null, 2)));
       files.set('icon.png', bundle.icon);
@@ -99,11 +97,17 @@ export class SeedService implements OnApplicationBootstrap {
       };
 
       const packageKey = await this.packageService.store(validatedPkg);
+      if (existingVer) {
+        existingVer.packageKey = packageKey;
+        existingVer.checksum = checksum;
+        existingVer.packageSize = validatedPkg.size;
+        await this.versionRepo.save(existingVer);
+      }
       this.logger.log(`Stored backend package for ${appId} v${version} with key: ${packageKey}`);
       return packageKey;
     } catch (err: any) {
       this.logger.warn(`Could not store package for ${appId}: ${err?.message || err}`);
-      return undefined;
+      throw err;
     }
   }
 

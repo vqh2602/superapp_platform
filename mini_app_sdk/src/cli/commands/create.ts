@@ -52,7 +52,7 @@ export async function createProject(projectName: string, options: CreateCommandO
       preview: 'vite preview',
     },
     dependencies: {
-      '@vqh2602/mini-app-sdk': '^1.0.0',
+      '@vqh2602/mini-app-sdk': '^1.0.6',
     },
     devDependencies: {
       typescript: '^5.6.3',
@@ -166,13 +166,13 @@ document.getElementById('btnLogin')?.addEventListener('click', async () => {
 // 2. Thanh toán
 document.getElementById('btnPay')?.addEventListener('click', async () => {
   try {
-    const res = await superApp.payment.requestPayment({
+    const order = await superApp.transport.invoke<{ orderId: string }>('payment.createOrder', {
       orderId: 'ORDER_' + Date.now(),
       amount: 45000,
       description: 'Thanh toán đơn hàng mẫu Mini App',
     });
+    const res = await superApp.transport.invoke('payment.openCheckout', { orderId: order.orderId });
     log(res);
-    await superApp.ui.showToast('Thanh toán thành công!');
   } catch (err: any) {
     log({ error: err });
   }
