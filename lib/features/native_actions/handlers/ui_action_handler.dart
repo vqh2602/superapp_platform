@@ -174,8 +174,10 @@ class SetNavigationBarTitleHandler implements NativeActionHandler {
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
     final title = payload['title']?.toString() ?? '';
+    final align = payload['align']?.toString().toLowerCase() ??
+        payload['titleAlign']?.toString().toLowerCase();
     // Dynamically update runtime Top Navigation Bar title
-    context.uiDelegate?.setTitle(title);
+    context.uiDelegate?.setTitle(title, align: align);
 
     return {
       'success': true,
@@ -400,6 +402,11 @@ class ConfigAppViewHandler implements NativeActionHandler {
     final bottomNavColorHex = payload['bottomNavColor']?.toString() ??
         (payload['bottomNav'] is Map ? payload['bottomNav']['color']?.toString() : null);
 
+    final titleAlign = payload['titleAlign']?.toString().toLowerCase() ??
+        payload['headerTitleAlign']?.toString().toLowerCase() ??
+        payload['align']?.toString().toLowerCase() ??
+        (payload['header'] is Map ? payload['header']['align']?.toString().toLowerCase() : null);
+
     final isStatusBarHidden = statusBarMode == 'hidden' || payload['hideStatusBar'] == true;
 
     final headerColor = _tryParseHex(headerColorHex);
@@ -419,6 +426,7 @@ class ConfigAppViewHandler implements NativeActionHandler {
       hasPaddingTop: hasPaddingTop,
       hasPaddingBottom: hasPaddingBottom,
       bottomNavColor: bottomNavColor,
+      titleAlign: titleAlign,
     );
 
     // 3. SystemChrome overlay handling

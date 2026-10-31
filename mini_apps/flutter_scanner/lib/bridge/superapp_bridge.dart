@@ -7,20 +7,30 @@ import 'dart:js_util' as js_util;
 class SuperAppBridge {
   SuperAppBridge._();
 
-  /// Check if the native SuperApp bridge is available in current browser/webview context
+  static dynamic _hostBridge() {
+    for (final name in ['bridge', 'SuperAppBridge']) {
+      final bridge = js_util.getProperty<dynamic>(js_util.globalThis, name);
+      if (bridge != null && js_util.getProperty<dynamic>(bridge, 'invoke') != null) return bridge;
+    }
+    return null;
+  }
+
   static bool isAvailable() {
     try {
-      final bridge = js_util.getProperty(js_util.globalThis, 'SuperAppBridge');
-      return bridge != null;
-    } catch (_) {
-      return false;
-    }
+      final channel = js_util.getProperty<dynamic>(js_util.globalThis, 'FlutterBridge');
+      return channel != null && _hostBridge() != null;
+    } catch (_) { return false; }
+  }
+
+  static Map<String, dynamic> _mapResponse(dynamic response, String action) {
+    if (response is Map) return response.cast<String, dynamic>();
+    throw StateError('Invalid native response for $action');
   }
 
   /// Low-level bridge invoke method: sends action name & payload to SuperApp Native Container
   static Future<dynamic> invoke(String action, [Map<String, dynamic>? payload]) async {
     try {
-      final bridge = js_util.getProperty(js_util.globalThis, 'SuperAppBridge');
+      final bridge = _hostBridge();
       if (bridge == null) {
         throw StateError('SuperAppBridge không tồn tại trên window object');
       }
@@ -57,17 +67,13 @@ class SuperAppBridge {
     final res = await invoke('media.scanQRCode', {
       if (prompt != null) 'prompt': prompt,
     });
-    if (res is Map<String, dynamic>) return res;
-    if (res is Map) return res.cast<String, dynamic>();
-    return {'content': res.toString(), 'format': 'QR_CODE'};
+    return _mapResponse(res, 'media.scanQRCode');
   }
 
   /// Chọn ảnh từ thư viện
   static Future<Map<String, dynamic>> chooseImage() async {
     final res = await invoke('media.chooseImage', {'count': 1});
-    if (res is Map<String, dynamic>) return res;
-    if (res is Map) return res.cast<String, dynamic>();
-    return {'tempFilePaths': []};
+    return _mapResponse(res, 'media.chooseImage');
   }
 
   /// Hiển thị thông báo Toast nhanh
@@ -98,16 +104,12 @@ class SuperAppBridge {
   /// Lấy thông tin pin thiết bị
   static Future<Map<String, dynamic>> getBatteryInfo() async {
     final res = await invoke('getBatteryInfo');
-    if (res is Map<String, dynamic>) return res;
-    if (res is Map) return res.cast<String, dynamic>();
-    return {};
+    return _mapResponse(res, 'getBatteryInfo');
   }
 
   /// Lấy thông tin mạng hiện tại
   static Future<Map<String, dynamic>> getNetworkInfo() async {
     final res = await invoke('getNetworkInfo');
-    if (res is Map<String, dynamic>) return res;
-    if (res is Map) return res.cast<String, dynamic>();
-    return {};
+    return _mapResponse(res, 'getNetworkInfo');
   }
 }

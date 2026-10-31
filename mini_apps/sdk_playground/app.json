@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "appId": "sdk_playground",
-  "name": "SDK Playground",
+  "name": "SDK Playground (React)",
   "description": "React + TypeScript Mini App test bed with interactive SDK runner",
   "category": "Developer Tools",
   "version": "1.0.5",

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:serp_debug_overlay/flutter_debug_overlay.dart';
 import '../data/debug_log_repository.dart';
 import '../domain/bridge_log_entry.dart';
 
@@ -22,6 +23,22 @@ class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
       appBar: AppBar(
         title: const Text('Bridge Debug Center'),
         actions: [
+          IconButton(
+            tooltip: 'Mở SERP Debug Overlay',
+            icon: const Icon(Icons.bug_report_rounded, color: Colors.blueAccent),
+            onPressed: () {
+              final overlay = DebugOverlay.maybeOf(context);
+              if (overlay != null) {
+                overlay.toggleVisibility();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Debug Overlay chưa sẵn sàng hoặc bị vô hiệu hóa'),
+                  ),
+                );
+              }
+            },
+          ),
           IconButton(
             tooltip: 'Xóa logs',
             icon: const Icon(Icons.delete_outline),

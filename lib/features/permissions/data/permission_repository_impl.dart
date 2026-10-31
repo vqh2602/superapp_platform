@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
+import '../../../../core/network/app_http_client.dart';
 import '../../authentication/data/auth_repository_impl.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 
@@ -242,9 +243,11 @@ class PermissionRepositoryImpl {
 final permissionRepositoryProvider = Provider<PermissionRepositoryImpl>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
   final authRepo = ref.watch(authRepositoryProvider);
+  final httpClient = ref.watch(appHttpClientProvider);
   final repository = PermissionRepositoryImpl(
     usersUrl: endpoint.usersUrl,
     authRepo: authRepo,
+    httpClient: httpClient,
   );
   ref.onDispose(repository.dispose);
   return repository;

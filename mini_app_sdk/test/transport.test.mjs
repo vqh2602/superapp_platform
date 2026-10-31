@@ -2,12 +2,9 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import ts from 'typescript';
-import { SuperAppSDK, TransportResolver } from '../dist/index.js';
+import { SuperAppSDK } from '../dist/index.js';
 import { NativeBridgeTransport } from '../dist/transport/native-transport.js';
 
-const legacySource = fs.readFileSync(new URL('../../mini_apps/sdk_playground/src/sdk/bridgeTransport.ts', import.meta.url), 'utf8');
-const legacyJs = ts.transpileModule(legacySource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021 } }).outputText;
 let win;
 let requests;
 function attachHost() {
@@ -17,10 +14,13 @@ function attachHost() {
     win.SuperAppBridge.dispatchResponse({ id: req.id, success: true, data: { action: req.action, appId: req.appId } });
   } };
 }
-function legacyClient() {
-  const exports = {};
-  vm.runInNewContext(legacyJs, { exports, require: () => ({ TransportResolver }), window: win, console, setTimeout, clearTimeout });
-  return new exports.BridgeTransport('sdk_playground');
+function playgroundClient() {
+  // Playground now imports the official SDK directly; no example-specific copy.
+  const sdk = new SuperAppSDK({appId: 'sdk_playground'});
+  return {
+    invoke: (...args) => sdk.transport.invoke(...args),
+    addEventListener: (event, listener) => sdk.on(event, listener),
+  };
 }
 beforeEach(() => {
   requests = [];
@@ -33,7 +33,7 @@ afterEach(() => { delete globalThis.window; });
 test('SDK initialized first delivers responses to Playground and plain JS callbacks', async () => {
   attachHost();
   const sdk = new SuperAppSDK({ appId: 'sdk_playground' });
-  const legacy = legacyClient();
+  const legacy = playgroundClient();
   assert.deepEqual(JSON.parse(JSON.stringify(await legacy.invoke('user.getProfile', {}, 50))), { action: 'user.getProfile', appId: 'sdk_playground' });
   let direct;
   win.SuperAppBridge._callbacks.direct = response => { direct = response.data; };
@@ -45,7 +45,7 @@ test('SDK initialized first delivers responses to Playground and plain JS callba
 
 test('Playground initialized first coexists with multiple official SDK instances', async () => {
   attachHost();
-  const legacy = legacyClient();
+  const legacy = playgroundClient();
   const first = new SuperAppSDK({ appId: 'first' });
   const second = new SuperAppSDK({ appId: 'second' });
   const values = await Promise.all([
@@ -62,7 +62,7 @@ test('shared events reach both SDK and direct JS listeners once', async () => {
   attachHost();
   const first = new SuperAppSDK();
   const second = new SuperAppSDK();
-  const legacy = legacyClient();
+  const legacy = playgroundClient();
   const hits = [0, 0, 0];
   const off = first.on('miniapp.ready', () => hits[0]++);
   second.on('miniapp.ready', () => hits[1]++);
@@ -129,7 +129,7 @@ for (const order of ['host-first', 'sdk-first']) {
     if (order === 'host-first') injectHost();
     const sdk = new SuperAppSDK({ appId: 'sdk_playground', timeoutMs: 50 });
     if (order === 'sdk-first') injectHost();
-    const playground = legacyClient();
+    const playground = playgroundClient();
     assert.equal((await sdk.getUserProfile()).action, 'auth.getUserProfile');
     assert.equal((await playground.invoke('user.getProfile', {}, 50)).action, 'user.getProfile');
     // Host's raw-JS API must continue resolving its own callback registry.
@@ -212,7 +212,10 @@ test('typed SDK methods preserve the native JSON response without flattening or 
   };
   win.FlutterBridge = {postMessage(raw) {
     const req = JSON.parse(raw);
-    win.SuperAppBridge.dispatchResponse({id: req.id, success: true, data: responses[req.action]});
+    const aliases = {'getNetworkInfo': 'device.getNetworkInfo', 'getBatteryInfo': 'device.getBatteryInfo', 'storage.getSecureItem': 'storage.getItem'};
+    const data = responses[aliases[req.action] || req.action];
+    assert.notEqual(data, undefined, `Missing native fixture for ${req.action}`);
+    win.SuperAppBridge.dispatchResponse({id: req.id, success: true, data});
   }};
   const sdk = new SuperAppSDK();
   assert.deepEqual(await sdk.getNetworkInfo(), responses['device.getNetworkInfo']);

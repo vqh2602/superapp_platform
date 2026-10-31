@@ -23,6 +23,7 @@ import '../../native_actions/domain/mini_app_ui_delegate.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/web_log_entry.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
+import 'widgets/webview_debug_bottom_sheet.dart';
 import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
@@ -56,10 +57,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   Timer? _diagnosticTimer;
   String? _loadError;
   final List<WebLogEntry> _webLogs = [];
+  final ValueNotifier<int> _webLogRevision = ValueNotifier(0);
   bool _hasBlankScreenWarning = false;
 
   // Dynamic UI & Container state from configAppView / setNavigationBarTitle / setNavigationBarColor
   String? _overrideTitle;
+  String? _titleAlignment;
   Color? _overrideHeaderColor;
   String? _overrideTextColor; // 'white' | 'black'
   Color? _overrideStatusBarColor;
@@ -84,6 +87,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _webLogRevision.dispose();
     _progressTicker?.cancel();
     _loadTimeoutTimer?.cancel();
     _overlayDismissTimer?.cancel();
@@ -94,7 +98,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       } catch (_) {}
     }
     try {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      );
       SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
     } catch (_) {}
     _eventEmitter?.emit('miniapp.close');
@@ -102,10 +109,11 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   @override
-  void setTitle(String title) {
+  void setTitle(String title, {String? align}) {
     if (mounted) {
       setState(() {
         _overrideTitle = title;
+        if (align != null) _titleAlignment = align;
       });
     }
   }
@@ -138,12 +146,14 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     bool? hasPaddingTop,
     bool? hasPaddingBottom,
     Color? bottomNavColor,
+    String? titleAlign,
   }) {
     if (mounted) {
       setState(() {
         if (headerColor != null) _overrideHeaderColor = headerColor;
         if (headerTitle != null) _overrideTitle = headerTitle;
         if (textColor != null) _overrideTextColor = textColor;
+        if (titleAlign != null) _titleAlignment = titleAlign;
         if (statusBar != null) {
           _statusBarStyle = statusBar;
           _isStatusBarHidden = statusBar == 'hidden';
@@ -190,12 +200,86 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
   }
 
-  Future<void> _safeRunScript(WebViewController? controller, String script) async {
+  Future<void> _safeRunScript(
+    WebViewController? controller,
+    String script,
+  ) async {
     if (controller == null) return;
     try {
       await controller.runJavaScript(script);
     } catch (e) {
-      debugPrint('[MiniApp Runtime] Ignored runJavaScript limitation: $e');
+      _recordWebLog(
+        WebLogEntry(
+          id: 'eval_${DateTime.now().microsecondsSinceEpoch}',
+          type: 'eval',
+          level: 'error',
+          message: 'Native script injection failed: $e',
+        ),
+      );
+    }
+  }
+
+  void _recordWebLog(WebLogEntry entry) {
+    if (!mounted) return;
+    _webLogs.insert(0, entry);
+    if (_webLogs.length > 500) _webLogs.removeLast();
+    _webLogRevision.value++;
+  }
+
+  void _failStartup(String message) {
+    if (!mounted) return;
+    _loadTimeoutTimer?.cancel();
+    _progressTicker?.cancel();
+    _recordWebLog(
+      WebLogEntry(
+        id: 'startup_${DateTime.now().microsecondsSinceEpoch}',
+        type: 'error',
+        level: 'error',
+        message: message,
+      ),
+    );
+    setState(() {
+      _isLoading = false;
+      _showLoadingOverlay = false;
+      _loadError = message;
+    });
+  }
+
+  void _startLoadDeadline() {
+    _loadTimeoutTimer?.cancel();
+    _loadTimeoutTimer = Timer(const Duration(minutes: 2), () {
+      if (mounted && _isLoading && _loadError == null) {
+        _failStartup(
+          'Mini App chưa khởi tạo sau 120 giây. Mở Web Debug để xem lỗi tải JS / WASM, hoặc thử tải lại.',
+        );
+      }
+    });
+  }
+
+  Future<void> _checkPageStartup(
+    BridgeEventEmitter emitter,
+    MiniAppManifest manifest,
+  ) async {
+    final result = await _webViewController?.runJavaScriptReturningResult(
+      'JSON.stringify(window.__SUPERAPP_STARTUP__ || null)',
+    );
+    var value = jsonDecode(result.toString());
+    if (value is String) value = jsonDecode(value);
+    if (!mounted) return;
+    if (value is Map) {
+      if (value['stage'] == 'error') {
+        _failStartup('Flutter Web: ${value['error']}');
+      } else if (value['stage'] == 'ready') {
+        await _finishLoading(emitter, manifest);
+      } else {
+        _updateProgressTarget(
+          96,
+          newCeiling: 98,
+          status: 'Flutter Web: ${value['stage']}...',
+        );
+      }
+    } else {
+      await _finishLoading(emitter, manifest);
     }
   }
 
@@ -266,13 +350,19 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         final step = _isFinished
             ? math.max(1.5, diff * 0.25)
             : math.max(0.35, diff * 0.12);
-        _displayedProgress = math.min(_targetProgress, _displayedProgress + step);
+        _displayedProgress = math.min(
+          _targetProgress,
+          _displayedProgress + step,
+        );
         setState(() {});
       } else if (_displayedProgress < _stageCeiling && !_isFinished) {
         // While waiting for asynchronous response, gently advance so progress is active
         final remaining = _stageCeiling - _displayedProgress;
         final creepStep = math.max(0.04, remaining * 0.04);
-        _displayedProgress = math.min(_stageCeiling, _displayedProgress + creepStep);
+        _displayedProgress = math.min(
+          _stageCeiling,
+          _displayedProgress + creepStep,
+        );
         setState(() {});
       }
     });
@@ -303,7 +393,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     BridgeEventEmitter emitter,
     MiniAppManifest manifest,
   ) async {
-    if (!mounted || !_isLoading) return;
+    if (!mounted || !_isLoading || _isFinished) return;
     _loadTimeoutTimer?.cancel();
 
     _isFinished = true;
@@ -351,7 +441,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       if (!mounted || _webViewController == null) return;
       try {
         final res = await _webViewController!.runJavaScriptReturningResult(
-          '(function() { var r = document.getElementById("root"); return !!(r && (r.childElementCount > 0 || r.innerHTML.length > 0)); })()'
+          '(function() { var r = document.getElementById("root"); return !!((r && (r.childElementCount > 0 || r.innerHTML.length > 0)) || document.querySelector("flutter-view, flt-glass-pane, canvas") || (!r && document.body && document.body.innerText.trim())); })()',
         );
         final isRendered = res.toString() == 'true';
         if (!isRendered && mounted) {
@@ -379,11 +469,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       initialStatus: 'Đang làm mới giao diện...',
     );
 
-    _loadTimeoutTimer = Timer(const Duration(seconds: kIsWeb ? 6 : 10), () {
-      if (mounted && _isLoading && _loadError == null && _eventEmitter != null && manifest != null) {
-        _finishLoading(_eventEmitter!, manifest);
-      }
-    });
+    _startLoadDeadline();
 
     _webViewController?.reload();
   }
@@ -419,7 +505,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       setState(() {
         _isLoading = false;
         _showLoadingOverlay = false;
-        _loadError = 'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
+        _loadError =
+            'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
       });
       return;
     }
@@ -455,7 +542,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     );
 
     final validManifest = manifest;
-    final themeHex = validManifest.schema?['theme']?['backgroundColor'] as String?;
+    final themeHex =
+        validManifest.schema?['theme']?['backgroundColor'] as String?;
     final themeBg = _parseColor(themeHex, defaultColor: Colors.white);
 
     final controller = WebViewController()
@@ -494,7 +582,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     final emitter = BridgeEventEmitter(controller);
 
-    BridgeChannel.register(
+    await BridgeChannel.register(
       controller: controller,
       dispatcher: dispatcher,
       contextGetter: () => context,
@@ -502,11 +590,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         try {
           final data = jsonDecode(rawMessage) as Map<String, dynamic>;
           final entry = WebLogEntry.fromJson(data);
-          if (mounted) {
-            setState(() {
-              _webLogs.insert(0, entry);
-              if (_webLogs.length > 500) _webLogs.removeLast();
-            });
+          _recordWebLog(entry);
+          if (entry.type == 'startup' &&
+              mounted &&
+              _isLoading &&
+              _loadError == null) {
+            if (entry.message == 'ready') {
+              _finishLoading(emitter, validManifest);
+            } else if (entry.message == 'error') {
+              _failStartup('Flutter Web: ${entry.stack ?? entry.message}');
+            } else {
+              _updateProgressTarget(
+                96,
+                newCeiling: 98,
+                status: 'Flutter Web: ${entry.message}...',
+              );
+            }
           }
         } catch (e) {
           debugPrint('[WebDebug] Failed to parse message: $rawMessage');
@@ -514,24 +613,38 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       },
     );
 
-    controller.setOnConsoleMessage((JavaScriptConsoleMessage consoleMessage) {
-      debugPrint('[MiniApp Web Console] (${consoleMessage.level.name}): ${consoleMessage.message}');
-      final isExisting = _webLogs.any((l) => l.message == consoleMessage.message);
-      if (!isExisting && mounted) {
-        setState(() {
-          _webLogs.insert(
-            0,
-            WebLogEntry(
-              id: 'native_console_${DateTime.now().microsecondsSinceEpoch}',
-              type: 'console',
-              level: consoleMessage.level.name.toLowerCase(),
-              message: consoleMessage.message,
-            ),
-          );
-          if (_webLogs.length > 500) _webLogs.removeLast();
-        });
+    await controller.setOnConsoleMessage((JavaScriptConsoleMessage message) {
+      debugPrint(
+        '[MiniApp Web Console] (${message.level.name}): ${message.message}',
+      );
+      // The JS hook carries richer details; only suppress its immediate native echo.
+      final duplicate =
+          _webLogs.isNotEmpty &&
+          _webLogs.first.message == message.message &&
+          DateTime.now().difference(_webLogs.first.timestamp).inMilliseconds <
+              100;
+      if (!duplicate) {
+        _recordWebLog(
+          WebLogEntry(
+            id: 'console_${DateTime.now().microsecondsSinceEpoch}',
+            type: 'console',
+            level: message.level.name.toLowerCase(),
+            message: message.message,
+          ),
+        );
       }
     });
+
+    if (await controller.isUserScriptInjectionSupported(
+      WebViewUserScriptInjectionTime.documentStart,
+    )) {
+      await controller.addUserScript(
+        WebViewUserScript(
+          source:
+              '${BridgeChannel.webDebugPolyfillScript}\n${BridgeChannel.bridgePolyfillScript}',
+        ),
+      );
+    }
 
     const resetScript = '''
       (function() {
@@ -544,7 +657,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       })();
     ''';
 
-    controller.setNavigationDelegate(
+    await controller.setNavigationDelegate(
       NavigationDelegate(
         onProgress: (int progress) {
           if (mounted && _isLoading) {
@@ -582,7 +695,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         },
         onPageFinished: (url) async {
           await _safeRunScript(controller, resetScript);
-          await _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
+          await _safeRunScript(
+            controller,
+            BridgeChannel.webDebugPolyfillScript,
+          );
           await _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
           if (validManifest.isSchemaApp && validManifest.schema != null) {
             final schemaJson = jsonEncode(validManifest.schema);
@@ -597,18 +713,24 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               } catch(e) { console.error("[Schema Inject Error]", e.message || e); }''',
             );
           }
-          await _finishLoading(emitter, validManifest);
+          try {
+            await _checkPageStartup(emitter, validManifest);
+          } catch (error) {
+            _failStartup('Không thể kiểm tra khởi tạo Mini App: $error');
+          }
         },
         onWebResourceError: (error) {
-          _progressTicker?.cancel();
-          _loadTimeoutTimer?.cancel();
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-              _showLoadingOverlay = false;
-              _loadError = 'Không thể tải Mini App: ${error.description}';
-            });
-          }
+          final message =
+              'WebView ${error.errorCode}: ${error.description} (${error.url ?? "unknown URL"})';
+          _recordWebLog(
+            WebLogEntry(
+              id: 'resource_${DateTime.now().microsecondsSinceEpoch}',
+              type: 'error',
+              level: 'error',
+              message: message,
+            ),
+          );
+          if (error.isForMainFrame == true) _failStartup(message);
         },
       ),
     );
@@ -629,8 +751,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       status: 'Đang kết nối tài nguyên...',
     );
 
+    _startLoadDeadline();
+
     // Load entry point: remote Backend URL is the primary runtime loader
-    if (validManifest.isAsset && validManifest.entryUrl.startsWith('assets/') && !validManifest.entryUrl.startsWith('assets/mini_apps/')) {
+    if (validManifest.isAsset &&
+        validManifest.entryUrl.startsWith('assets/') &&
+        !validManifest.entryUrl.startsWith('assets/mini_apps/')) {
       try {
         controller.loadFlutterAsset(validManifest.entryUrl);
       } catch (e) {
@@ -642,19 +768,29 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       if (targetUri.startsWith('assets/mini_apps/')) {
         final isWeb = validManifest.isWebApp;
         final targetApp = isWeb ? validManifest.id : 'schema_runtime';
-        targetUri = '${EndpointConfig.alwaysdataEndpoint}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
+        targetUri =
+            '${EndpointConfig.alwaysdataEndpoint}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
       }
       controller.loadRequest(Uri.parse(targetUri));
     }
+  }
 
-    // Safety timeout in case onPageFinished is delayed or never fires
-    _loadTimeoutTimer?.cancel();
-    _loadTimeoutTimer = Timer(const Duration(seconds: kIsWeb ? 6 : 10), () {
-      if (mounted && _isLoading && _loadError == null) {
-        debugPrint('[MiniAppRuntime] Safety timeout reached, completing loading.');
-        _finishLoading(emitter, validManifest);
-      }
-    });
+  void _openWebDebugModal([MiniAppManifest? manifest]) {
+    final activeManifest =
+        manifest ??
+        ref.read(miniAppRepositoryProvider).getAppById(_currentAppId);
+    WebViewDebugBottomSheet.show(
+      context,
+      controller: _webViewController,
+      logs: _webLogs,
+      logsRevision: _webLogRevision,
+      onClearLogs: () {
+        _webLogs.clear();
+        _webLogRevision.value++;
+      },
+      appId: _currentAppId,
+      appTitle: activeManifest?.name ?? _currentAppId,
+    );
   }
 
   void _showMiniAppActionBottomSheet(MiniAppManifest? manifest) {
@@ -662,6 +798,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       context,
       manifest: manifest,
       appId: _currentAppId,
+      onWebDebug: () => _openWebDebugModal(manifest),
       onReload: () {
         _reloadMiniApp(manifest);
       },
@@ -686,14 +823,20 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     final isDarkHeader = _overrideTextColor == 'white'
         ? true
         : (_overrideTextColor == 'black' ? false : _isColorDark(headerBgColor));
-    final headerTextColor = isDarkHeader ? Colors.white : const Color(0xFF0F172A);
+    final headerTextColor = isDarkHeader
+        ? Colors.white
+        : const Color(0xFF0F172A);
     final displayTitle = _overrideTitle ?? manifest?.name ?? 'Mini App';
 
     Color brandColor;
-    final themePrimaryHex = manifest?.schema?['theme']?['primaryColor'] as String? ??
+    final themePrimaryHex =
+        manifest?.schema?['theme']?['primaryColor'] as String? ??
         manifest?.schema?['theme']?['accentColor'] as String?;
     if (themePrimaryHex != null && themePrimaryHex.isNotEmpty) {
-      brandColor = _parseColor(themePrimaryHex, defaultColor: const Color(0xFF2563EB));
+      brandColor = _parseColor(
+        themePrimaryHex,
+        defaultColor: const Color(0xFF2563EB),
+      );
     } else {
       switch (_currentAppId) {
         case 'tiktok':
@@ -737,7 +880,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           brandColor = const Color(0xFFDC2626);
           break;
         default:
-          brandColor = isDarkTheme ? const Color(0xFFF59E0B) : const Color(0xFF00BA52);
+          brandColor = isDarkTheme
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFF00BA52);
       }
     }
 
@@ -752,31 +897,36 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     final bool enableSafeAreaTop = _hasPaddingTop && _hasPadding;
     final bool enableSafeAreaBottom = _hasPaddingBottom && _hasPadding;
 
-    final isHeaderTransparent = headerBgColor == Colors.transparent ||
+    final isHeaderTransparent =
+        headerBgColor == Colors.transparent ||
         headerBgColor.a < 0.95 ||
         _statusBarStyle == 'transparent';
     const headerBarHeight = 48.0;
-    final totalHeaderHeight = (_isStatusBarHidden ? 0.0 : safeTopInset) + headerBarHeight;
+    final totalHeaderHeight =
+        (_isStatusBarHidden ? 0.0 : safeTopInset) + headerBarHeight;
 
     // Effective background tint for frosted glass / transparent header
     final effectiveHeaderBgColor = headerBgColor == Colors.transparent
         ? (isDarkHeader
-            ? Colors.black.withValues(alpha: 0.3)
-            : Colors.white.withValues(alpha: 0.65))
-        : (isHeaderTransparent ? headerBgColor.withValues(alpha: 0.8) : headerBgColor);
+              ? Colors.black.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.65))
+        : (isHeaderTransparent
+              ? headerBgColor.withValues(alpha: 0.8)
+              : headerBgColor);
 
     final statusBarColor = _overrideStatusBarColor ?? Colors.transparent;
     final statusBarIconBrightness = _statusBarStyle == 'light'
         ? Brightness.dark
         : (_statusBarStyle == 'dark'
-            ? Brightness.light
-            : (isDarkHeader ? Brightness.light : Brightness.dark));
+              ? Brightness.light
+              : (isDarkHeader ? Brightness.light : Brightness.dark));
     final statusBarBrightness = statusBarIconBrightness == Brightness.light
         ? Brightness.dark
         : Brightness.light;
 
     // Mini App Content Top & Bottom
-    final contentTop = (isHeaderTransparent || !enableSafeAreaTop || _isActionBarHidden)
+    final contentTop =
+        (isHeaderTransparent || !enableSafeAreaTop || _isActionBarHidden)
         ? (enableSafeAreaTop && !_isStatusBarHidden ? safeTopInset : 0.0)
         : totalHeaderHeight;
     final contentBottom = enableSafeAreaBottom ? safeBottomInset : 0.0;
@@ -786,7 +936,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         statusBarColor: statusBarColor,
         statusBarIconBrightness: statusBarIconBrightness,
         statusBarBrightness: statusBarBrightness,
-        systemNavigationBarColor: _bottomNavColor ?? (_hideBottomNav ? Colors.transparent : null),
+        systemNavigationBarColor:
+            _bottomNavColor ?? (_hideBottomNav ? Colors.transparent : null),
       ),
       child: Scaffold(
         backgroundColor: defaultBgColor,
@@ -808,7 +959,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                     ),
 
                   // Diagnostic Alert Banner for blank screen (Only in debug mode)
-                  if (ref.watch(isDebugModeEnabledProvider) && _hasBlankScreenWarning && !_isLoading && _loadError == null)
+                  if (ref.watch(isDebugModeEnabledProvider) &&
+                      _hasBlankScreenWarning &&
+                      !_isLoading &&
+                      _loadError == null)
                     Positioned(
                       left: 16,
                       right: 16,
@@ -818,20 +972,52 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                         borderRadius: BorderRadius.circular(12),
                         color: const Color(0xFF1E293B),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: [
-                              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 22),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.amber,
+                                size: 22,
+                              ),
                               const SizedBox(width: 10),
                               const Expanded(
                                 child: Text(
                                   'Màn hình có thể bị trắng hoặc chưa mount được React DOM.',
-                                  style: TextStyle(color: Colors.white, fontSize: 12),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF38BDF8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                ),
+                                onPressed: () => _openWebDebugModal(manifest),
+                                child: const Text(
+                                  'DEBUG NGAY',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
-                                onPressed: () => setState(() => _hasBlankScreenWarning = false),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white54,
+                                  size: 16,
+                                ),
+                                onPressed: () => setState(
+                                  () => _hasBlankScreenWarning = false,
+                                ),
                               ),
                             ],
                           ),
@@ -878,16 +1064,32 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                               _loadError!,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: isDarkTheme ? Colors.white : const Color(0xFF0F172A),
+                                color: isDarkTheme
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A),
                                 fontSize: 14,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                _initMiniApp();
-                              },
-                              child: const Text('Thử lại'),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    _initMiniApp();
+                                  },
+                                  child: const Text('Thử lại'),
+                                ),
+                                const SizedBox(width: 12),
+                                OutlinedButton.icon(
+                                  icon: const Icon(
+                                    Icons.terminal_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Xem Web Debug'),
+                                  onPressed: () => _openWebDebugModal(manifest),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -944,11 +1146,11 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     final bool useGlassCapsule = isHeaderTransparent;
     final Color capsuleBg = useGlassCapsule
         ? (isDarkHeader
-            ? Colors.black.withValues(alpha: 0.4)
-            : Colors.white.withValues(alpha: 0.75))
+              ? Colors.black.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.75))
         : (isDarkHeader
-            ? Colors.white.withValues(alpha: 0.18)
-            : Colors.white.withValues(alpha: 0.95));
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.95));
 
     final Color capsuleBorderColor = isDarkHeader
         ? Colors.white.withValues(alpha: 0.35)
@@ -996,11 +1198,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
             ),
           ),
           // Capsule Divider
-          Container(
-            width: 0.8,
-            height: 16,
-            color: capsuleDividerColor,
-          ),
+          Container(width: 0.8, height: 16, color: capsuleDividerColor),
           // Nút đóng miniapp (⊙)
           InkWell(
             onTap: () {
@@ -1075,29 +1273,38 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Center Title (dynamically updated by configAppView or setTitle)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 90),
-              child: Text(
-                displayTitle,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: headerTextColor,
-                  letterSpacing: -0.2,
+          // Title: Defaults to left-aligned when unchanged, centered when overridden/updated
+          Builder(
+            builder: (context) {
+              final isTitleChanged = _overrideTitle != null;
+              final isLeft =
+                  _titleAlignment == 'left' ||
+                  (_titleAlignment == null && !isTitleChanged);
+
+              return Align(
+                alignment: isLeft ? Alignment.centerLeft : Alignment.center,
+                child: Padding(
+                  padding: isLeft
+                      ? const EdgeInsets.only(left: 2, right: 90)
+                      : const EdgeInsets.symmetric(horizontal: 90),
+                  child: Text(
+                    displayTitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: headerTextColor,
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+              );
+            },
           ),
 
           // Right Capsule Bar: [ ••• | ⊙ ] (Host-Controlled, Cannot be removed or edited)
-          Align(
-            alignment: Alignment.centerRight,
-            child: capsuleButton,
-          ),
+          Align(alignment: Alignment.centerRight, child: capsuleButton),
         ],
       ),
     );
@@ -1128,19 +1335,35 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     IconData fallbackIcon = Icons.apps_rounded;
     final iconName = iconStr.toLowerCase();
-    if (iconName == 'video' || iconName == 'movie' || appId == 'capcut' || appId == 'youtube') {
+    if (iconName == 'video' ||
+        iconName == 'movie' ||
+        appId == 'capcut' ||
+        appId == 'youtube') {
       fallbackIcon = Icons.movie_filter_rounded;
-    } else if (iconName == 'games' || iconName == 'game' || appId == 'free_fire') {
+    } else if (iconName == 'games' ||
+        iconName == 'game' ||
+        appId == 'free_fire') {
       fallbackIcon = Icons.sports_esports_rounded;
-    } else if (iconName == 'social' || iconName == 'chat' || appId == 'messenger') {
+    } else if (iconName == 'social' ||
+        iconName == 'chat' ||
+        appId == 'messenger') {
       fallbackIcon = Icons.chat_bubble_rounded;
-    } else if (iconName == 'shopping' || iconName == 'cart' || appId == 'shopee') {
+    } else if (iconName == 'shopping' ||
+        iconName == 'cart' ||
+        appId == 'shopee') {
       fallbackIcon = Icons.shopping_bag_rounded;
-    } else if (iconName == 'coffee' || iconName == 'storefront' || appId == 'sample_store' || appId == 'coffee_shop') {
+    } else if (iconName == 'coffee' ||
+        iconName == 'storefront' ||
+        appId == 'sample_store' ||
+        appId == 'coffee_shop') {
       fallbackIcon = Icons.coffee_rounded;
-    } else if (iconName == 'code' || iconName == 'terminal' || appId == 'sdk_playground') {
+    } else if (iconName == 'code' ||
+        iconName == 'terminal' ||
+        appId == 'sdk_playground') {
       fallbackIcon = Icons.code_rounded;
-    } else if (iconName == 'qr_code_scanner' || iconName == 'scanner' || appId == 'flutter_scanner') {
+    } else if (iconName == 'qr_code_scanner' ||
+        iconName == 'scanner' ||
+        appId == 'flutter_scanner') {
       fallbackIcon = Icons.qr_code_scanner_rounded;
     } else if (iconName == 'utilities' || appId == 'viettel_tammi') {
       fallbackIcon = Icons.cell_tower_rounded;
@@ -1175,17 +1398,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
             ? Image.network(
                 fullNetworkUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  fallbackIcon,
-                  size: 40,
-                  color: Colors.white,
-                ),
+                errorBuilder: (_, __, ___) =>
+                    Icon(fallbackIcon, size: 40, color: Colors.white),
               )
-            : Icon(
-                fallbackIcon,
-                size: 40,
-                color: Colors.white,
-              ),
+            : Icon(fallbackIcon, size: 40, color: Colors.white),
       ),
     );
   }

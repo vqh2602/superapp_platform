@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:webview_all/webview_all.dart';
@@ -25,6 +26,7 @@ class WebViewDebugBottomSheet extends StatefulWidget {
     BuildContext context, {
     required WebViewController? controller,
     required List<WebLogEntry> logs,
+    required ValueListenable<int> logsRevision,
     required VoidCallback onClearLogs,
     required String appId,
     required String appTitle,
@@ -34,20 +36,24 @@ class WebViewDebugBottomSheet extends StatefulWidget {
       useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => PointerInterceptor(
-        child: WebViewDebugBottomSheet(
-          controller: controller,
-          logs: logs,
-          onClearLogs: onClearLogs,
-          appId: appId,
-          appTitle: appTitle,
+      builder: (ctx) => ValueListenableBuilder<int>(
+        valueListenable: logsRevision,
+        builder: (context, revision, child) => PointerInterceptor(
+          child: WebViewDebugBottomSheet(
+            controller: controller,
+            logs: logs,
+            onClearLogs: onClearLogs,
+            appId: appId,
+            appTitle: appTitle,
+          ),
         ),
       ),
     );
   }
 
   @override
-  State<WebViewDebugBottomSheet> createState() => _WebViewDebugBottomSheetState();
+  State<WebViewDebugBottomSheet> createState() =>
+      _WebViewDebugBottomSheetState();
 }
 
 class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
@@ -131,7 +137,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         })()
       ''';
 
-      final res = await widget.controller!.runJavaScriptReturningResult(inspectScript);
+      final res = await widget.controller!.runJavaScriptReturningResult(
+        inspectScript,
+      );
       String rawJson = res.toString();
       // Handle string wrapped inside JSON from webview
       if (rawJson.startsWith('"') && rawJson.endsWith('"')) {
@@ -163,7 +171,8 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
     });
 
     try {
-      final wrappedCode = '''
+      final wrappedCode =
+          '''
         (function() {
           try {
             var res = eval(${jsonEncode(code)});
@@ -177,7 +186,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         })()
       ''';
 
-      final result = await widget.controller!.runJavaScriptReturningResult(wrappedCode);
+      final result = await widget.controller!.runJavaScriptReturningResult(
+        wrappedCode,
+      );
       var display = result.toString();
       if (display.startsWith('"') && display.endsWith('"')) {
         try {
@@ -242,7 +253,8 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         ''';
         break;
       case 'bridge_failure':
-        script = '''
+        script =
+            '''
           (function() {
             if (window.FlutterBridge && window.FlutterBridge.postMessage) {
               window.FlutterBridge.postMessage(JSON.stringify({
@@ -258,7 +270,8 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         ''';
         break;
       default:
-        script = 'console.error(new Error("[Mô phỏng lỗi] Custom runtime error"));';
+        script =
+            'console.error(new Error("[Mô phỏng lỗi] Custom runtime error"));';
     }
 
     try {
@@ -266,7 +279,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Đã kích hoạt mô phỏng lỗi! Xem chi tiết trong danh sách logs.'),
+            content: Text(
+              'Đã kích hoạt mô phỏng lỗi! Xem chi tiết trong danh sách logs.',
+            ),
             duration: Duration(seconds: 2),
             backgroundColor: Color(0xFFDC2626),
             behavior: SnackBarBehavior.floating,
@@ -285,7 +300,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
     });
 
     try {
-      final res = await widget.controller!.runJavaScriptReturningResult('document.documentElement.outerHTML');
+      final res = await widget.controller!.runJavaScriptReturningResult(
+        'document.documentElement.outerHTML',
+      );
       var source = res.toString();
       if (source.startsWith('"') && source.endsWith('"')) {
         try {
@@ -351,12 +368,16 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: errorCount > 0 ? Colors.red.withValues(alpha: 0.2) : const Color(0xFF2563EB).withValues(alpha: 0.2),
+                    color: errorCount > 0
+                        ? Colors.red.withValues(alpha: 0.2)
+                        : const Color(0xFF2563EB).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.terminal_rounded,
-                    color: errorCount > 0 ? const Color(0xFFF87171) : const Color(0xFF60A5FA),
+                    color: errorCount > 0
+                        ? const Color(0xFFF87171)
+                        : const Color(0xFF60A5FA),
                     size: 20,
                   ),
                 ),
@@ -378,7 +399,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                           if (errorCount > 0) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.red,
                                 borderRadius: BorderRadius.circular(10),
@@ -423,7 +447,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               indicatorWeight: 3,
               labelColor: const Color(0xFF38BDF8),
               unselectedLabelColor: Colors.white60,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
               tabs: [
                 Tab(
                   child: Row(
@@ -476,7 +503,8 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
       if (_logFilter == 'log' && (l.isError || l.isWarning)) return false;
       if (_searchQuery.isNotEmpty) {
         return l.message.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            (l.stack?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+            (l.stack?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+                false);
       }
       return true;
     }).toList();
@@ -496,11 +524,23 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip('all', 'Tất cả (${widget.logs.length})', null),
+                          _buildFilterChip(
+                            'all',
+                            'Tất cả (${widget.logs.length})',
+                            null,
+                          ),
                           const SizedBox(width: 6),
-                          _buildFilterChip('error', 'Lỗi ($errorCount)', Colors.red),
+                          _buildFilterChip(
+                            'error',
+                            'Lỗi ($errorCount)',
+                            Colors.red,
+                          ),
                           const SizedBox(width: 6),
-                          _buildFilterChip('warn', 'Cảnh báo ($warnCount)', Colors.amber),
+                          _buildFilterChip(
+                            'warn',
+                            'Cảnh báo ($warnCount)',
+                            Colors.amber,
+                          ),
                           const SizedBox(width: 6),
                           _buildFilterChip('log', 'Logs', Colors.blue),
                         ],
@@ -511,18 +551,34 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                   PopupMenuButton<String>(
                     tooltip: 'Mô phỏng lỗi',
                     icon: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFDC2626).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.bolt_rounded, color: Colors.redAccent, size: 14),
+                          Icon(
+                            Icons.bolt_rounded,
+                            color: Colors.redAccent,
+                            size: 14,
+                          ),
                           SizedBox(width: 2),
-                          Text('Test Lỗi', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Test Lỗi',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -534,7 +590,15 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                         child: Row(
                           children: [
                             Text('💥 ', style: TextStyle(fontSize: 14)),
-                            Expanded(child: Text('TypeError (orderData.calculateTotal)', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            Expanded(
+                              child: Text(
+                                'TypeError (orderData.calculateTotal)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -543,7 +607,15 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                         child: Row(
                           children: [
                             Text('⏱️ ', style: TextStyle(fontSize: 14)),
-                            Expanded(child: Text('Promise Rejection (Timeout)', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            Expanded(
+                              child: Text(
+                                'Promise Rejection (Timeout)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -552,7 +624,15 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                         child: Row(
                           children: [
                             Text('⚠️ ', style: TextStyle(fontSize: 14)),
-                            Expanded(child: Text('Syntax / Parse Error', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            Expanded(
+                              child: Text(
+                                'Syntax / Parse Error',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -561,30 +641,59 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                         child: Row(
                           children: [
                             Text('🌉 ', style: TextStyle(fontSize: 14)),
-                            Expanded(child: Text('Native Bridge Error (Simulate)', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            Expanded(
+                              child: Text(
+                                'Native Bridge Error (Simulate)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy_rounded, color: Colors.white70, size: 18),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
                     padding: const EdgeInsets.all(4),
                     tooltip: 'Sao chép toàn bộ logs',
                     onPressed: widget.logs.isEmpty
                         ? null
                         : () {
-                            final allText = widget.logs.map((l) {
-                              final st = l.stack != null ? '\n${l.stack}' : '';
-                              return '[${l.timestamp.toIso8601String()}] [${l.level.toUpperCase()}] ${l.message}$st';
-                            }).join('\n\n');
-                            _copyToClipboard(allText, 'Đã sao chép ${widget.logs.length} dòng logs');
+                            final allText = widget.logs
+                                .map((l) {
+                                  final st = l.stack != null
+                                      ? '\n${l.stack}'
+                                      : '';
+                                  return '[${l.timestamp.toIso8601String()}] [${l.level.toUpperCase()}] ${l.message}$st';
+                                })
+                                .join('\n\n');
+                            _copyToClipboard(
+                              allText,
+                              'Đã sao chép ${widget.logs.length} dòng logs',
+                            );
                           },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white70, size: 18),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const Icon(
+                      Icons.delete_sweep_rounded,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
                     padding: const EdgeInsets.all(4),
                     tooltip: 'Xóa sạch logs',
                     onPressed: () {
@@ -600,12 +709,22 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Tìm kiếm trong logs...',
-                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 16),
+                  hintStyle: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    fontSize: 12,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.white54,
+                    size: 16,
+                  ),
                   isDense: true,
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -624,11 +743,20 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_outline, color: Colors.white.withValues(alpha: 0.2), size: 48),
+                      Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.white.withValues(alpha: 0.2),
+                        size: 48,
+                      ),
                       const SizedBox(height: 12),
                       Text(
-                        widget.logs.isEmpty ? 'Chưa có log nào từ WebView' : 'Không có log phù hợp bộ lọc',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+                        widget.logs.isEmpty
+                            ? 'Chưa có log nào từ WebView'
+                            : 'Không có log phù hợp bộ lọc',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -664,7 +792,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 4),
             ],
@@ -687,8 +818,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
     Color borderColor;
     String badgeText;
 
-    final isScriptErrorCensored = log.isError &&
-        (log.message.contains('Script error') || log.message == 'Script error.');
+    final isScriptErrorCensored =
+        log.isError &&
+        (log.message.contains('Script error') ||
+            log.message == 'Script error.');
 
     if (log.isError) {
       badgeColor = Colors.red;
@@ -735,16 +868,24 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               const SizedBox(width: 8),
               Text(
                 '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}.${log.timestamp.millisecond.toString().padLeft(3, '0')}',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  fontSize: 11,
+                ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Colors.white54, size: 14),
+                icon: const Icon(
+                  Icons.copy_rounded,
+                  color: Colors.white54,
+                  size: 14,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 tooltip: 'Copy',
                 onPressed: () {
-                  final text = '${log.message}${log.stack != null ? '\n${log.stack}' : ''}';
+                  final text =
+                      '${log.message}${log.stack != null ? '\n${log.stack}' : ''}';
                   _copyToClipboard(text, 'Đã sao chép log');
                 },
               ),
@@ -772,7 +913,11 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 16),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -780,19 +925,30 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                       children: [
                         const Text(
                           'Chi tiết chẩn đoán WebKit CORS/file://',
-                          style: TextStyle(color: Color(0xFFFDE68A), fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Color(0xFFFDE68A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         const Text(
                           'WebKit trên iOS tự động thay thế chi tiết lỗi runtime của script tải từ file:// bằng chuỗi "Script error." để bảo mật. Hãy dùng tab JS REPL hoặc bọc code trong try...catch để unmask stack trace.',
-                          style: TextStyle(color: Color(0xFFFEF3C7), fontSize: 10),
+                          style: TextStyle(
+                            color: Color(0xFFFEF3C7),
+                            fontSize: 10,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         InkWell(
                           onTap: () => _tabController.animateTo(2),
                           child: const Text(
                             '👉 Chuyển sang JS REPL để test thử mã lỗi',
-                            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Color(0xFF38BDF8),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -817,9 +973,20 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.alt_route_rounded, color: Color(0xFF94A3B8), size: 13),
+                      Icon(
+                        Icons.alt_route_rounded,
+                        color: Color(0xFF94A3B8),
+                        size: 13,
+                      ),
                       SizedBox(width: 4),
-                      Text('CALL STACK / GỢI Ý', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                      Text(
+                        'CALL STACK / GỢI Ý',
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -844,7 +1011,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
   // TAB 2: HEALTH & DOM INSPECTOR
   Widget _buildInspectorTab() {
     if (_inspectorLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)));
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF38BDF8)),
+      );
     }
 
     if (_inspectionData.containsKey('error')) {
@@ -894,8 +1063,15 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               ),
             ),
             TextButton.icon(
-              icon: const Icon(Icons.refresh, size: 14, color: Color(0xFF38BDF8)),
-              label: const Text('Cập nhật', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12)),
+              icon: const Icon(
+                Icons.refresh,
+                size: 14,
+                color: Color(0xFF38BDF8),
+              ),
+              label: const Text(
+                'Cập nhật',
+                style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12),
+              ),
               onPressed: _runInspection,
             ),
           ],
@@ -905,7 +1081,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isRootRendered ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFF7F1D1D).withValues(alpha: 0.3),
+            color: isRootRendered
+                ? const Color(0xFF064E3B).withValues(alpha: 0.3)
+                : const Color(0xFF7F1D1D).withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isRootRendered ? const Color(0xFF059669) : Colors.red,
@@ -914,8 +1092,12 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
           child: Row(
             children: [
               Icon(
-                isRootRendered ? Icons.check_circle_rounded : Icons.warning_rounded,
-                color: isRootRendered ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                isRootRendered
+                    ? Icons.check_circle_rounded
+                    : Icons.warning_rounded,
+                color: isRootRendered
+                    ? const Color(0xFF34D399)
+                    : const Color(0xFFF87171),
                 size: 28,
               ),
               const SizedBox(width: 12),
@@ -924,9 +1106,13 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isRootRendered ? 'DOM & React đã mount thành công' : 'Cảnh báo: #root đang trống!',
+                      isRootRendered
+                          ? 'DOM & React đã mount thành công'
+                          : 'Cảnh báo: #root đang trống!',
                       style: TextStyle(
-                        color: isRootRendered ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                        color: isRootRendered
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFFF87171),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -936,7 +1122,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                       isRootRendered
                           ? 'Đã phát hiện $rootChildren phần tử con trong #root (innerHTML: $rootLength ký tự).'
                           : 'Phần tử #root chưa có nội dung DOM. Có thể script gặp lỗi trước khi React.render hoàn tất.',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -949,15 +1138,27 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
 
         _buildSectionHeader('1. THÔNG TIN TRANG WEB & TÀI NGUYÊN'),
         _buildInfoTile('URL', _inspectionData['url']?.toString() ?? 'N/A'),
-        _buildInfoTile('Document Title', _inspectionData['title']?.toString() ?? 'N/A'),
-        _buildInfoTile('ReadyState', _inspectionData['readyState']?.toString() ?? 'N/A'),
-        _buildInfoTile('Thẻ <script> trong DOM', '${_inspectionData['scriptsCount'] ?? 0} thẻ'),
+        _buildInfoTile(
+          'Document Title',
+          _inspectionData['title']?.toString() ?? 'N/A',
+        ),
+        _buildInfoTile(
+          'ReadyState',
+          _inspectionData['readyState']?.toString() ?? 'N/A',
+        ),
+        _buildInfoTile(
+          'Thẻ <script> trong DOM',
+          '${_inspectionData['scriptsCount'] ?? 0} thẻ',
+        ),
 
         const SizedBox(height: 16),
 
         _buildSectionHeader('2. PHẦN TỬ GỐC (#root)'),
         _buildStatusTile('#root tồn tại trong DOM', rootExists),
-        _buildInfoTile('Số phần tử con (child elements)', '$rootChildren nodes'),
+        _buildInfoTile(
+          'Số phần tử con (child elements)',
+          '$rootChildren nodes',
+        ),
         _buildInfoTile('Độ dài innerHTML', '$rootLength ký tự'),
         if (root['innerHTMLSnippet'] != null && rootLength > 0)
           Container(
@@ -980,17 +1181,38 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
         const SizedBox(height: 16),
 
         _buildSectionHeader('3. NATIVE BRIDGE CONNECTIVITY'),
-        _buildStatusTile('window.FlutterBridge (Native Channel)', bridge['flutterBridgeExists'] == true),
-        _buildStatusTile('window.SuperAppBridge (JS SDK Polyfill)', bridge['superAppBridgeExists'] == true),
-        _buildStatusTile('SuperAppBridge Callbacks Map', bridge['hasCallbacks'] == true),
-        _buildStatusTile('SuperAppBridge Listeners Map', bridge['hasListeners'] == true),
+        _buildStatusTile(
+          'window.FlutterBridge (Native Channel)',
+          bridge['flutterBridgeExists'] == true,
+        ),
+        _buildStatusTile(
+          'window.SuperAppBridge (JS SDK Polyfill)',
+          bridge['superAppBridgeExists'] == true,
+        ),
+        _buildStatusTile(
+          'SuperAppBridge Callbacks Map',
+          bridge['hasCallbacks'] == true,
+        ),
+        _buildStatusTile(
+          'SuperAppBridge Listeners Map',
+          bridge['hasListeners'] == true,
+        ),
 
         const SizedBox(height: 16),
 
         _buildSectionHeader('4. NO-CODE SCHEMA STATE'),
-        _buildStatusTile('window.__MINIAPP_SCHEMA__ được nạp', schema['schemaExists'] == true),
-        _buildInfoTile('window.__MINIAPP_APP_ID__', schema['appId']?.toString() ?? 'null'),
-        _buildInfoTile('Số trang trong Schema', '${schema['schemaPagesCount'] ?? 0} pages'),
+        _buildStatusTile(
+          'window.__MINIAPP_SCHEMA__ được nạp',
+          schema['schemaExists'] == true,
+        ),
+        _buildInfoTile(
+          'window.__MINIAPP_APP_ID__',
+          schema['appId']?.toString() ?? 'null',
+        ),
+        _buildInfoTile(
+          'Số trang trong Schema',
+          '${schema['schemaPagesCount'] ?? 0} pages',
+        ),
       ],
     );
   }
@@ -1021,7 +1243,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -1052,7 +1277,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           Row(
             children: [
               Icon(
@@ -1080,7 +1308,11 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
   Widget _buildReplTab() {
     final snippets = [
       {'label': 'document.title', 'code': 'document.title'},
-      {'label': '#root innerHTML', 'code': 'document.getElementById("root") ? document.getElementById("root").innerHTML.substring(0, 200) : "root not found"'},
+      {
+        'label': '#root innerHTML',
+        'code':
+            'document.getElementById("root") ? document.getElementById("root").innerHTML.substring(0, 200) : "root not found"',
+      },
       {'label': 'SuperAppBridge', 'code': 'typeof window.SuperAppBridge'},
       {'label': 'Schema Object', 'code': 'window.__MINIAPP_SCHEMA__'},
       {'label': 'User Agent', 'code': 'navigator.userAgent'},
@@ -1109,7 +1341,10 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 backgroundColor: const Color(0xFF1E293B),
                 label: Text(
                   s['label']!,
-                  style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 11),
+                  style: const TextStyle(
+                    color: Color(0xFF38BDF8),
+                    fontSize: 11,
+                  ),
                 ),
                 onPressed: () {
                   _replController.text = s['code']!;
@@ -1124,10 +1359,17 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
           TextField(
             controller: _replController,
             maxLines: 3,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontFamily: 'monospace',
+            ),
             decoration: InputDecoration(
               hintText: 'Nhập mã JavaScript (e.g. document.body.innerHTML)...',
-              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12),
+              hintStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.35),
+                fontSize: 12,
+              ),
               filled: true,
               fillColor: const Color(0xFF1E293B),
               border: OutlineInputBorder(
@@ -1148,20 +1390,39 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                 ),
                 icon: _replRunning
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                     : const Icon(Icons.play_arrow_rounded, size: 18),
-                label: Text(_replRunning ? 'Đang chạy...' : 'Chạy biểu thức (Eval)'),
-                onPressed: _replRunning ? null : () => _executeRepl(_replController.text),
+                label: Text(
+                  _replRunning ? 'Đang chạy...' : 'Chạy biểu thức (Eval)',
+                ),
+                onPressed: _replRunning
+                    ? null
+                    : () => _executeRepl(_replController.text),
               ),
               const Spacer(),
               if (_replResult != null)
                 IconButton(
                   tooltip: 'Sao chép kết quả',
-                  icon: const Icon(Icons.copy_rounded, color: Colors.white70, size: 18),
-                  onPressed: () => _copyToClipboard(_replResult!, 'Đã sao chép kết quả'),
+                  icon: const Icon(
+                    Icons.copy_rounded,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
+                  onPressed: () =>
+                      _copyToClipboard(_replResult!, 'Đã sao chép kết quả'),
                 ),
             ],
           ),
@@ -1186,16 +1447,21 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
                 color: const Color(0xFF0F172A),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _replIsError ? Colors.red.withValues(alpha: 0.5) : const Color(0xFF334155),
+                  color: _replIsError
+                      ? Colors.red.withValues(alpha: 0.5)
+                      : const Color(0xFF334155),
                 ),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
-                  _replResult ?? '// Nhập lệnh hoặc chọn shortcut bên trên để chạy.',
+                  _replResult ??
+                      '// Nhập lệnh hoặc chọn shortcut bên trên để chạy.',
                   style: TextStyle(
                     color: _replResult == null
                         ? Colors.white30
-                        : (_replIsError ? const Color(0xFFF87171) : const Color(0xFF38BDF8)),
+                        : (_replIsError
+                              ? const Color(0xFFF87171)
+                              : const Color(0xFF38BDF8)),
                     fontSize: 12,
                     fontFamily: 'monospace',
                   ),
@@ -1211,7 +1477,9 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
   // TAB 4: DOM SOURCE
   Widget _buildDomSourceTab() {
     if (_domLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)));
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF38BDF8)),
+      );
     }
 
     return Column(
@@ -1227,14 +1495,27 @@ class _WebViewDebugBottomSheetState extends State<WebViewDebugBottomSheet>
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white70, size: 18),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Colors.white70,
+                  size: 18,
+                ),
                 tooltip: 'Tải lại DOM Source',
                 onPressed: _loadDomSource,
               ),
               IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Colors.white70, size: 18),
+                icon: const Icon(
+                  Icons.copy_rounded,
+                  color: Colors.white70,
+                  size: 18,
+                ),
                 tooltip: 'Sao chép toàn bộ HTML',
-                onPressed: _domSource == null ? null : () => _copyToClipboard(_domSource!, 'Đã sao chép HTML Source'),
+                onPressed: _domSource == null
+                    ? null
+                    : () => _copyToClipboard(
+                        _domSource!,
+                        'Đã sao chép HTML Source',
+                      ),
               ),
             ],
           ),

@@ -1,5 +1,7 @@
+import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
+import '../../../../core/network/app_http_client.dart';
 import '../../authentication/data/auth_repository_impl.dart';
 import '../../authentication/data/auth_code_service_shim.dart';
 import '../../authentication/data/token_service_shim.dart';
@@ -34,6 +36,7 @@ class NativeActionDispatcher {
   final PermissionRepositoryImpl permissionRepo;
   final DebugLogRepository debugLogRepo;
   final SecureStorageRepositoryImpl secureStorageRepo;
+  final http.Client? httpClient;
 
   final Map<String, NativeActionHandler> _handlers = {};
 
@@ -48,6 +51,7 @@ class NativeActionDispatcher {
     SecureStorageRepositoryImpl? secureStorageRepo,
     String? miniappUrl,
     String? authUrl,
+    this.httpClient,
     Function(String appId)? onSwitchMiniApp,
   }) : secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
     _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
@@ -63,14 +67,17 @@ class NativeActionDispatcher {
       AuthRequestCodeHandler(
         authRepo: authRepo,
         authCodeService: authCodeService,
+        httpClient: httpClient,
         miniappUrl: miniappUrl,
       ),
       AuthExchangeCodeHandler(
         tokenService: tokenService,
+        httpClient: httpClient,
         miniappUrl: miniappUrl,
       ),
       AuthRefreshTokenHandler(
         tokenService: tokenService,
+        httpClient: httpClient,
         authUrl: authUrl,
       ),
       AuthLogoutHandler(authRepo: authRepo),
@@ -317,6 +324,7 @@ class NativeActionDispatcher {
 
 final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
+  final httpClient = ref.watch(appHttpClientProvider);
   return NativeActionDispatcher(
     authRepo: ref.watch(authRepositoryProvider),
     authCodeService: ref.watch(authCodeServiceProvider),
@@ -328,5 +336,6 @@ final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
     secureStorageRepo: ref.watch(secureStorageRepositoryProvider),
     miniappUrl: endpoint.miniappUrl,
     authUrl: endpoint.authUrl,
+    httpClient: httpClient,
   );
 });

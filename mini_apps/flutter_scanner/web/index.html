@@ -5,8 +5,44 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>QR & Barcode Scanner</title>
+  <title>Flutter Scanner (Flutter Web)</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    window.__WEBVIEW_LOGS__ = window.__WEBVIEW_LOGS__ || [];
+    function __sendEarlyLog(entry) {
+      window.__WEBVIEW_LOGS__.push(entry);
+      try {
+        if (window.__SuperAppWebDebug__ && window.__SuperAppWebDebug__.postMessage) {
+          window.__SuperAppWebDebug__.postMessage(JSON.stringify(entry));
+        }
+      } catch (_) {}
+    }
+    window.addEventListener('error', function(e) {
+      var target = e.target;
+      var resource = target && (target.src || target.href);
+      var msg = resource ? ('Failed to load ' + (target.tagName || 'resource') + ': ' + resource) : (e.message || 'Script Error');
+      if (e.filename) msg += ' at ' + e.filename + ':' + (e.lineno || '') + ':' + (e.colno || '');
+      __sendEarlyLog({
+        id: 'early_err_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        type: 'error',
+        level: 'error',
+        message: msg,
+        stack: e.error && e.error.stack ? e.error.stack : null,
+        timeMs: Date.now()
+      });
+    }, true);
+    window.addEventListener('unhandledrejection', function(e) {
+      var reason = e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : 'Unknown rejection';
+      __sendEarlyLog({
+        id: 'early_rej_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        type: 'unhandledrejection',
+        level: 'error',
+        message: '[Unhandled Rejection] ' + reason,
+        stack: e.reason && e.reason.stack ? e.reason.stack : null,
+        timeMs: Date.now()
+      });
+    });
+  </script>
   <style>
     body {
       margin: 0;
@@ -44,25 +80,7 @@
     <p style="margin-top: 14px; font-size: 13px; font-weight: 600; color: #64748B;">Đang khởi chạy Flutter Web...</p>
   </div>
 
-  <script src="flutter.js" defer></script>
-  <script>
-    window.addEventListener('load', function(ev) {
-      // Initialize SuperApp Web bridge callbacks placeholder if running in iframe
-      window.SuperAppBridge = window.SuperAppBridge || {};
+  <script src="flutter_bootstrap.js" async></script>
 
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: {{flutter_service_worker_version}},
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            var loader = document.getElementById('loading');
-            if (loader) loader.remove();
-            appRunner.runApp();
-          });
-        }
-      });
-    });
-  </script>
 </body>
 </html>

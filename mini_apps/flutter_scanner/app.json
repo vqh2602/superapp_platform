@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "appId": "flutter_scanner",
-  "name": "QR & Barcode Scanner (Flutter Web)",
+  "name": "Flutter Scanner (Flutter Web)",
   "description": "Mini App viết bằng Flutter Web: Quét mã QR, mã vạch sản phẩm thông qua SuperApp Native Bridge",
   "category": "Utilities",
   "version": "1.0.5",

@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "appId": "schema_runtime",
-  "name": "Schema Runtime Engine",
+  "name": "Schema Runtime (React + JSON)",
   "description": "Dynamic No-Code Schema execution engine for SuperApp",
   "category": "Developer Tools",
   "version": "1.0.5",

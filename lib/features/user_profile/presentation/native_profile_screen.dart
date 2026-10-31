@@ -71,10 +71,7 @@ class NativeProfileScreen extends ConsumerWidget {
                         _buildInfoRow('Số điện thoại', user.phone),
                         _buildInfoRow('Email', user.email),
                         _buildInfoRow('Vai trò', user.role),
-                        _buildInfoRow(
-                          'Trạng thái xác thực',
-                          'Đã xác thực',
-                        ),
+                        _buildInfoRow('Trạng thái xác thực', 'Đã xác thực'),
                       ],
                     ),
                   ),

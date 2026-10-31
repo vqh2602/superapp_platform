@@ -129,13 +129,14 @@ async function run() {
       zip.end();
     });
 
-    const checksum = crypto.createHash('sha256').update(htmlBuffer).digest('hex');
+    const checksum = crypto.createHash('sha256').update(zipBuffer).digest('hex');
 
     // Store in backend storage under appId-version deterministic or standard folder
     const targetDir = path.join(BACKEND_STORAGE_DIR, `${app.id}-${manifest.version}`);
     fs.mkdirSync(targetDir, { recursive: true });
     fs.writeFileSync(path.join(targetDir, 'app.json'), manifestBuffer);
     fs.writeFileSync(path.join(targetDir, 'icon.png'), iconBuffer);
+    fs.rmSync(path.join(targetDir, 'dist'), { recursive: true, force: true });
     fs.cpSync(distDir, path.join(targetDir, 'dist'), { recursive: true });
 
     // Ship seed bundles separately from mutable uploaded package storage.
@@ -143,6 +144,7 @@ async function run() {
     fs.mkdirSync(seedDir, { recursive: true });
     fs.writeFileSync(path.join(seedDir, 'app.json'), manifestBuffer);
     fs.writeFileSync(path.join(seedDir, 'icon.png'), iconBuffer);
+    fs.rmSync(path.join(seedDir, 'dist'), { recursive: true, force: true });
     fs.cpSync(distDir, path.join(seedDir, 'dist'), { recursive: true });
 
     // Also write export zip
@@ -153,7 +155,7 @@ async function run() {
       appId: app.id,
       version: manifest.version,
       checksum: checksum.slice(0, 12),
-      size: `${(htmlBuffer.length / 1024).toFixed(1)} KB`,
+      size: `${(zipBuffer.length / 1024).toFixed(1)} KB`,
       url: `/api/v1/miniapps/${app.id}/${manifest.version}/dist/index.html`,
       storagePath: targetDir,
     });

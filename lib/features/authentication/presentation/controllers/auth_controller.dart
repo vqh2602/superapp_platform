@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../app/router/app_router.dart';
 import '../../../../core/config/endpoint_config.dart';
+import '../../../../core/network/app_http_client.dart';
 import '../../domain/models/auth_session.dart';
 import '../../domain/models/platform_user.dart';
 import '../../data/auth_repository_impl.dart';
@@ -9,7 +12,11 @@ import '../../data/token_service_shim.dart';
 /// Core provider for AuthRepositoryImpl connected to backend endpoint
 final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
-  final repo = AuthRepositoryImpl(authUrl: endpoint.authUrl);
+  final httpClient = ref.watch(appHttpClientProvider);
+  final repo = AuthRepositoryImpl(
+    authUrl: endpoint.authUrl,
+    httpClient: httpClient,
+  );
   ref.onDispose(() => repo.dispose());
   return repo;
 });
@@ -57,6 +64,7 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   AuthRepositoryImpl get _repository => ref.read(authRepositoryProvider);
+  bool _isHandlingTokenExpired = false;
 
   @override
   AuthState build() {
@@ -108,6 +116,61 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true);
     await _repository.logout();
     state = const AuthState();
+  }
+
+  /// Handles 401 Unauthorized or expired token by resetting the auth session,
+  /// redirecting to the login screen, and displaying a notification.
+  void handleTokenExpired([String? reason]) {
+    if (_isHandlingTokenExpired) return;
+    _isHandlingTokenExpired = true;
+
+    final message = reason ?? 'Phiên đăng nhập đã hết hạn (401). Vui lòng đăng nhập lại.';
+
+    // 1. Clear session state & set error message
+    state = state.copyWith(
+      clearSession: true,
+      isLoading: false,
+      errorMessage: message,
+    );
+    _repository.reset();
+
+    // 2. Redirect to /login and present warning SnackBar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        appRouter.go('/login');
+
+        final context = rootNavigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.lock_clock_outlined, color: Colors.amberAccent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF0F172A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      } finally {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          _isHandlingTokenExpired = false;
+        });
+      }
+    });
   }
 
   void clearError() {

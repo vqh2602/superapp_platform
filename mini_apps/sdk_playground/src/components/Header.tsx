@@ -13,7 +13,7 @@ export const Header: React.FC = () => {
             <Cpu size={20} className="icon-pulse" />
           </div>
           <div>
-            <h1 className="app-title">SDK Playground</h1>
+            <h1 className="app-title">SDK Playground (React)</h1>
             <p className="app-subtitle">Super App React Mini App Runtime</p>
           </div>
         </div>

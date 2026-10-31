@@ -4,6 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "flutter build web --release && node postbuild.js"
+    "build": "node ../../scripts/build-flutter-miniapp.cjs"
   }
 }

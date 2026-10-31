@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/app_config.dart';
@@ -22,6 +23,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _storageKeyRememberCredentials = 'superapp_remember_credentials';
+  static const String _storageKeySavedAccount = 'superapp_saved_account';
+  static const String _storageKeySavedPassword = 'superapp_saved_password';
+
+  bool _rememberCredentials = true;
+  bool _hasSavedCredentials = false;
   bool _obscurePassword = true;
   int _versionTapCount = 0;
   DateTime? _lastTapTime;
@@ -32,7 +40,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     final currentEndpoint = ref.read(backendEndpointProvider);
     _endpointController = TextEditingController(text: currentEndpoint.baseUrl);
+    _loadSavedCredentials();
+  }
 
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final remember = await _storage.read(key: _storageKeyRememberCredentials);
+      final savedAccount = await _storage.read(key: _storageKeySavedAccount);
+      final savedPassword = await _storage.read(key: _storageKeySavedPassword);
+
+      if (!mounted) return;
+      setState(() {
+        _rememberCredentials = remember != 'false';
+        if (_rememberCredentials) {
+          if (savedAccount != null && savedAccount.isNotEmpty) {
+            _emailController.text = savedAccount;
+          }
+          if (savedPassword != null && savedPassword.isNotEmpty) {
+            _passwordController.text = savedPassword;
+          }
+          _hasSavedCredentials =
+              (savedAccount != null && savedAccount.isNotEmpty) ||
+              (savedPassword != null && savedPassword.isNotEmpty);
+        }
+      });
+    } catch (e) {
+      debugPrint('[LoginScreen] Error loading saved credentials: $e');
+    }
+  }
+
+  Future<void> _saveOrClearCredentials(String account, String password) async {
+    try {
+      if (_rememberCredentials) {
+        await _storage.write(key: _storageKeyRememberCredentials, value: 'true');
+        await _storage.write(key: _storageKeySavedAccount, value: account);
+        await _storage.write(key: _storageKeySavedPassword, value: password);
+      } else {
+        await _storage.write(key: _storageKeyRememberCredentials, value: 'false');
+        await _storage.delete(key: _storageKeySavedAccount);
+        await _storage.delete(key: _storageKeySavedPassword);
+      }
+    } catch (e) {
+      debugPrint('[LoginScreen] Error saving credentials: $e');
+    }
+  }
+
+  Future<void> _clearSavedCredentials() async {
+    try {
+      await _storage.delete(key: _storageKeySavedAccount);
+      await _storage.delete(key: _storageKeySavedPassword);
+      if (mounted) {
+        setState(() {
+          _emailController.clear();
+          _passwordController.clear();
+          _hasSavedCredentials = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã xóa thông tin tài khoản & mật khẩu đã lưu'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[LoginScreen] Error clearing credentials: $e');
+    }
   }
 
   @override
@@ -124,10 +197,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(email, password);
 
     if (success && mounted) {
+      // Save credentials if remember credentials option is enabled
+      await _saveOrClearCredentials(email, password);
+
       // Invalidate catalog to load fresh from newly configured backend
       ref.invalidate(dynamicCatalogProvider);
       ref.invalidate(catalogCategoriesProvider);
-      context.go('/home');
+      if (mounted) {
+        context.go('/home');
+      }
     }
   }
 
@@ -427,7 +505,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   const SizedBox(height: 12),
 
-                  const SizedBox(height: 20),
+                  // Remember Account & Password checkbox
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _rememberCredentials = !_rememberCredentials;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: _rememberCredentials,
+                                  activeColor: AppTheme.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _rememberCredentials = val ?? false;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Lưu tài khoản & mật khẩu',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF334155),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (_hasSavedCredentials)
+                        TextButton.icon(
+                          onPressed: _clearSavedCredentials,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            foregroundColor: const Color(0xFFEF4444),
+                          ),
+                          icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                          label: const Text(
+                            'Xóa đã lưu',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
 
                   // Login Button
                   BouncingTap(

@@ -10,7 +10,6 @@ import { PackageService, ValidatedPackage } from '../registry/packages/package.s
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { testIcon } from '../registry/packages/test-package';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -31,6 +30,20 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedExistingApps();
   }
 
+  private getSystemManifest(appId: string, version: string) {
+    for (const root of ['seed-bundles', '../mini_apps', 'mini_apps']) {
+      const file = path.resolve(process.cwd(), root, appId, 'app.json');
+      if (fs.existsSync(file)) {
+        const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (manifest.appId !== appId || manifest.version !== version) {
+          throw new Error(`System Mini App manifest mismatch: ${appId} v${version}`);
+        }
+        return manifest;
+      }
+    }
+    throw new Error(`Missing system Mini App manifest: ${appId}`);
+  }
+
   private getMiniAppBundle(appId: string): { html: Buffer; icon: Buffer; allFiles: Map<string, Buffer> } {
     const candidates = [
       path.resolve(process.cwd(), 'seed-bundles', appId),
@@ -44,7 +57,8 @@ export class SeedService implements OnApplicationBootstrap {
       const distDir = path.join(dir, 'dist');
       if (fs.existsSync(htmlPath)) {
         const html = fs.readFileSync(htmlPath);
-        const icon = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : testIcon;
+        if (!fs.existsSync(iconPath)) throw new Error(`Missing icon for ${appId}`);
+        const icon = fs.readFileSync(iconPath);
         const allFiles = new Map<string, Buffer>();
 
         const collectFiles = (curDir: string, relPrefix: string = '') => {
@@ -73,15 +87,6 @@ export class SeedService implements OnApplicationBootstrap {
     try {
       const bundle = this.getMiniAppBundle(appId);
       const existingVer = await this.versionRepo.findOne({ where: { appId, version } });
-      if (existingVer?.packageKey) {
-        try {
-          const storedHtml = await this.packageService.file(existingVer.packageKey, 'dist/index.html');
-          if (storedHtml.equals(bundle.html)) return existingVer.packageKey;
-        } catch (_) {
-          // File missing from storage, proceed to re-store
-        }
-      }
-
       const files = new Map<string, Buffer>();
       files.set('app.json', Buffer.from(JSON.stringify(manifest, null, 2)));
       files.set('icon.png', bundle.icon);
@@ -89,11 +94,23 @@ export class SeedService implements OnApplicationBootstrap {
         files.set(filePath, content);
       }
 
-      const checksum = createHash('sha256').update(bundle.html).digest('hex');
-      let totalSize = bundle.icon.length;
-      for (const content of bundle.allFiles.values()) {
+      if (existingVer?.packageKey) {
+        try {
+          const unchanged = await Promise.all([...files].map(async ([name, content]) =>
+            (await this.packageService.file(existingVer.packageKey, name)).equals(content)));
+          if (unchanged.every(Boolean)) return existingVer.packageKey;
+        } catch (_) {
+          // Missing/stale assets (including JS/WASM) must trigger a complete repair.
+        }
+      }
+      const hash = createHash('sha256');
+      let totalSize = 0;
+      for (const name of [...files.keys()].sort()) {
+        const content = files.get(name)!;
+        hash.update(name).update('\0').update(String(content.length)).update('\0').update(content);
         totalSize += content.length;
       }
+      const checksum = hash.digest('hex');
 
       const validatedPkg: ValidatedPackage = {
         manifest,
@@ -107,6 +124,8 @@ export class SeedService implements OnApplicationBootstrap {
         existingVer.packageKey = packageKey;
         existingVer.checksum = checksum;
         existingVer.packageSize = validatedPkg.size;
+        existingVer.manifest = manifest;
+        existingVer.capabilities = manifest.permissions;
         await this.versionRepo.save(existingVer);
       }
       this.logger.log(`Stored backend package for ${appId} v${version} with key: ${packageKey}`);
@@ -122,26 +141,15 @@ export class SeedService implements OnApplicationBootstrap {
     const targetVersion = '1.0.5';
 
     // 0. Seed Schema Runtime (Host engine for all No-Code schema apps)
-    const schemaRuntimeManifest = {
-      manifestVersion: 1,
-      appId: 'schema_runtime',
-      name: 'Schema Runtime Engine',
-      description: 'Dynamic No-Code Schema execution engine for SuperApp',
-      category: 'Developer Tools',
-      version: targetVersion,
-      runtimeType: MiniAppRuntimeType.WEB,
-      entry: 'dist/index.html',
-      icon: 'icon.png',
-      permissions: ['navigation.close', 'navigation.openMiniApp', 'showToast', 'configAppView'],
-    };
+    const schemaRuntimeManifest = this.getSystemManifest('schema_runtime', targetVersion);
     const schemaRuntimePkgKey = await this.ensurePackageStored('schema_runtime', targetVersion, schemaRuntimeManifest);
 
     let schemaRuntimeApp = await this.appRepo.findOne({ where: { id: 'schema_runtime' } });
     if (!schemaRuntimeApp) {
       schemaRuntimeApp = this.appRepo.create({
         id: 'schema_runtime',
-        name: 'Schema Runtime Engine',
-        description: 'Dynamic No-Code Schema execution engine for SuperApp',
+        name: schemaRuntimeManifest.name,
+        description: schemaRuntimeManifest.description,
         icon: 'code',
         category: 'Developer Tools',
         tenantId: 'system_core',
@@ -168,6 +176,10 @@ export class SeedService implements OnApplicationBootstrap {
       });
       await this.versionRepo.save(ver);
     } else {
+      schemaRuntimeApp.name = schemaRuntimeManifest.name;
+      schemaRuntimeApp.description = schemaRuntimeManifest.description;
+      schemaRuntimeApp.category = schemaRuntimeManifest.category;
+      schemaRuntimeApp.capabilities = schemaRuntimeManifest.permissions;
       schemaRuntimeApp.activePublishedVersion = targetVersion;
       schemaRuntimeApp.entryUrl = `/api/v1/miniapps/schema_runtime/${targetVersion}/dist/index.html`;
       schemaRuntimeApp.isAsset = false;
@@ -195,80 +207,7 @@ export class SeedService implements OnApplicationBootstrap {
     }
 
     // 1. Seed SDK Playground
-    const playgroundManifest = {
-      manifestVersion: 1,
-      appId: 'sdk_playground',
-      name: 'SDK Playground',
-      description: 'React + TypeScript Mini App test bed with interactive SDK runner',
-      category: 'Developer Tools',
-      version: targetVersion,
-      runtimeType: MiniAppRuntimeType.WEB,
-      entry: 'dist/index.html',
-      icon: 'icon.png',
-      permissions: [
-        'auth.requestCode',
-        'user.getProfile',
-        'user.getBasicInfo',
-        'navigation.openNativePage',
-        'navigation.close',
-        'navigation.openMiniApp',
-        'device.scanQRCode',
-        'device.getLocation',
-        'device.pickImage',
-        'permission.request',
-        'permission.getPermissions',
-        'storage.setSecureItem',
-        'storage.getSecureItem',
-        'storage.removeSecureItem',
-        'storage.clear',
-        'storage.setCredentials',
-        'storage.getCredentials',
-        'storage.deleteCredentials',
-        'storage.secure',
-        'contacts',
-        'device.scanQr',
-        'scanQr',
-        'device.scanBarcode',
-        'scanBarcode',
-        'getPhoto',
-        'pickImages',
-        'saveImageToGallery',
-        'pickVideo',
-        'saveVideoToGallery',
-        'saveFile',
-        'pickFile',
-        'filePreview',
-        'showToast',
-        'vibrate',
-        'copyToClipboard',
-        'setBrightness',
-        'setStatusBarStyle',
-        'setStatusBarColor',
-        'setNavigationBarColor',
-        'configAppView',
-        'showMiniappMenu',
-        'closeApp',
-        'getNetworkInfo',
-        'getDeviceLanguage',
-        'getSuperAppSettings',
-        'getSystemInfo',
-        'getAppInfo',
-        'getBatteryInfo',
-        'getContacts',
-        'setSecretData',
-        'getSecretData',
-        'removeSecretData',
-        'microphone',
-        'openPhone',
-        'openSMS',
-        'openExternalBrowser',
-        'openDeepLink',
-        'speechToText',
-        'hideKeyboard',
-        'debug.echo',
-        'debug.simulateFailure',
-      ],
-    };
+    const playgroundManifest = this.getSystemManifest('sdk_playground', targetVersion);
     const playgroundPkgKey = await this.ensurePackageStored('sdk_playground', targetVersion, playgroundManifest);
 
     let existingPlayground = await this.appRepo.findOne({
@@ -279,8 +218,8 @@ export class SeedService implements OnApplicationBootstrap {
       this.logger.log(`Seeding existing Mini App: sdk_playground (web v${targetVersion})...`);
       existingPlayground = this.appRepo.create({
         id: 'sdk_playground',
-        name: 'SDK Playground',
-        description: 'React + TypeScript Mini App test bed with interactive SDK runner',
+        name: playgroundManifest.name,
+        description: playgroundManifest.description,
         icon: 'code',
         category: 'Developer Tools',
         tenantId: 'system_core',
@@ -307,6 +246,10 @@ export class SeedService implements OnApplicationBootstrap {
       });
       await this.versionRepo.save(ver);
     } else {
+      existingPlayground.name = playgroundManifest.name;
+      existingPlayground.description = playgroundManifest.description;
+      existingPlayground.category = playgroundManifest.category;
+      existingPlayground.capabilities = playgroundManifest.permissions;
       existingPlayground.activePublishedVersion = targetVersion;
       existingPlayground.entryUrl = `/api/v1/miniapps/sdk_playground/${targetVersion}/dist/index.html`;
       existingPlayground.isAsset = false;
@@ -334,18 +277,7 @@ export class SeedService implements OnApplicationBootstrap {
     }
 
     // 2. Seed Sample Store
-    const storeManifest = {
-      manifestVersion: 1,
-      appId: 'sample_store',
-      name: 'Sample Mini App 2 (Store)',
-      description: 'Secondary Mini App to demonstrate cross-mini-app native switching',
-      category: 'Food & Beverage',
-      version: targetVersion,
-      runtimeType: MiniAppRuntimeType.WEB,
-      entry: 'dist/index.html',
-      icon: 'icon.png',
-      permissions: ['user.getBasicInfo', 'navigation.close'],
-    };
+    const storeManifest = this.getSystemManifest('sample_store', targetVersion);
     const storePkgKey = await this.ensurePackageStored('sample_store', targetVersion, storeManifest);
 
     let existingStore = await this.appRepo.findOne({
@@ -356,8 +288,8 @@ export class SeedService implements OnApplicationBootstrap {
       this.logger.log(`Seeding existing Mini App: sample_store (web v${targetVersion})...`);
       existingStore = this.appRepo.create({
         id: 'sample_store',
-        name: 'Sample Mini App 2 (Store)',
-        description: 'Secondary Mini App to demonstrate cross-mini-app native switching',
+        name: storeManifest.name,
+        description: storeManifest.description,
         icon: 'storefront',
         category: 'Food & Beverage',
         tenantId: 'system_core',
@@ -384,6 +316,10 @@ export class SeedService implements OnApplicationBootstrap {
       });
       await this.versionRepo.save(ver);
     } else {
+      existingStore.name = storeManifest.name;
+      existingStore.description = storeManifest.description;
+      existingStore.category = storeManifest.category;
+      existingStore.capabilities = storeManifest.permissions;
       existingStore.activePublishedVersion = targetVersion;
       existingStore.entryUrl = `/api/v1/miniapps/sample_store/${targetVersion}/dist/index.html`;
       existingStore.isAsset = false;
@@ -411,33 +347,7 @@ export class SeedService implements OnApplicationBootstrap {
     }
 
     // 2b. Seed Flutter Web Scanner (Native Bridge QR & Barcode Scanner)
-    const scannerManifest = {
-      manifestVersion: 1,
-      appId: 'flutter_scanner',
-      name: 'QR & Barcode Scanner (Flutter Web)',
-      description: 'Mini App quét mã QR và mã vạch viết bằng Flutter Web sử dụng SuperApp Native Bridge',
-      category: 'Utilities',
-      version: targetVersion,
-      runtimeType: MiniAppRuntimeType.WEB,
-      entry: 'dist/index.html',
-      icon: 'icon.png',
-      permissions: [
-        'media.scanQRCode',
-        'device.scanQRCode',
-        'scanQr',
-        'scanBarcode',
-        'device.scanBarcode',
-        'getPhoto',
-        'chooseImage',
-        'showToast',
-        'vibrate',
-        'copyToClipboard',
-        'navigation.close',
-        'navigation.openExternalBrowser',
-        'getNetworkInfo',
-        'getBatteryInfo',
-      ],
-    };
+    const scannerManifest = this.getSystemManifest('flutter_scanner', targetVersion);
     const scannerPkgKey = await this.ensurePackageStored('flutter_scanner', targetVersion, scannerManifest);
 
     let existingScanner = await this.appRepo.findOne({ where: { id: 'flutter_scanner' } });
@@ -445,8 +355,8 @@ export class SeedService implements OnApplicationBootstrap {
       this.logger.log(`Seeding existing Mini App: flutter_scanner (flutter web v${targetVersion})...`);
       existingScanner = this.appRepo.create({
         id: 'flutter_scanner',
-        name: 'QR & Barcode Scanner (Flutter)',
-        description: 'Mini App quét mã QR & mã vạch viết bằng Flutter Web thông qua SuperApp Native Bridge',
+        name: scannerManifest.name,
+        description: scannerManifest.description,
         icon: 'qr_code_scanner',
         category: 'Utilities',
         tenantId: 'system_core',
@@ -473,6 +383,10 @@ export class SeedService implements OnApplicationBootstrap {
       });
       await this.versionRepo.save(ver);
     } else {
+      existingScanner.name = scannerManifest.name;
+      existingScanner.description = scannerManifest.description;
+      existingScanner.category = scannerManifest.category;
+      existingScanner.capabilities = scannerManifest.permissions;
       existingScanner.activePublishedVersion = targetVersion;
       existingScanner.entryUrl = `/api/v1/miniapps/flutter_scanner/${targetVersion}/dist/index.html`;
       existingScanner.isAsset = false;

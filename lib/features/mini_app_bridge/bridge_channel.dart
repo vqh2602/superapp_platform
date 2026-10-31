@@ -6,13 +6,13 @@ import 'bridge_dispatcher.dart';
 class BridgeChannel {
   static const String webDebugChannelName = '__SuperAppWebDebug__';
 
-  static void register({
+  static Future<void> register({
     required WebViewController controller,
     required BridgeDispatcher dispatcher,
     required BuildContext Function() contextGetter,
     void Function(String message)? onWebDebugMessage,
-  }) {
-    controller.addJavaScriptChannel(
+  }) async {
+    await controller.addJavaScriptChannel(
       AppConfig.bridgeChannelName,
       onMessageReceived: (JavaScriptMessage message) {
         dispatcher.handleMessage(message.message, contextGetter());
@@ -20,7 +20,7 @@ class BridgeChannel {
     );
 
     if (onWebDebugMessage != null) {
-      controller.addJavaScriptChannel(
+      await controller.addJavaScriptChannel(
         webDebugChannelName,
         onMessageReceived: (JavaScriptMessage message) {
           onWebDebugMessage(message.message);
@@ -38,6 +38,7 @@ class BridgeChannel {
 
       function sendToFlutter(entry) {
         window.__WEBVIEW_LOGS__.push(entry);
+        if (window.__WEBVIEW_LOGS__.length > 500) window.__WEBVIEW_LOGS__.shift();
         try {
           if (window.__SuperAppWebDebug__ && window.__SuperAppWebDebug__.postMessage) {
             window.__SuperAppWebDebug__.postMessage(JSON.stringify(entry));
@@ -45,22 +46,31 @@ class BridgeChannel {
         } catch(e) {}
       }
 
+      function describe(value) {
+        if (value instanceof Error || (value && value.stack)) {
+          return value.stack || value.message || String(value);
+        }
+        if (typeof value === 'object') {
+          var seen = [];
+          try { return JSON.stringify(value, function(key, item) {
+            if (item && typeof item === 'object') {
+              if (seen.indexOf(item) >= 0) return '[Circular]';
+              seen.push(item);
+            }
+            return item;
+          }); } catch (_) {}
+        }
+        return String(value);
+      }
       var levels = ['log', 'info', 'warn', 'error', 'debug'];
       levels.forEach(function(lvl) {
         var orig = console[lvl];
         console[lvl] = function() {
           var args = Array.prototype.slice.call(arguments);
-          var text = args.map(function(a) {
-            if (typeof a === 'object') {
-              try { return JSON.stringify(a); } catch(e) { return String(a); }
-            }
-            return String(a);
-          }).join(' ');
           sendToFlutter({
             id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            type: 'console',
-            level: lvl,
-            message: text,
+            type: 'console', level: lvl,
+            message: args.map(describe).join(' '),
             timeMs: Date.now()
           });
           if (orig) orig.apply(console, arguments);
@@ -68,7 +78,9 @@ class BridgeChannel {
       });
 
       window.addEventListener('error', function(e) {
-        var msg = (e.message || 'Uncaught Error');
+        var target = e.target;
+        var resource = target && (target.src || target.href);
+        var msg = resource ? 'Failed to load ' + (target.tagName || 'resource') + ': ' + resource : (e.message || 'Uncaught Error');
         var stack = e.error && e.error.stack ? e.error.stack : null;
         if (e.filename) msg += ' at ' + e.filename + ':' + (e.lineno || '') + ':' + (e.colno || '');
         if (msg === 'Script error.' || msg === 'Script error') {
@@ -85,10 +97,10 @@ class BridgeChannel {
           stack: stack,
           timeMs: Date.now()
         });
-      });
+      }, true);
 
       window.addEventListener('unhandledrejection', function(e) {
-        var reason = e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : 'Unknown rejection';
+        var reason = describe(e.reason);
         sendToFlutter({
           id: 'rej_' + Date.now(),
           type: 'unhandledrejection',
@@ -97,6 +109,11 @@ class BridgeChannel {
           stack: e.reason && e.reason.stack ? e.reason.stack : null,
           timeMs: Date.now()
         });
+      });
+      window.addEventListener('superapp.startup', function(e) {
+        sendToFlutter({id: 'startup_' + Date.now(), type: 'startup',
+          level: e.detail.stage === 'error' ? 'error' : 'info',
+          message: e.detail.stage, stack: e.detail.error || null, timeMs: Date.now()});
       });
     })();
   ''';

@@ -78,7 +78,7 @@ async function main() {
 
   const sshHost = process.env.ALWAYSDATA_SSH_HOST || `ssh-${account}.alwaysdata.net`;
   const sshUser = process.env.ALWAYSDATA_SSH_USER || account;
-  const remoteDir = process.env.ALWAYSDATA_REMOTE_DIR || 'superapp_backend';
+  const remoteDir = process.env.ALWAYSDATA_REMOTE_DIR || 'superapp-backend';
   const apiKey = process.env.ALWAYSDATA_API_KEY || '';
   const siteId = process.env.ALWAYSDATA_SITE_ID || '';
 

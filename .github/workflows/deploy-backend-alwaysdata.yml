@@ -10,11 +10,15 @@ on:
       - 'mini_apps/**'
       - 'mini_app_sdk/**'
       - 'scripts/build-and-deploy-miniapps.cjs'
+      - 'scripts/build-flutter-miniapp.cjs'
       - '.github/workflows/deploy-backend-alwaysdata.yml'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      RESTART_API_KEY: ${{ secrets.ALWAYSDATA_API_KEY }}
+      RESTART_SITE_ID: ${{ secrets.ALWAYSDATA_SITE_ID }}
     defaults:
       run:
         working-directory: backend
@@ -32,6 +36,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Setup Flutter for Flutter Scanner
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.9'
+          cache: true
 
       - name: Build bundled Mini Apps
         run: |
@@ -58,7 +69,7 @@ jobs:
         env:
           SSH_USER: ${{ secrets.ALWAYSDATA_SSH_USER }}
           SSH_HOST: ${{ secrets.ALWAYSDATA_SSH_HOST }}
-          REMOTE_DIR: ${{ secrets.ALWAYSDATA_REMOTE_DIR || 'superapp_backend' }}
+          REMOTE_DIR: ${{ secrets.ALWAYSDATA_REMOTE_DIR || 'superapp-backend' }}
         run: |
           tar -czf release.tar.gz dist package.json package-lock.json seed-bundles
           ssh $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_DIR/storage/miniapps"
@@ -66,7 +77,7 @@ jobs:
           ssh $SSH_USER@$SSH_HOST "cd $REMOTE_DIR && tar -xzf release.tar.gz && rm release.tar.gz && npm install --omit=dev && pkill -f 'dist/main' || true"
 
       - name: Restart Site via Alwaysdata API
-        if: ${{ secrets.ALWAYSDATA_API_KEY != '' && secrets.ALWAYSDATA_SITE_ID != '' }}
+        if: ${{ env.RESTART_API_KEY != '' && env.RESTART_SITE_ID != '' }}
         env:
           API_KEY: ${{ secrets.ALWAYSDATA_API_KEY }}
           ACCOUNT: ${{ secrets.ALWAYSDATA_SSH_USER }}

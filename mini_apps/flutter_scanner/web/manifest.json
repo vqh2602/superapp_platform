@@ -1,6 +1,6 @@
 {
-  "name": "QR & Barcode Scanner",
-  "short_name": "Scanner",
+  "name": "Flutter Scanner (Flutter Web)",
+  "short_name": "Flutter Scanner",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#F8FAFC",

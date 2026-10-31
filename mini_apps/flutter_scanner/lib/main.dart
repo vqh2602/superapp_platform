@@ -14,7 +14,7 @@ class ScannerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QR & Barcode Scanner',
+      title: 'Flutter Scanner (Flutter Web)',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -196,7 +196,7 @@ class _ScannerHomeScreenState extends State<ScannerHomeScreen> {
           children: [
             Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0068FF), size: 22),
             SizedBox(width: 8),
-            Text('Flutter Web Scanner'),
+            Text('Flutter Scanner (Flutter Web)'),
           ],
         ),
         actions: [

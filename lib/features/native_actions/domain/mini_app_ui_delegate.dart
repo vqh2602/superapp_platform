@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// SuperApp Mini App container UI (Title, Header Color, Status Bar, Fullscreen, Minimize, etc.)
 abstract class MiniAppUiDelegate {
   /// Update the current navigation bar title in the top bar.
-  void setTitle(String title);
+  void setTitle(String title, {String? align});
 
   /// Set navigation bar background color, text color ('white' | 'black'), and optional status bar color.
   void setNavigationBarColor({
@@ -27,6 +27,7 @@ abstract class MiniAppUiDelegate {
     bool? hasPaddingTop,
     bool? hasPaddingBottom,
     Color? bottomNavColor,
+    String? titleAlign,
   });
 
   /// Keep the screen on / awake (or allow it to sleep).

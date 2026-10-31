@@ -13,6 +13,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
   final String appId;
   final VoidCallback onReload;
   final VoidCallback onMinimize;
+  final VoidCallback? onWebDebug;
 
   const MiniAppActionBottomSheet({
     super.key,
@@ -20,6 +21,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
     required this.appId,
     required this.onReload,
     required this.onMinimize,
+    this.onWebDebug,
   });
 
   static Future<void> show(
@@ -28,6 +30,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
     required String appId,
     required VoidCallback onReload,
     required VoidCallback onMinimize,
+    VoidCallback? onWebDebug,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -38,6 +41,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
         appId: appId,
         onReload: onReload,
         onMinimize: onMinimize,
+        onWebDebug: onWebDebug,
       ),
     );
   }
@@ -110,339 +114,363 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Drag handle
-            Center(
-              child: Container(
-                width: 44,
-                height: 4.5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Header Row: App Icon + Name + Subtitle + Info button (i)
-            Row(
-              children: [
-                // App Icon
-                Container(
-                  width: 50,
-                  height: 50,
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4.5,
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(category),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _getCategoryColor(category).withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      _getCategoryIcon(category),
-                      color: Colors.white,
-                      size: 26,
-                    ),
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(width: 14),
+              ),
+              const SizedBox(height: 16),
 
-                // Name & Subtitle
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appTitle,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                          letterSpacing: -0.3,
+              // Header Row: App Icon + Name + Subtitle + Info button (i)
+              Row(
+                children: [
+                  // App Icon
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(category),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _getCategoryColor(
+                            category,
+                          ).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(
+                        _getCategoryIcon(category),
+                        color: Colors.white,
+                        size: 26,
                       ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Text(
-                            'Mini app của ',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: Color(0xFF64748B),
-                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Name & Subtitle
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appTitle,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.3,
                           ),
-                          Flexible(
-                            child: Text(
-                              '$category Official',
-                              style: const TextStyle(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            const Text(
+                              'Mini app của ',
+                              style: TextStyle(
                                 fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF2563EB),
+                                color: Color(0xFF64748B),
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
+                            Flexible(
+                              child: Text(
+                                '$category Official',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF2563EB),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: Color(0xFFF59E0B),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Info Icon Button (i)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.info_outline_rounded,
+                      color: Color(0xFF2563EB),
+                      size: 24,
+                    ),
+                    onPressed: () => _showTechnicalInfoDialog(context, ref),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // "Gửi tới" Section
+              const Text(
+                'Gửi tới',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Contacts Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildContactItem(
+                    context,
+                    name: 'Sầu Riêng',
+                    avatarColor: const Color(0xFFE11D48),
+                    icon: Icons.person_rounded,
+                    badgeText: '+99',
+                    appTitle: appTitle,
+                  ),
+                  _buildContactItem(
+                    context,
+                    name: 'XU É 12',
+                    avatarColor: const Color(0xFFEA580C),
+                    icon: Icons.monetization_on_rounded,
+                    appTitle: appTitle,
+                  ),
+                  _buildContactItem(
+                    context,
+                    name: '4TLS-BK H...',
+                    avatarColor: const Color(0xFF2563EB),
+                    icon: Icons.group_rounded,
+                    badgeText: '+7',
+                    appTitle: appTitle,
+                  ),
+                  _buildContactItem(
+                    context,
+                    name: 'Xem thêm',
+                    avatarColor: const Color(0xFFF1F5F9),
+                    icon: Icons.more_horiz_rounded,
+                    iconColor: const Color(0xFF64748B),
+                    appTitle: appTitle,
+                    isMore: true,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+
+              // Share URL Bar with Copy Button
+              InkWell(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: shareUrl));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã sao chép liên kết vào bộ nhớ tạm!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          shareUrl,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF334155),
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            size: 14,
-                            color: Color(0xFFF59E0B),
-                          ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.copy_rounded,
+                        size: 20,
+                        color: Color(0xFF2563EB),
                       ),
                     ],
                   ),
                 ),
-
-                // Info Icon Button (i)
-                IconButton(
-                  icon: const Icon(
-                    Icons.info_outline_rounded,
-                    color: Color(0xFF2563EB),
-                    size: 24,
-                  ),
-                  onPressed: () => _showTechnicalInfoDialog(context, ref),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // "Gửi tới" Section
-            const Text(
-              'Gửi tới',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF0F172A),
               ),
-            ),
-            const SizedBox(height: 12),
 
-            // Contacts Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildContactItem(
-                  context,
-                  name: 'Sầu Riêng',
-                  avatarColor: const Color(0xFFE11D48),
-                  icon: Icons.person_rounded,
-                  badgeText: '+99',
-                  appTitle: appTitle,
-                ),
-                _buildContactItem(
-                  context,
-                  name: 'XU É 12',
-                  avatarColor: const Color(0xFFEA580C),
-                  icon: Icons.monetization_on_rounded,
-                  appTitle: appTitle,
-                ),
-                _buildContactItem(
-                  context,
-                  name: '4TLS-BK H...',
-                  avatarColor: const Color(0xFF2563EB),
-                  icon: Icons.group_rounded,
-                  badgeText: '+7',
-                  appTitle: appTitle,
-                ),
-                _buildContactItem(
-                  context,
-                  name: 'Xem thêm',
-                  avatarColor: const Color(0xFFF1F5F9),
-                  icon: Icons.more_horiz_rounded,
-                  iconColor: const Color(0xFF64748B),
-                  appTitle: appTitle,
-                  isMore: true,
-                ),
-              ],
-            ),
+              const SizedBox(height: 18),
 
-            const SizedBox(height: 18),
-
-            // Share URL Bar with Copy Button
-            InkWell(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: shareUrl));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã sao chép liên kết vào bộ nhớ tạm!'),
-                    duration: Duration(seconds: 2),
+              // Action Grid: 2 Rows x 3 Columns
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: Icons.qr_code_2_rounded,
+                      label: 'Mã QR',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showQrCodeDialog(context, shareUrl);
+                      },
+                    ),
                   ),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        shareUrl,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF334155),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: Icons.add_box_outlined,
+                      label: 'Tạo phím tắt',
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Đã tạo phím tắt "$appTitle" trên màn hình chính!',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.copy_rounded,
-                      size: 20,
-                      color: Color(0xFF2563EB),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      iconColor: isFavorite
+                          ? const Color(0xFFF59E0B)
+                          : const Color(0xFF334155),
+                      label: isFavorite ? 'Đã thích' : 'Yêu thích',
+                      onTap: () {
+                        ref
+                            .read(favoriteAppsProvider.notifier)
+                            .toggleFavorite(appId);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              !isFavorite
+                                  ? 'Đã thêm "$appTitle" vào mục Yêu thích!'
+                                  : 'Đã bỏ yêu thích "$appTitle"!',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Action Grid: 2 Rows x 3 Columns
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionTile(
-                    icon: Icons.qr_code_2_rounded,
-                    label: 'Mã QR',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showQrCodeDialog(context, shareUrl);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildActionTile(
-                    icon: Icons.add_box_outlined,
-                    label: 'Tạo phím tắt',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đã tạo phím tắt "$appTitle" trên màn hình chính!'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildActionTile(
-                    icon: isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                    iconColor: isFavorite ? const Color(0xFFF59E0B) : const Color(0xFF334155),
-                    label: isFavorite ? 'Đã thích' : 'Yêu thích',
-                    onTap: () {
-                      ref.read(favoriteAppsProvider.notifier).toggleFavorite(appId);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(!isFavorite
-                              ? 'Đã thêm "$appTitle" vào mục Yêu thích!'
-                              : 'Đã bỏ yêu thích "$appTitle"!'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionTile(
-                    icon: Icons.fullscreen_exit_rounded,
-                    label: 'Thu nhỏ',
-                    onTap: () {
-                      Navigator.pop(context);
-                      onMinimize();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildActionTile(
-                    icon: Icons.lock_outline_rounded,
-                    label: 'Quản lý quyền',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showAppPermissionsSheet(context, ref);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildActionTile(
-                    icon: Icons.refresh_rounded,
-                    label: 'Tải lại',
-                    onTap: () {
-                      Navigator.pop(context);
-                      onReload();
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            if (isDebug) ...[
               const SizedBox(height: 10),
-              _buildActionTile(
-                icon: Icons.bug_report_outlined,
-                label: 'Trình gỡ lỗi (Debug Logs)',
-                iconColor: const Color(0xFF6366F1),
-                fullWidth: true,
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/debug');
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: Icons.fullscreen_exit_rounded,
+                      label: 'Thu nhỏ',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onMinimize();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: Icons.lock_outline_rounded,
+                      label: 'Quản lý quyền',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showAppPermissionsSheet(context, ref);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildActionTile(
+                      icon: Icons.refresh_rounded,
+                      label: 'Tải lại',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReload();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              if (onWebDebug != null) ...[
+                const SizedBox(height: 10),
+                _buildActionTile(
+                  icon: Icons.code_rounded,
+                  label: 'Web Debug (Console / JS / DOM)',
+                  fullWidth: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    onWebDebug!();
+                  },
+                ),
+              ],
+              if (isDebug) ...[
+                const SizedBox(height: 10),
+                _buildActionTile(
+                  icon: Icons.bug_report_outlined,
+                  label: 'Trình gỡ lỗi (Debug Logs)',
+                  iconColor: const Color(0xFF6366F1),
+                  fullWidth: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/debug');
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // Bottom "Đóng" Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    foregroundColor: const Color(0xFF0F172A),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  child: const Text(
+                    'Đóng',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
               ),
             ],
-
-            const SizedBox(height: 20),
-
-            // Bottom "Đóng" Button
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  foregroundColor: const Color(0xFF0F172A),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text(
-                  'Đóng',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildContactItem(
@@ -460,9 +488,11 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isMore
-                ? 'Đã mở danh sách bạn bè để chia sẻ!'
-                : 'Đã gửi liên kết "$appTitle" tới $name!'),
+            content: Text(
+              isMore
+                  ? 'Đã mở danh sách bạn bè để chia sẻ!'
+                  : 'Đã gửi liên kết "$appTitle" tới $name!',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -485,7 +515,10 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                     right: -2,
                     bottom: -2,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF475569),
                         borderRadius: BorderRadius.circular(8),
@@ -545,7 +578,11 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
             ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 22, color: iconColor ?? const Color(0xFF334155)),
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: iconColor ?? const Color(0xFF334155),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     label,
@@ -560,7 +597,11 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 24, color: iconColor ?? const Color(0xFF334155)),
+                  Icon(
+                    icon,
+                    size: 24,
+                    color: iconColor ?? const Color(0xFF334155),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     label,
@@ -585,13 +626,18 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 manifest?.name ?? appId,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -662,7 +708,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                         );
                       },
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       child: const Text('Sao chép'),
                     ),
@@ -674,7 +722,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       child: const Text('Đóng'),
                     ),
@@ -697,11 +747,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final repo = ref.read(permissionRepositoryProvider);
-            final capabilities = manifest?.capabilities ?? [
-              'user.getBasicInfo',
-              'navigation.close',
-              'device.scanQRCode',
-            ];
+            final capabilities =
+                manifest?.capabilities ??
+                ['user.getBasicInfo', 'navigation.close', 'device.scanQRCode'];
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.65,
@@ -733,11 +781,17 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                           children: [
                             const Text(
                               'Quản lý quyền truy cập',
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
                               manifest?.name ?? appId,
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                              ),
                             ),
                           ],
                         ),
@@ -776,7 +830,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                             isGranted ? 'Đã cho phép' : 'Đã từ chối / chưa cấp',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isGranted ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                              color: isGranted
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF94A3B8),
                             ),
                           ),
                           value: isGranted,
@@ -798,13 +854,19 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                             repo.revokeAll(appId);
                             setSheetState(() {});
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Đã thu hồi toàn bộ quyền của $appId')),
+                              SnackBar(
+                                content: Text(
+                                  'Đã thu hồi toàn bộ quyền của $appId',
+                                ),
+                              ),
                             );
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Text('Thu hồi tất cả'),
                         ),
@@ -816,7 +878,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Text('Hoàn tất'),
                         ),
@@ -837,7 +901,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           title: Row(
             children: [
               Container(
@@ -847,13 +913,20 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                   color: const Color(0xFF2563EB).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 22),
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   manifest?.name ?? 'Thông tin kỹ thuật',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -866,31 +939,65 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
               children: [
                 _buildInfoRow('Mã ứng dụng (ID)', manifest?.id ?? appId),
                 _buildInfoRow('Phiên bản', 'v${manifest?.version ?? "1.0.0"}'),
-                _buildInfoRow('Loại Runtime', manifest?.isSchemaApp == true ? 'No-Code Schema' : 'Web View App'),
+                _buildInfoRow(
+                  'Loại Runtime',
+                  manifest?.isSchemaApp == true
+                      ? 'No-Code Schema'
+                      : 'Web View App',
+                ),
                 _buildInfoRow('Danh mục', manifest?.category ?? 'Chung'),
                 const SizedBox(height: 8),
-                const Text('Mô tả:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
+                const Text(
+                  'Mô tả:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Color(0xFF475569),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   manifest?.description ?? 'Chưa có mô tả chi tiết.',
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Quyền Manifest (Capabilities):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF475569))),
+                const Text(
+                  'Quyền Manifest (Capabilities):',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Color(0xFF475569),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
-                  children: (manifest?.capabilities ?? ['navigation.close']).map((c) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(c, style: const TextStyle(fontSize: 10, color: Color(0xFF334155), fontFamily: 'monospace')),
-                    );
-                  }).toList(),
+                  children: (manifest?.capabilities ?? ['navigation.close'])
+                      .map((c) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            c,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF334155),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
               ],
             ),
@@ -909,7 +1016,9 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: const Text('Đóng'),
             ),
@@ -925,8 +1034,18 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF0F172A))),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: Color(0xFF0F172A),
+            ),
+          ),
         ],
       ),
     );
@@ -957,14 +1076,23 @@ class _QrCodePainter extends CustomPainter {
     for (int r = 0; r < 21; r++) {
       for (int c = 0; c < 21; c++) {
         // Skip position patterns
-        if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7)) continue;
+        if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7)) {
+          continue;
+        }
         // Skip center logo area
-        if (r >= 7 && r <= 13 && c >= 7 && c <= 13) continue;
+        if (r >= 7 && r <= 13 && c >= 7 && c <= 13) {
+          continue;
+        }
 
         if (rng.nextBool()) {
           canvas.drawRRect(
             RRect.fromRectAndRadius(
-              Rect.fromLTWH(c * cellSize, r * cellSize, cellSize * 0.9, cellSize * 0.9),
+              Rect.fromLTWH(
+                c * cellSize,
+                r * cellSize,
+                cellSize * 0.9,
+                cellSize * 0.9,
+              ),
               const Radius.circular(1.5),
             ),
             paint,
@@ -974,7 +1102,13 @@ class _QrCodePainter extends CustomPainter {
     }
   }
 
-  void _drawPositionPattern(Canvas canvas, double x, double y, double cellSize, Paint paint) {
+  void _drawPositionPattern(
+    Canvas canvas,
+    double x,
+    double y,
+    double cellSize,
+    Paint paint,
+  ) {
     // Outer 7x7
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -995,7 +1129,12 @@ class _QrCodePainter extends CustomPainter {
     // Center black 3x3
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(x + cellSize * 2, y + cellSize * 2, cellSize * 3, cellSize * 3),
+        Rect.fromLTWH(
+          x + cellSize * 2,
+          y + cellSize * 2,
+          cellSize * 3,
+          cellSize * 3,
+        ),
         const Radius.circular(2),
       ),
       paint,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/app_config.dart';
 import '../../../../core/config/endpoint_config.dart';
+import '../../../../core/network/app_http_client.dart';
 import '../domain/mini_app_manifest.dart';
 
 class MiniAppRepository {
@@ -169,7 +170,11 @@ class MiniAppRepository {
 /// Core singleton provider for MiniAppRepository bound to backendEndpointProvider
 final miniAppRepositoryProvider = Provider<MiniAppRepository>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
-  return MiniAppRepository(catalogUrl: endpoint.catalogUrl);
+  final httpClient = ref.watch(appHttpClientProvider);
+  return MiniAppRepository(
+    catalogUrl: endpoint.catalogUrl,
+    httpClient: httpClient,
+  );
 });
 
 /// Selected category filter state

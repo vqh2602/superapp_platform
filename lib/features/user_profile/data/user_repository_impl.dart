@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
+import '../../../../core/network/app_http_client.dart';
 import '../../authentication/data/auth_repository_impl.dart';
 import '../../authentication/domain/models/platform_user.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
@@ -122,8 +123,10 @@ class UserRepositoryImpl {
 final userRepositoryProvider = Provider<UserRepositoryImpl>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
   final endpoint = ref.watch(backendEndpointProvider);
+  final httpClient = ref.watch(appHttpClientProvider);
   return UserRepositoryImpl(
     authRepository: authRepo,
     authUrl: endpoint.authUrl,
+    httpClient: httpClient,
   );
 });
