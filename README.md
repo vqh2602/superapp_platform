@@ -60,17 +60,17 @@ flowchart TB
 
     subgraph FlutterShell["2. SuperApp Master Platform (Flutter)"]
         CatalogModule["Catalog & Discovery Engine"]
-        CapsuleBar["WeChat Capsule Bar [ ••• | ⊙ ]"]
         WebViewRuntime["WebView Runtime Engine (webview_all)"]
         SchemaEngine["No-Code Schema Renderer"]
         BridgeDispatcher["Bridge Dispatcher & Perm Gatekeeper"]
         NativeHandlers["Native Handlers (Device, GPS, QR, Auth, Pay, Store)"]
     end
 
-    subgraph MiniAppSandbox["3. Mini App Runtime (Web / React / Schema)"]
-        SDK["@vqh2602/mini-app-sdk"]
-        Transport["BridgeTransport (Auto Resolver)"]
-        MiniAppView["Giao diện Mini App (UI Components)"]
+    subgraph MiniAppSandbox["3. Mini App Runtime (Flutter / Web / React / Schema)"]
+        FlutterMiniApp["Flutter Web Mini Apps"]
+        WebMiniApp["HTML5 / React / Vue Mini Apps"]
+        SchemaMiniApp["No-Code JSON Schema Mini Apps"]
+        SDK["@vqh2602/mini-app-sdk & BridgeTransport"]
     end
 
     subgraph BackendServices["4. Backend & CMS Services"]
@@ -81,8 +81,9 @@ flowchart TB
 
     ClientDevices --> FlutterShell
     WebViewRuntime <--> MiniAppSandbox
-    SDK --> Transport
-    Transport <--> BridgeDispatcher
+    FlutterMiniApp --> SDK
+    WebMiniApp --> SDK
+    SDK <--> BridgeDispatcher
     BridgeDispatcher --> NativeHandlers
 
     CatalogModule <-->|REST API /catalog| NestServer

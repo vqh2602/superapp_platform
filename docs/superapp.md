@@ -55,42 +55,54 @@ Tài liệu kỹ thuật chi tiết về kiến trúc mã nguồn, bảng tính 
 Hệ thống được tổ chức theo tiêu chuẩn **Feature-First / Clean Architecture**, quản lý trạng thái bằng **Riverpod 2.x** và định tuyến bằng **GoRouter 14.x**:
 
 ```mermaid
-graph TD
-    subgraph PresentationLayer["1. Presentation Layer"]
+flowchart TD
+    subgraph PresentationLayer["1. Presentation Layer (Flutter UI)"]
         CatalogScreen["Mini App Catalog Screen"]
         RuntimeScreen["Mini App Runtime Screen (WebView Container)"]
         DebugScreen["Native Debug Screen (Logs Inspector)"]
         ProfileScreen["Native Profile Screen"]
-        CapsuleBar["WeChat-Style Capsule Bar [ ••• | ⊙ ]"]
     end
 
-    subgraph BridgeLayer["2. Mini App Bridge Layer"]
+    subgraph MiniAppLayer["2. Mini App Execution Sandbox"]
+        FlutterMiniApp["Flutter Web Mini Apps"]
+        WebMiniApp["HTML5 / React / Vue Mini Apps"]
+        SchemaMiniApp["No-Code JSON Schema Mini Apps"]
+        MiniAppSdk["Mini App SDK & BridgeTransport"]
+    end
+
+    subgraph BridgeLayer["3. Mini App Bridge Layer"]
         BridgeChannel["BridgeChannel (JavaScript Channels)"]
-        BridgeDispatcher["BridgeDispatcher (Sanitize & Measure Timing)"]
-        EventEmitter["BridgeEventEmitter (Push Events to Mini App)"]
+        BridgeDispatcher["BridgeDispatcher (Sanitize & Timing)"]
+        EventEmitter["BridgeEventEmitter (Push Events)"]
     end
 
-    subgraph CoreApplicationLayer["3. Core & Native Handlers"]
+    subgraph CoreApplicationLayer["4. Core & Native Action Handlers"]
         Gatekeeper["Permissions Gatekeeper (Capability Check)"]
         ActionDispatcher["NativeActionDispatcher"]
         AuthHandler["AuthActionHandler"]
         DeviceHandler["DeviceActionHandler"]
-        PaymentHandler["PaymentActionHandler"]
         StorageHandler["StorageActionHandler"]
         NavHandler["NavigationActionHandler"]
+        SystemHandler["System & UI Action Handlers"]
     end
 
-    subgraph DataDomainLayer["4. Domain & Data Repositories"]
-        MiniAppRepo["MiniAppRepository (Remote API + Local Cache)"]
-        AuthRepo["MockAuthRepository & TokenService"]
-        OrderRepo["MockOrderRepository"]
-        SecureStorage["SecureStorageRepository"]
+    subgraph DataDomainLayer["5. Domain & Data Repositories"]
+        MiniAppRepo["MiniAppRepository (Remote API + Cache)"]
+        AuthRepo["AuthRepository & TokenService"]
+        SecureStorage["SecureStorageRepository (Keychain / Keystore)"]
         DebugLogRepo["DebugLogRepository"]
     end
 
-    PresentationLayer --> BridgeLayer
-    BridgeLayer --> CoreApplicationLayer
+    RuntimeScreen <--> MiniAppLayer
+    FlutterMiniApp --> MiniAppSdk
+    WebMiniApp --> MiniAppSdk
+    MiniAppSdk <--> BridgeChannel
+    BridgeChannel --> BridgeDispatcher
+    BridgeDispatcher --> Gatekeeper
+    Gatekeeper --> ActionDispatcher
+    ActionDispatcher --> CoreApplicationLayer
     CoreApplicationLayer --> DataDomainLayer
+    EventEmitter -.->|Push Events| MiniAppSdk
 ```
 
 ### Chi tiết cấu trúc thư mục `lib/`:
