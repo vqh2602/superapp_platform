@@ -69,7 +69,7 @@ flowchart TD
         LocalMockEngine["In-Memory Mock State Store"]
     end
 
-    ReactVueApp -->|@vqh2602/mini-app-sdk| Resolver
+    ReactVueApp -->|Qua mini-app-sdk| Resolver
     FlutterWebApp -->|window.FlutterBridge| NativeTransport
     VanillaApp -->|window.FlutterBridge| NativeTransport
 

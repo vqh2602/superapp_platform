@@ -70,7 +70,7 @@ flowchart TB
         FlutterMiniApp["Flutter Web Mini Apps"]
         WebMiniApp["HTML5 / React / Vue Mini Apps"]
         SchemaMiniApp["No-Code JSON Schema Mini Apps"]
-        SDK["@vqh2602/mini-app-sdk & BridgeTransport"]
+        SDK["Mini App SDK NPM & BridgeTransport"]
     end
 
     subgraph BackendServices["4. Backend & CMS Services"]
