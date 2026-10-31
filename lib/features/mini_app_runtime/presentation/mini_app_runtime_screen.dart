@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +44,16 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   WebViewController? _webViewController;
   BridgeEventEmitter? _eventEmitter;
   bool _isLoading = true;
-  int _loadProgress = 15;
+  bool _showLoadingOverlay = true;
+  double _displayedProgress = 0.0;
+  double _targetProgress = 15.0;
+  double _stageCeiling = 25.0;
+  String _statusMessage = 'Đang kiểm tra Mini App...';
+  bool _isFinished = false;
+  Timer? _progressTicker;
+  Timer? _loadTimeoutTimer;
+  Timer? _overlayDismissTimer;
+  Timer? _diagnosticTimer;
   String? _loadError;
   final List<WebLogEntry> _webLogs = [];
   bool _hasBlankScreenWarning = false;
@@ -73,6 +84,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _progressTicker?.cancel();
+    _loadTimeoutTimer?.cancel();
+    _overlayDismissTimer?.cancel();
+    _diagnosticTimer?.cancel();
     if (_isKeepScreenOn) {
       try {
         WakelockPlus.disable();
@@ -226,12 +241,171 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     return color.computeLuminance() < 0.5;
   }
 
+  void _startProgressTicker({
+    required double initialProgress,
+    required double initialTarget,
+    required double initialCeiling,
+    required String initialStatus,
+  }) {
+    _progressTicker?.cancel();
+    _isFinished = false;
+    _displayedProgress = initialProgress;
+    _targetProgress = initialTarget;
+    _stageCeiling = initialCeiling;
+    _statusMessage = initialStatus;
+
+    _progressTicker = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_displayedProgress < _targetProgress) {
+        // Smooth exponential convergence towards target milestone
+        final diff = _targetProgress - _displayedProgress;
+        final step = _isFinished
+            ? math.max(1.5, diff * 0.25)
+            : math.max(0.35, diff * 0.12);
+        _displayedProgress = math.min(_targetProgress, _displayedProgress + step);
+        setState(() {});
+      } else if (_displayedProgress < _stageCeiling && !_isFinished) {
+        // While waiting for asynchronous response, gently advance so progress is active
+        final remaining = _stageCeiling - _displayedProgress;
+        final creepStep = math.max(0.04, remaining * 0.04);
+        _displayedProgress = math.min(_stageCeiling, _displayedProgress + creepStep);
+        setState(() {});
+      }
+    });
+  }
+
+  void _updateProgressTarget(
+    double target, {
+    double? newCeiling,
+    String? status,
+  }) {
+    if (!mounted) return;
+    if (newCeiling != null && newCeiling > _stageCeiling) {
+      _stageCeiling = newCeiling;
+    }
+    if (target > _targetProgress) {
+      _targetProgress = target.clamp(0.0, 100.0);
+    }
+    if (_targetProgress > _stageCeiling) {
+      _stageCeiling = _targetProgress;
+    }
+    if (status != null) {
+      _statusMessage = status;
+    }
+    setState(() {});
+  }
+
+  Future<void> _finishLoading(
+    BridgeEventEmitter emitter,
+    MiniAppManifest manifest,
+  ) async {
+    if (!mounted || !_isLoading) return;
+    _loadTimeoutTimer?.cancel();
+
+    _isFinished = true;
+    _updateProgressTarget(
+      100.0,
+      newCeiling: 100.0,
+      status: 'Đang khởi chạy...',
+    );
+
+    // Give visual time for progress animation to smoothly hit 100%
+    final start = DateTime.now();
+    while (mounted &&
+        _displayedProgress < 99.5 &&
+        DateTime.now().difference(start).inMilliseconds < 450) {
+      await Future.delayed(const Duration(milliseconds: 25));
+    }
+
+    if (!mounted) return;
+    _progressTicker?.cancel();
+
+    setState(() {
+      _displayedProgress = 100.0;
+      _isLoading = false;
+    });
+
+    emitter.emit('miniapp.ready', {
+      'appId': manifest.id,
+      'version': manifest.version,
+    });
+    emitter.emit('miniapp.show');
+
+    // Fade out overlay completely after transition
+    _overlayDismissTimer?.cancel();
+    _overlayDismissTimer = Timer(const Duration(milliseconds: 350), () {
+      if (mounted && !_isLoading) {
+        setState(() {
+          _showLoadingOverlay = false;
+        });
+      }
+    });
+
+    // Check if root element mounted (diagnostic alert)
+    _diagnosticTimer?.cancel();
+    _diagnosticTimer = Timer(const Duration(milliseconds: 2500), () async {
+      if (!mounted || _webViewController == null) return;
+      try {
+        final res = await _webViewController!.runJavaScriptReturningResult(
+          '(function() { var r = document.getElementById("root"); return !!(r && (r.childElementCount > 0 || r.innerHTML.length > 0)); })()'
+        );
+        final isRendered = res.toString() == 'true';
+        if (!isRendered && mounted) {
+          setState(() {
+            _hasBlankScreenWarning = true;
+          });
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _reloadMiniApp(MiniAppManifest? manifest) {
+    _loadTimeoutTimer?.cancel();
+    setState(() {
+      _isLoading = true;
+      _showLoadingOverlay = true;
+      _hasBlankScreenWarning = false;
+      _loadError = null;
+    });
+
+    _startProgressTicker(
+      initialProgress: 10.0,
+      initialTarget: 40.0,
+      initialCeiling: 68.0,
+      initialStatus: 'Đang làm mới giao diện...',
+    );
+
+    _loadTimeoutTimer = Timer(const Duration(seconds: kIsWeb ? 6 : 10), () {
+      if (mounted && _isLoading && _loadError == null && _eventEmitter != null && manifest != null) {
+        _finishLoading(_eventEmitter!, manifest);
+      }
+    });
+
+    _webViewController?.reload();
+  }
+
   Future<void> _initMiniApp() async {
+    _progressTicker?.cancel();
+    _loadTimeoutTimer?.cancel();
+
     setState(() {
       _hasBlankScreenWarning = false;
       _isLoading = true;
-      _loadProgress = 15;
+      _showLoadingOverlay = true;
+      _loadError = null;
     });
+
+    // Stage 1: Fetching Mini App Manifest & specifications
+    _startProgressTicker(
+      initialProgress: 0.0,
+      initialTarget: 22.0,
+      initialCeiling: 28.0,
+      initialStatus: 'Đang kiểm tra Mini App...',
+    );
 
     // Revalidate visibility, active version and current grants on every launch.
     final manifest = await ref
@@ -241,13 +415,21 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     if (manifest == null) {
       if (!mounted) return;
+      _progressTicker?.cancel();
       setState(() {
         _isLoading = false;
-        _loadProgress = 0;
+        _showLoadingOverlay = false;
         _loadError = 'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
       });
       return;
     }
+
+    // Stage 2: Validating permissions & security environment
+    _updateProgressTarget(
+      38.0,
+      newCeiling: 48.0,
+      status: 'Đang xác thực quyền & bảo mật...',
+    );
 
     // Refresh saved consent on every launch, before WebView startup actions run.
     final permissionRepo = ref.read(permissionRepositoryProvider);
@@ -255,20 +437,24 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       await permissionRepo.fetchPermissionsFromBackend(_currentAppId);
     } catch (_) {
       if (!mounted) return;
+      _progressTicker?.cancel();
       setState(() {
         _isLoading = false;
+        _showLoadingOverlay = false;
         _loadError = 'Không thể tải quyền Mini App đã lưu. Vui lòng thử lại.';
       });
       return;
     }
     if (!mounted) return;
 
+    // Stage 3: Initializing Runtime & Bridge
+    _updateProgressTarget(
+      55.0,
+      newCeiling: 68.0,
+      status: 'Đang khởi tạo môi trường Runtime...',
+    );
+
     final validManifest = manifest;
-    if (mounted) {
-      setState(() {
-        if (_loadProgress < 30) _loadProgress = 30;
-      });
-    }
     final themeHex = validManifest.schema?['theme']?['backgroundColor'] as String?;
     final themeBg = _parseColor(themeHex, defaultColor: Colors.white);
 
@@ -292,6 +478,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         setState(() {
           _currentAppId = targetAppId;
           _isLoading = true;
+          _showLoadingOverlay = true;
           _initMiniApp();
         });
       },
@@ -360,18 +547,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     controller.setNavigationDelegate(
       NavigationDelegate(
         onProgress: (int progress) {
-          if (mounted) {
-            setState(() {
-              _loadProgress = progress.clamp(15, 100);
-            });
+          if (mounted && _isLoading) {
+            // Map webview resource loading (0..100) to progress range (70..95)
+            final mapped = 70.0 + (progress.clamp(0, 100) / 100.0) * 25.0;
+            _updateProgressTarget(
+              mapped,
+              newCeiling: 96.0,
+              status: 'Đang tải tài nguyên ($progress%)...',
+            );
           }
         },
         onPageStarted: (url) {
-          if (mounted) {
-            setState(() {
-              if (_loadProgress < 35) _loadProgress = 35;
-            });
-          }
+          _updateProgressTarget(
+            68.0,
+            newCeiling: 92.0,
+            status: 'Đang nạp dữ liệu giao diện...',
+          );
           if (!kIsWeb) {
             _safeRunScript(controller, resetScript);
             _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
@@ -406,44 +597,18 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               } catch(e) { console.error("[Schema Inject Error]", e.message || e); }''',
             );
           }
-          if (mounted) {
-            setState(() {
-              _loadProgress = 100;
-            });
-          }
-          await Future.delayed(const Duration(milliseconds: 220));
+          await _finishLoading(emitter, validManifest);
+        },
+        onWebResourceError: (error) {
+          _progressTicker?.cancel();
+          _loadTimeoutTimer?.cancel();
           if (mounted) {
             setState(() {
               _isLoading = false;
+              _showLoadingOverlay = false;
+              _loadError = 'Không thể tải Mini App: ${error.description}';
             });
           }
-          emitter.emit('miniapp.ready', {
-            'appId': validManifest.id,
-            'version': validManifest.version,
-          });
-          emitter.emit('miniapp.show');
-
-          // Check if root element mounted
-          Future.delayed(const Duration(milliseconds: 2500), () async {
-            if (!mounted || _webViewController == null) return;
-            try {
-              final res = await _webViewController!.runJavaScriptReturningResult(
-                '(function() { var r = document.getElementById("root"); return !!(r && (r.childElementCount > 0 || r.innerHTML.length > 0)); })()'
-              );
-              final isRendered = res.toString() == 'true';
-              if (!isRendered && mounted) {
-                setState(() {
-                  _hasBlankScreenWarning = true;
-                });
-              }
-            } catch (_) {}
-          });
-        },
-        onWebResourceError: (error) {
-          setState(() {
-            _isLoading = false;
-            _loadError = 'Không thể tải Mini App: ${error.description}';
-          });
         },
       ),
     );
@@ -457,6 +622,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       _webViewController = controller;
       _eventEmitter = emitter;
     }
+
+    _updateProgressTarget(
+      62.0,
+      newCeiling: 88.0,
+      status: 'Đang kết nối tài nguyên...',
+    );
 
     // Load entry point: remote Backend URL is the primary runtime loader
     if (validManifest.isAsset && validManifest.entryUrl.startsWith('assets/') && !validManifest.entryUrl.startsWith('assets/mini_apps/')) {
@@ -476,17 +647,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       controller.loadRequest(Uri.parse(targetUri));
     }
 
-    Future.delayed(const Duration(milliseconds: kIsWeb ? 1200 : 3000), () {
+    // Safety timeout in case onPageFinished is delayed or never fires
+    _loadTimeoutTimer?.cancel();
+    _loadTimeoutTimer = Timer(const Duration(seconds: kIsWeb ? 6 : 10), () {
       if (mounted && _isLoading && _loadError == null) {
-        setState(() {
-          _loadProgress = 100;
-          _isLoading = false;
-        });
-        emitter.emit('miniapp.ready', {
-          'appId': validManifest.id,
-          'version': validManifest.version,
-        });
-        emitter.emit('miniapp.show');
+        debugPrint('[MiniAppRuntime] Safety timeout reached, completing loading.');
+        _finishLoading(emitter, validManifest);
       }
     });
   }
@@ -497,11 +663,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       manifest: manifest,
       appId: _currentAppId,
       onReload: () {
-        setState(() {
-          _isLoading = true;
-          _hasBlankScreenWarning = false;
-        });
-        _webViewController?.reload();
+        _reloadMiniApp(manifest);
       },
       onMinimize: () {
         _eventEmitter?.emit('miniapp.hide');
@@ -677,15 +839,23 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                       ),
                     ),
 
-                  if (_isLoading)
-                    Container(
-                      color: themeBgColor,
-                      child: Center(
-                        child: _buildLoadingView(
-                          manifest,
-                          isDarkTheme,
-                          themeBgColor,
-                          brandColor,
+                  if (_showLoadingOverlay)
+                    AnimatedOpacity(
+                      opacity: _isLoading ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: IgnorePointer(
+                        ignoring: !_isLoading,
+                        child: Container(
+                          color: themeBgColor,
+                          child: Center(
+                            child: _buildLoadingView(
+                              manifest,
+                              isDarkTheme,
+                              themeBgColor,
+                              brandColor,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -715,11 +885,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () {
-                                setState(() {
-                                  _isLoading = true;
-                                  _loadError = null;
-                                  _initMiniApp();
-                                });
+                                _initMiniApp();
                               },
                               child: const Text('Thử lại'),
                             ),
@@ -1034,6 +1200,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         ? manifest!.name
         : (_overrideTitle ?? 'Mini App');
 
+    final percent = _displayedProgress.clamp(0.0, 100.0).toInt();
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1054,65 +1222,57 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           ),
         ),
         const SizedBox(height: 24),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: _loadProgress.toDouble()),
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, _) {
-            final percent = value.clamp(0, 100).toInt();
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$percent%',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: brandColor,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  width: 160,
-                  height: 6,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$percent%',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: brandColor,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: 170,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isDarkTheme ? Colors.white12 : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: (_displayedProgress / 100.0).clamp(0.0, 1.0),
+                child: Container(
                   decoration: BoxDecoration(
-                    color: isDarkTheme ? Colors.white12 : const Color(0xFFE2E8F0),
+                    color: brandColor,
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: (value / 100.0).clamp(0.0, 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: brandColor,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: brandColor.withValues(alpha: 0.4),
-                            blurRadius: 6,
-                          ),
-                        ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: brandColor.withValues(alpha: 0.4),
+                        blurRadius: 6,
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  percent >= 100
-                      ? 'Đang khởi chạy...'
-                      : (percent > 60
-                          ? 'Đang nạp tài nguyên...'
-                          : 'Đang tải Mini App...'),
-                  style: TextStyle(
-                    color: isDarkTheme ? Colors.white60 : const Color(0xFF64748B),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Text(
+                _statusMessage,
+                key: ValueKey(_statusMessage),
+                style: TextStyle(
+                  color: isDarkTheme ? Colors.white60 : const Color(0xFF64748B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ],
     );
