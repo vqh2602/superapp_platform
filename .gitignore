@@ -38,6 +38,11 @@ build/
 .env.*
 !.env.example
 !.env.alwaysdata.example
+*.jks
+*.keystore
+*service_account*.json
+key.properties
+scripts copy/
 
 # Node related
 node_modules/
