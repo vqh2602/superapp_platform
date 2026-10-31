@@ -57,10 +57,10 @@ flowchart TD
     end
 
     subgraph SDKTransport["Tầng Trừu Tượng Hóa (Transport Layer)"]
-        Resolver{"TransportResolver\n(Tự nhận diện môi trường)"}
-        NativeTransport["NativeBridgeTransport\n(window.FlutterBridge)"]
-        IframeTransport["PostMessageTransport\n(window.parent.postMessage)"]
-        MockTransport["MockBridgeTransport\n(Standalone / Unit Test)"]
+        Resolver{"TransportResolver<br/>(Tự nhận diện môi trường)"}
+        NativeTransport["NativeBridgeTransport<br/>(window.FlutterBridge)"]
+        IframeTransport["PostMessageTransport<br/>(window.parent.postMessage)"]
+        MockTransport["MockBridgeTransport<br/>(Standalone / Unit Test)"]
     end
 
     subgraph RuntimeHost["Môi trường thực thi SuperApp"]
@@ -69,13 +69,17 @@ flowchart TD
         LocalMockEngine["In-Memory Mock State Store"]
     end
 
-    FlutterWebApp -->|JSON qua Bridge| NativeTransport
     ReactVueApp -->|@vqh2602/mini-app-sdk| Resolver
+    FlutterWebApp -->|window.FlutterBridge| NativeTransport
     VanillaApp -->|window.FlutterBridge| NativeTransport
 
-    Resolver -->|Trong SuperApp| NativeTransport --> NativeHost
-    Resolver -->|Trong Simulator| IframeTransport --> SimHost
-    Resolver -->|Chạy độc lập localhost| MockTransport --> LocalMockEngine
+    Resolver -->|Trong SuperApp| NativeTransport
+    Resolver -->|Trong Simulator| IframeTransport
+    Resolver -->|Chạy độc lập localhost| MockTransport
+
+    NativeTransport -->|Bridge Envelopes| NativeHost
+    IframeTransport -->|PostMessage Envelopes| SimHost
+    MockTransport -->|In-Memory Mock| LocalMockEngine
 ```
 
 ### 2.1. Cấu trúc Giao thức gói tin (Bridge Envelopes)
@@ -140,14 +144,14 @@ sequenceDiagram
     participant JSBridge as WebView JS Bridge (window.FlutterBridge)
     participant Host as SuperApp Host (Flutter Native)
 
-    User->>FWeb: Nhấn "Quét mã QR bàn"
-    FWeb->>FWeb: Sinh id = "req_101", đóng gói JSON
+    User->>FWeb: Nhấn 'Quét mã QR bàn'
+    FWeb->>FWeb: Sinh id = 'req_101', đóng gói JSON
     FWeb->>JSBridge: postMessage(JSON.stringify(req))
     JSBridge->>Host: BridgeDispatcher.handleMessage()
     Host->>Host: Kiểm tra quyền 'device.scanQRCode'
     Host->>User: Mở Native Camera QR Scanner Screen
     User->>Host: Đưa camera quét mã QR
-    Host-->>JSBridge: runJavaScript("window.SuperAppBridge.dispatchResponse(...)")
+    Host-->>JSBridge: runJavaScript('window.SuperAppBridge.dispatchResponse(...)')
     JSBridge-->>FWeb: Completer giải quyết kết quả Promise
     FWeb-->>User: Hiển thị thông tin quét được lên màn hình!
 ```
