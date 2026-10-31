@@ -24,7 +24,7 @@ class SuperApp extends ConsumerWidget {
           logBucket: globalLogBucket,
           httpBucket: globalHttpBucket,
           isDevelop: isDebugActive,
-          enableFloatingButton: isDebugActive,
+          enableFloatingButton: false,
           pointers: 2,
           // hiddenFields: const [
           //   'Authorization',
