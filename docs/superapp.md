@@ -16,7 +16,7 @@ Tài liệu kỹ thuật chi tiết về kiến trúc mã nguồn, bảng tính 
 1. [Bảng hỗ trợ nền tảng (Platform Support Matrix)](#1-bảng-hỗ-trợ-nền-tảng-platform-support-matrix)
 2. [Kiến trúc mã nguồn (Code Architecture)](#2-kiến-trúc-mã-nguồn-code-architecture)
 3. [Chi tiết các tính năng chính (Key Features)](#3-chi-tiết-các-tính-năng-chính-key-features)
-4. [Cơ chế Bridge Protocol & Dispatcher](#4-cơ-chế-bridge-protocol--dispatcher)
+4. [Cơ chế Bridge Protocol & Danh mục Hàm (API & Type Specs)](#4-cơ-chế-bridge-protocol--danh-mục-hàm-api--type-specs)
 5. [Hệ thống Kiểm soát Quyền (Capabilities Gatekeeper)](#5-hệ-thống-kiểm-soát-quyền-capabilities-gatekeeper)
 6. [Màn hình Runtime & Thanh điều hướng Capsule](#6-màn-hình-runtime--thanh-điều-hướng-capsule)
 7. [Hướng dẫn cài đặt & Chạy ứng dụng](#7-hướng-dẫn-cài-đặt--chạy-ứng-dụng)
@@ -181,7 +181,7 @@ lib/
 
 ---
 
-## 4. Cơ chế Bridge Protocol & Dispatcher
+## 4. Cơ chế Bridge Protocol & Danh mục Hàm (API & Type Specs)
 
 Kênh giao tiếp giữa Web Mini App và Flutter Master Shell sử dụng cơ chế truyền tin bất đồng bộ chuẩn hóa JSON Envelope:
 
@@ -209,8 +209,7 @@ Kênh giao tiếp giữa Web Mini App và Flutter Master Shell sử dụng cơ c
     "longitude": 106.700806,
     "city": "Hồ Chí Minh",
     "country": "Việt Nam",
-    "accuracy": 5.0,
-    "isMock": false
+    "accuracy": 5.0
   },
   "executionTimeMs": 42
 }
@@ -229,6 +228,591 @@ Kênh giao tiếp giữa Web Mini App và Flutter Master Shell sử dụng cơ c
   "executionTimeMs": 15
 }
 ```
+
+### 4.4. Danh mục Hàm & Đặc tả Kiểu Dữ Liệu Chi Tiết (API Specifications & Type Definitions)
+
+Mọi yêu cầu gọi từ Mini App thông qua SDK hoặc qua `window.FlutterBridge.postMessage` đều tuân theo hợp đồng dữ liệu rõ ràng. Dưới đây là định nghĩa kiểu (TypeScript Types) và định dạng dữ liệu (JSON Format) chuẩn mực cho từng hàm được SuperApp hỗ trợ:
+
+#### 1. Nhóm Máy ảnh & Quét mã (Camera & QR Scanner)
+
+##### `device.scanQRCode` / `media.scanQRCode` / `scanQr`
+Mở màn hình Native Scanner quét mã QR hoặc mã vạch bằng camera, hỗ trợ nhận diện từ Thư viện ảnh hoặc nhập thủ công khi camera không khả dụng trên môi trường ảo.
+
+- **Capability yêu cầu**: `device.scanQRCode`
+- **SDK Method**: `superApp.scanQr(options)` hoặc `superApp.media.scanQRCode(prompt)`
+- **Định dạng Tham số đầu vào (Request Payload)**:
+  ```typescript
+  interface ScanQrOptions {
+    prompt?: string;       // Gợi ý hiển thị trên khung ngắm (mặc định: 'Quét mã QR & Mã vạch')
+    formats?: string[];    // Bộ lọc định dạng: ['QR_CODE', 'EAN_13', 'CODE_128']
+  }
+  ```
+- **Định dạng Kết quả trả về (Response Data - `response.data`)**:
+  ```typescript
+  interface QRCodeResult {
+    content: string;       // Nội dung chuỗi giải mã từ mã QR hoặc Barcode
+    format: string;        // Loại mã được nhận diện: 'QR_CODE' | 'EAN_13' | 'CODE_128'
+    timestamp: number;     // Unix timestamp thời điểm quét (ms)
+  }
+  ```
+- **Ví dụ JSON Phản hồi Thành công**:
+  ```json
+  {
+    "id": "req_1730000001",
+    "success": true,
+    "data": {
+      "content": "SUPERAPP-ORDER-882910",
+      "format": "QR_CODE",
+      "timestamp": 1730536800000
+    },
+    "executionTimeMs": 312
+  }
+  ```
+
+---
+
+##### `media.getPhoto` / `device.pickImage`
+Chụp ảnh trực tiếp từ camera hoặc chọn 1 ảnh từ thư viện thiết bị.
+
+- **Capability yêu cầu**: `device.pickImage`
+- **SDK Method**: `superApp.getPhoto({ source })`
+- **Request Payload**:
+  ```typescript
+  interface GetPhotoOptions {
+    source?: 'camera' | 'gallery'; // Nguồn lấy ảnh (mặc định: 'camera')
+  }
+  ```
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface PhotoResult {
+    uri: string;           // Đường dẫn tệp tin ảnh cục bộ trên máy
+    mimeType: string;      // Định dạng MIME (vd: "image/jpeg", "image/png")
+    width: number;         // Chiều rộng ảnh (pixels)
+    height: number;        // Chiều cao ảnh (pixels)
+    sizeBytes: number;     // Dung lượng tệp tin (bytes)
+    fileName: string;      // Tên tệp tin
+    source: string;        // 'camera' | 'gallery'
+    timestamp: number;     // Unix timestamp (ms)
+  }
+  ```
+
+---
+
+##### `media.pickImages` / `media.chooseImage`
+Chọn nhiều hình ảnh cùng lúc từ thư viện thiết bị.
+
+- **Capability yêu cầu**: `device.pickImage`
+- **SDK Method**: `superApp.pickImages({ maxCount })`
+- **Request Payload**:
+  ```typescript
+  interface PickImagesOptions {
+    maxCount?: number;     // Số lượng ảnh tối đa cho phép chọn (mặc định: 3, tối đa: 100)
+  }
+  ```
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface PickImagesResult {
+    images: Array<{
+      uri: string;
+      mimeType: string;
+      width: number;
+      height: number;
+      sizeBytes: number;
+      fileName: string;
+    }>;
+    count: number;         // Tổng số lượng ảnh đã chọn thành công
+  }
+  ```
+
+---
+
+##### `media.saveImageToGallery` & `media.saveVideoToGallery`
+Lưu hình ảnh hoặc video từ tệp cục bộ vào Bộ sưu tập (Gallery / Photos) của thiết bị.
+
+- **Request Payload**:
+  ```typescript
+  interface SaveMediaOptions {
+    uri: string;           // Đường dẫn tệp tin cục bộ cần lưu
+  }
+  ```
+- **Response Data**:
+  ```typescript
+  interface SaveMediaResult {
+    success: boolean;
+    timestamp: number;
+  }
+  ```
+
+---
+
+#### 2. Nhóm Vị trí & Phần cứng Thiết bị (Device & Hardware)
+
+##### `device.getLocation`
+Lấy tọa độ vị trí địa lý GPS hiện tại của thiết bị.
+
+- **Capability yêu cầu**: `device.getLocation`
+- **SDK Method**: `superApp.device.getLocation({ highAccuracy })`
+- **Request Payload**:
+  ```typescript
+  interface GetLocationOptions {
+    highAccuracy?: boolean;// Chế độ GPS độ chính xác cao (mặc định: true)
+  }
+  ```
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface LocationResult {
+    latitude: number;      // Vĩ độ (vd: 10.776889)
+    longitude: number;     // Kinh độ (vd: 106.700806)
+    accuracy: number;      // Sai số tính bằng mét (vd: 4.5)
+    altitude: number;      // Độ cao so với mực nước biển (mét)
+    heading: number;       // Hướng di chuyển (độ, từ 0 đến 359.9)
+    speed: number;         // Vận tốc di chuyển tức thời (m/s)
+    timestamp: number;     // Unix timestamp (ms)
+  }
+  ```
+
+---
+
+##### `device.getBatteryInfo`
+Kiểm tra mức năng lượng pin còn lại và trạng thái sạc.
+
+- **Capability yêu cầu**: Không cần
+- **SDK Method**: `superApp.device.getBatteryInfo()`
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface BatteryInfo {
+    level: number;         // Mức pin từ 0 đến 100 (%)
+    status: string;        // 'charging' | 'discharging' | 'full' | 'unknown'
+    temperature: number | null; // Nhiệt độ pin (°C) nếu thiết bị hỗ trợ
+    isCharging: boolean;   // true nếu thiết bị đang cắm sạc
+    timestamp: number;     // Unix timestamp (ms)
+  }
+  ```
+
+---
+
+##### `device.getNetworkInfo`
+Kiểm tra trạng thái kết nối mạng Internet (WiFi, di động hoặc offline).
+
+- **Capability yêu cầu**: Không cần
+- **SDK Method**: `superApp.device.getNetworkInfo()`
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface NetworkInfo {
+    isConnected: boolean;  // Thiết bị có đang kết nối mạng hay không
+    networkType: string;   // 'wifi' | 'cellular' | 'ethernet' | 'none'
+    isWifi: boolean;       // Đang kết nối WiFi
+    isMobile: boolean;     // Đang kết nối mạng di động (3G/4G/5G)
+    ssid: string | null;   // Tên mạng WiFi kết nối (nếu hệ điều hành cho phép)
+    bssid: string | null;  // Địa chỉ MAC của Access Point WiFi
+    ipAddress: string | null; // Địa chỉ IP nội bộ của máy (vd: "192.168.1.100")
+    signalStrength: string | null;
+    timestamp: number;     // Unix timestamp (ms)
+  }
+  ```
+
+---
+
+##### `device.getDeviceInfo` / `device.getSystemInfo`
+Lấy thông số kỹ thuật phần cứng, kích thước màn hình hiển thị và Safe Area.
+
+- **Capability yêu cầu**: Không cần
+- **SDK Method**: `superApp.device.getDeviceInfo()`
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface DeviceInfo {
+    platform: 'android' | 'ios' | 'macos' | 'windows' | 'linux' | 'web';
+    osVersion: string | null;     // Phiên bản hệ điều hành (vd: "iOS 17.5", "Android 14")
+    deviceModel: string | null;   // Tên model máy (vd: "iPhone 15 Pro", "SM-S918B")
+    brand: string | null;         // Thương hiệu sản xuất (vd: "Apple", "Samsung")
+    screenWidth: number | null;   // Chiều rộng màn hình theo điểm ảnh logic (dp/pt)
+    screenHeight: number | null;  // Chiều cao màn hình theo điểm ảnh logic (dp/pt)
+    pixelRatio: number | null;    // Mật độ điểm ảnh thiết bị (scale factor)
+    statusBarHeight: number | null; // Chiều cao Status Bar đỉnh máy (px)
+    safeAreaBottom: number | null;  // Chiều cao Safe Area thanh điều hướng đáy (px)
+    timestamp: number;            // Unix timestamp (ms)
+  }
+  ```
+
+---
+
+##### `device.getContacts`
+Đọc danh bạ liên hệ người dùng từ thiết bị.
+
+- **Capability yêu cầu**: `device.getContacts`
+- **SDK Method**: `superApp.device.getContacts({ query })`
+- **Request Payload**:
+  ```typescript
+  interface GetContactsOptions {
+    query?: string;        // Từ khóa tìm kiếm theo tên hoặc số điện thoại (tùy chọn)
+  }
+  ```
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface ContactInfo {
+    id: string;            // ID định danh liên hệ trong danh bạ hệ thống
+    displayName: string;   // Tên hiển thị đầy đủ
+    phoneNumber: string | null; // Số điện thoại chính
+    email: string | null;  // Địa chỉ email chính
+    phoneNumbers: string[];// Mảng tất cả các số điện thoại
+    emails: string[];      // Mảng tất cả các email
+    department: string | null;
+  }
+  interface ContactsResult {
+    contacts: ContactInfo[];
+    total: number;         // Tổng số liên hệ khớp
+  }
+  ```
+
+---
+
+##### `device.vibrate`
+Kích hoạt mô-tơ rung phản hồi xúc giác (Haptic Feedback) trên thiết bị.
+
+- **SDK Method**: `superApp.device.vibrate(style)`
+- **Request Payload**:
+  ```typescript
+  interface VibrateOptions {
+    style?: 'light' | 'medium' | 'heavy'; // Mức độ rung (mặc định: 'light')
+  }
+  ```
+- **Response Data**: `{ success: true, style: string }`
+
+---
+
+#### 3. Nhóm Lưu trữ Bảo mật Cách ly (Secure Isolated Storage)
+
+Dữ liệu được lưu trữ mã hóa phần cứng (Android Keystore / iOS Keychain), tự động gắn namespace độc lập theo `appId` đảm bảo không bị rò rỉ chéo giữa các Mini App.
+
+##### `storage.setItem` & `storage.getItem`
+Ghi và đọc dữ liệu khóa-giá trị bảo mật.
+
+- **SDK Method**: `superApp.storage.setItem(key, value, domain?)` & `superApp.storage.getItem(key, domain?)`
+- **Request Payload `storage.setItem`**:
+  ```typescript
+  interface StorageSetOptions {
+    key: string;           // Tên khóa lưu trữ (vd: "theme_preference")
+    value: any;            // Giá trị (chuỗi hoặc JSON object)
+    domain?: string;       // Phân vùng lưu trữ tùy chọn (mặc định: "default")
+  }
+  ```
+- **Response Data `storage.setItem`**:
+  ```typescript
+  interface StorageSetResult {
+    key: string;
+    domain: string;
+    appId: string;
+    success: boolean;
+    securityLevel: string; // 'hardware_keystore'
+    updatedAt: string;     // Chuỗi thời gian chuẩn ISO 8601
+  }
+  ```
+- **Response Data `storage.getItem`**:
+  ```typescript
+  interface StorageGetResult {
+    key: string;
+    value: string | null;  // Dữ liệu đã lưu hoặc null nếu không tồn tại
+    domain: string;
+    exists: boolean;       // true nếu khóa tồn tại
+    securityLevel: string;
+  }
+  ```
+
+---
+
+##### `storage.removeItem` & `storage.clear`
+Xóa 1 khóa hoặc dọn sạch toàn bộ dữ liệu lưu trữ của Mini App.
+
+- **Request Payload**:
+  - `storage.removeItem`: `{ key: string, domain?: string }`
+  - `storage.clear`: `{ domain?: string }`
+- **Response Data**:
+  - `storage.removeItem`: `{ key: string, domain: string, removed: boolean }`
+  - `storage.clear`: `{ cleared: boolean, count: number }`
+
+---
+
+##### `credentials.setCredentials` & `credentials.getCredentials`
+Lưu trữ và truy xuất tài khoản & mật khẩu được bảo vệ bởi Keychain/Keystore hệ thống.
+
+- **Request Payload `credentials.setCredentials`**:
+  ```typescript
+  interface SetCredentialsOptions {
+    username: string;      // Tên đăng nhập
+    password: string;      // Mật khẩu bảo mật
+    domain?: string;       // Tên miền phân vùng (mặc định: "default")
+  }
+  ```
+- **Response Data `credentials.getCredentials`**:
+  ```typescript
+  interface CredentialGetResult {
+    domain: string;
+    username: string | null;
+    password?: string | null;
+    exists: boolean;
+    securityLevel: string;
+  }
+  ```
+
+---
+
+#### 4. Nhóm Giao diện & Trải nghiệm Người dùng (UI & Controls)
+
+##### `ui.configAppView`
+Tùy biến toàn diện diện mạo Mini App trên thiết bị: màu thanh tiêu đề, ẩn/hiện AppBar, đổi màu Status Bar và đệm Safe Area.
+
+- **SDK Method**: `superApp.ui.configAppView(options)`
+- **Request Payload**:
+  ```typescript
+  interface ConfigAppViewOptions {
+    headerColor?: string;       // Mã màu nền AppBar (vd: '#0068FF' hoặc 'transparent')
+    headerTitle?: string;       // Đổi tên tiêu đề hiển thị trên AppBar
+    textColor?: 'white' | 'black'; // Màu chữ và nút trên AppBar
+    statusBar?: 'transparent' | 'hidden' | 'light' | 'dark'; // Chế độ thanh Status Bar
+    statusBarColor?: string;    // Màu nền thanh Status Bar hệ thống
+    actionBarHidden?: boolean;  // true để ẩn toàn bộ thanh AppBar (chỉ giữ capsule bar)
+    hasPaddingTop?: boolean;    // true để đệm tránh tai thỏ (Notch)
+    hasPaddingBottom?: boolean; // true để đệm tránh thanh Home bar đáy màn hình
+    bottomNavColor?: string;    // Màu sắc vùng Safe Area đáy
+  }
+  ```
+- **Response Data**: `{ success: true }`
+
+---
+
+##### `ui.showToast`
+Hiển thị thông báo Toast nhanh cạnh dưới màn hình.
+
+- **Request Payload**:
+  ```typescript
+  interface ToastOptions {
+    message: string;       // Nội dung thông báo
+    duration?: number;     // Thời gian hiển thị (ms, mặc định: 2000)
+  }
+  ```
+- **Response Data**: `{ success: true }`
+
+---
+
+##### `ui.showAlert` & `ui.showConfirm`
+Hiển thị hộp thoại cảnh báo hoặc xác nhận thao tác dạng Native Dialog.
+
+- **Request Payload `ui.showAlert`**:
+  ```typescript
+  interface AlertOptions {
+    title: string;         // Tiêu đề hộp thoại
+    message: string;       // Nội dung thông điệp
+    buttonText?: string;   // Nhãn nút đóng (mặc định: 'Đóng')
+  }
+  ```
+- **Request Payload `ui.showConfirm`**:
+  ```typescript
+  interface ConfirmOptions {
+    title: string;
+    message: string;
+    confirmText?: string;  // Nhãn nút xác nhận (mặc định: 'Đồng ý')
+    cancelText?: string;   // Nhãn nút hủy (mặc định: 'Huỷ')
+  }
+  ```
+- **Response Data `ui.showConfirm`**:
+  ```typescript
+  interface ConfirmResult {
+    confirmed: boolean;    // true nếu bấm Đồng ý, false nếu bấm Huỷ
+  }
+  ```
+
+---
+
+##### `ui.keepScreen`
+Yêu cầu hệ thống giữ màn hình luôn sáng (Wakelock), ngăn tự động khóa máy.
+
+- **Request Payload**: `{ keepScreenOn: boolean }`
+- **Response Data**: `{ success: true, keepScreenOn: boolean }`
+
+---
+
+##### `ui.copyToClipboard`
+Sao chép văn bản vào bộ nhớ đệm (Clipboard) hệ điều hành.
+
+- **Request Payload**: `{ text: string }`
+- **Response Data**: `{ success: true, text: string }`
+
+---
+
+##### `ui.minimizeApp` & `ui.closeApp`
+Thu nhỏ Mini App xuống chạy ngầm hoặc thoát khỏi Mini App trở về SuperApp.
+
+- **Response Data `ui.minimizeApp`**:
+  ```typescript
+  interface MinimizeResult {
+    success: boolean;
+    status: 'minimized';
+    appId: string;
+    timestamp: number;
+  }
+  ```
+
+---
+
+#### 5. Nhóm Người dùng & Xác thực (User & Authentication)
+
+##### `user.getBasicInfo`
+Lấy thông tin công khai không nhạy cảm của tài khoản đang đăng nhập SuperApp.
+
+- **Capability yêu cầu**: `user.getBasicInfo`
+- **SDK Method**: `superApp.user.getBasicInfo()`
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface UserBasicInfo {
+    id: string;            // UUID duy nhất của tài khoản người dùng
+    name: string;          // Tên hiển thị người dùng (vd: "Nguyễn Văn A")
+    avatarUrl?: string;    // URL ảnh đại diện (nếu có)
+  }
+  ```
+
+---
+
+##### `user.getProfile`
+Lấy thông tin tài khoản người dùng chi tiết (yêu cầu người dùng đồng ý cấp quyền bảo mật).
+
+- **Capability yêu cầu**: `user.getProfile`
+- **SDK Method**: `superApp.user.getProfile()`
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface UserProfile {
+    id: string;            // UUID của người dùng
+    name: string;          // Họ và tên đầy đủ
+    email?: string;        // Địa chỉ email (đã xác thực)
+    phone?: string;        // Số điện thoại đăng ký
+    avatarUrl?: string;    // URL ảnh đại diện
+    role?: string;         // Phân quyền ('USER' | 'ADMIN' | 'MERCHANT')
+    isVerified?: boolean;  // Trạng thái tài khoản đã KYC
+  }
+  ```
+
+---
+
+##### `auth.requestCode`
+Yêu cầu sinh mã ủy quyền dùng 1 lần (Single-use Auth Code) theo chuẩn bảo mật PKCE S256 cho Mini App.
+
+- **Capability yêu cầu**: Không cần
+- **Request Payload**:
+  ```typescript
+  interface RequestCodeOptions {
+    codeChallenge: string;       // SHA256 code challenge (base64url)
+    codeChallengeMethod: 'S256';
+    scopes?: string[];           // Danh sách các quyền cần ủy quyền
+  }
+  ```
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface AuthCodeResult {
+    authCode: string;            // Mã ủy quyền dùng 1 lần (hạn 60 giây)
+    expiresIn: number;           // 60 (giây)
+  }
+  ```
+
+---
+
+#### 6. Nhóm Tệp tin & Tiện ích Mở rộng (File & Utilities)
+
+##### `file.saveFile`
+Lưu tệp tin dữ liệu nhị phân hoặc Base64 vào bộ nhớ máy qua hộp thoại lưu tệp.
+
+- **Request Payload**:
+  ```typescript
+  interface SaveFileOptions {
+    fileName: string;      // Tên tệp tin kèm đuôi (vd: "don_hang_123.pdf")
+    base64?: string;       // Chuỗi dữ liệu tệp mã hóa Base64
+    path?: string;         // Hoặc đường dẫn tệp tin nguồn cục bộ
+  }
+  ```
+- **Response Data**:
+  ```typescript
+  interface SaveFileResult {
+    success: boolean;
+    fileName: string;
+    uri: string;           // Đường dẫn tệp tin sau khi lưu
+  }
+  ```
+
+---
+
+##### `file.pickFile`
+Mở trình quản lý tệp tin của hệ điều hành để người dùng chọn tệp.
+
+- **Request Payload**:
+  ```typescript
+  interface PickFileOptions {
+    allowMultiple?: boolean; // Cho phép chọn nhiều tệp cùng lúc (mặc định: false)
+  }
+  ```
+- **Response Data**:
+  ```typescript
+  interface PickFileResult {
+    files: Array<{
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      path: string;
+    }>;
+    count: number;
+  }
+  ```
+
+---
+
+##### `utility.openPhone` & `utility.openSMS`
+Khởi chạy ứng dụng Gọi điện thoại hoặc Soạn tin nhắn SMS mặc định của thiết bị.
+
+- **Request Payload `utility.openPhone`**: `{ phoneNumber: string }`
+- **Request Payload `utility.openSMS`**: `{ phoneNumber: string, body?: string }`
+- **Response Data**: `{ success: true }`
+
+---
+
+##### `utility.openExternalBrowser`
+Mở đường dẫn URL bên ngoài trình duyệt mặc định hệ thống (Safari, Chrome).
+
+- **Request Payload**: `{ url: string }`
+- **Response Data**: `{ success: true, url: string }`
+
+---
+
+##### `utility.speechToText`
+Kích hoạt microphone nhận diện giọng nói và chuyển đổi thành văn bản.
+
+- **Capability yêu cầu**: `device.recordAudio`
+- **Request Payload**: `{ language?: string }`
+- **Response Data**:
+  ```typescript
+  interface SpeechResult {
+    success: boolean;
+    text: string;          // Nội dung văn bản nhận diện được từ giọng nói
+  }
+  ```
+
+---
+
+#### 7. Nhóm Kiểm tra & Cấp Quyền Động (Runtime Permissions)
+
+##### `permission.request` & `permission.check`
+Kiểm tra hoặc chủ động yêu cầu người dùng cấp quyền truy cập tính năng (Camera, GPS, Danh bạ...).
+
+- **SDK Method**: `superApp.permission.request(capability)` & `superApp.permission.check(capability)`
+- **Request Payload**: `{ capability: string }`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface PermissionResult {
+    capability: string;    // Tên capability được kiểm tra (vd: 'device.scanQRCode')
+    granted: boolean;      // true nếu người dùng cấp quyền, false nếu từ chối
+  }
+  ```
 
 ---
 

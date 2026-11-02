@@ -126,7 +126,7 @@
           window.parent.postMessage({ type: 'SUPERAPP_BRIDGE_REQUEST', request: request }, '*');
         } else {
           // Browser fallback
-          setTimeout(() => resolve({ mock: true, action: action, status: 'SUCCESS' }), 300);
+          setTimeout(() => resolve({ action: action, status: 'SUCCESS' }), 300);
         }
       });
     }

@@ -85,7 +85,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
       'content': barcode.rawValue!,
       'format': barcode.format.name.toUpperCase(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'isMock': false,
     };
 
     if (mounted) {
@@ -112,7 +111,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           'content': barcode.rawValue!,
           'format': barcode.format.name.toUpperCase(),
           'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'isMock': false,
         });
       } else {
         if (!mounted) return;
@@ -226,7 +224,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                                 'content': code,
                                 'format': selectedFormat,
                                 'timestamp': DateTime.now().millisecondsSinceEpoch,
-                                'isMock': false,
                               });
                             }
                           },

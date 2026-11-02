@@ -261,7 +261,7 @@ export const FeatureCatalog: React.FC = () => {
     id: 'media_scan_qr',
     category: '2.4. Camera & Media',
     title: 'scanQr',
-    description: 'Quét mã QR & Mã vạch bằng camera (hỗ trợ QR Code, EAN-13, Code-128, tải ảnh hoặc chọn mẫu thử).',
+    description: 'Quét mã QR & Mã vạch bằng camera (hỗ trợ QR Code, EAN-13, Code-128 hoặc tải ảnh từ thư viện).',
     actionCode: 'superApp.scanQr()',
     hasParams: false,
     run: async () => superApp.scanQr(),

@@ -391,7 +391,7 @@ class SuperAppBridgeClient {
           completer.complete({'id': 'dev_user', 'name': 'Lập trình viên Flutter', 'role': 'DEVELOPER'});
           break;
         default:
-          completer.complete({'status': 'OK', 'mock': true});
+          completer.complete({'status': 'OK'});
       }
     });
   }
