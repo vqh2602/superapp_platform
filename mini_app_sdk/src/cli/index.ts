@@ -26,6 +26,7 @@ program
   .description('Khởi chạy Development Server và mở Browser Simulator')
   .option('-p, --port <port>', 'Cổng Vite dev server', '3000')
   .option('-s, --simulator-port <port>', 'Cổng Browser Simulator', '5175')
+  .option('-H, --host <host>', 'Host interface để bind Simulator (mặc định: 127.0.0.1 loopback)', '127.0.0.1')
   .option('--open', 'Tự động mở trình duyệt')
   .option('--no-simulator', 'Không khởi chạy Browser Simulator kèm theo')
   .action((options) => {
@@ -36,6 +37,7 @@ program
   .command('simulator')
   .description('Khởi chạy Browser Simulator & DevTools độc lập')
   .option('-p, --port <port>', 'Cổng Browser Simulator', '5175')
+  .option('-H, --host <host>', 'Host interface để bind Simulator (mặc định: 127.0.0.1 loopback)', '127.0.0.1')
   .option('-u, --app-url <url>', 'Địa chỉ Mini App đang chạy để kết nối', 'http://localhost:3000')
   .action((options) => {
     runSimulator(options);

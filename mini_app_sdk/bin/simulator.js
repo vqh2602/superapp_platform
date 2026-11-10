@@ -19,6 +19,7 @@ Usage: superapp-simulator [options]
 
 Options:
   --port <number>    Port to run simulator on (default: 5175)
+  --host <string>    Host interface to bind to (default: 127.0.0.1)
   -h, --help         Show this help message
 `);
   process.exit(0);
@@ -26,6 +27,9 @@ Options:
 
 const portIndex = args.indexOf('--port');
 const port = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1], 10) : 5175;
+
+const hostIndex = args.indexOf('--host');
+const host = hostIndex !== -1 && args[hostIndex + 1] ? args[hostIndex + 1] : '127.0.0.1';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -39,9 +43,35 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+function isAllowedCorsOrigin(origin) {
+  if (!origin || typeof origin !== 'string') return false;
+  try {
+    const url = new URL(origin);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '[::1]' ||
+      url.hostname.endsWith('.localhost')
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 const server = http.createServer((req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  // Restricted CORS policy: only allow trusted local origins
+  const reqOrigin = req.headers.origin;
+  if (reqOrigin && isAllowedCorsOrigin(reqOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-tenant-id');
+    res.setHeader('Vary', 'Origin');
+  }
+
+  // Security Headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -49,7 +79,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const parsedUrl = new URL(req.url, `http://localhost:${port}`);
+  const parsedUrl = new URL(req.url, `http://${host}:${port}`);
   let pathname = parsedUrl.pathname;
   let filePath = path.join(distDir, pathname);
 
@@ -89,7 +119,7 @@ server.on('error', (err) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`\n📱 \x1b[36mSuperApp Browser Simulator\x1b[0m is running at: \x1b[1mhttp://localhost:${port}\x1b[0m`);
-  console.log(`🔗 Open with target Mini App: \x1b[32mhttp://localhost:${port}/?url=http://localhost:3000\x1b[0m\n`);
+server.listen(port, host, () => {
+  console.log(`\n📱 \x1b[36mSuperApp Browser Simulator\x1b[0m is running at: \x1b[1mhttp://${host}:${port}\x1b[0m`);
+  console.log(`🔗 Open with target Mini App: \x1b[32mhttp://${host}:${port}/?url=http://localhost:3000\x1b[0m\n`);
 });

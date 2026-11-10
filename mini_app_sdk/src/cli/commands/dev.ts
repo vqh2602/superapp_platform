@@ -6,6 +6,7 @@ import { startSimulatorServer } from '../utils/server.js';
 export interface DevCommandOptions {
   port?: string;
   simulatorPort?: string;
+  host?: string;
   open?: boolean;
   noSimulator?: boolean;
 }
@@ -14,6 +15,7 @@ export async function devServer(options: DevCommandOptions = {}): Promise<void> 
   const manifest = loadManifest();
   const port = options.port || '3000';
   const simulatorPort = options.simulatorPort || '5175';
+  const host = options.host || '127.0.0.1';
 
   logger.title(`Khởi chạy Mini App Development Server`);
   logger.info(`Đang chạy ứng dụng: ${manifest.name} (${manifest.appId})`);
@@ -21,14 +23,14 @@ export async function devServer(options: DevCommandOptions = {}): Promise<void> 
   let simServer: any = null;
   if (!options.noSimulator) {
     try {
-      simServer = startSimulatorServer(parseInt(simulatorPort, 10));
+      simServer = startSimulatorServer(parseInt(simulatorPort, 10), host);
     } catch (e) {
       logger.warn(`Không thể khởi chạy Simulator trên cổng ${simulatorPort}`);
     }
   }
 
   logger.info(`Vite Server: http://localhost:${port}`);
-  logger.info(`Browser Simulator: http://localhost:${simulatorPort}/?url=http://localhost:${port}`);
+  logger.info(`Browser Simulator: http://${host}:${simulatorPort}/?url=http://localhost:${port}`);
 
   const child = spawn('npx', ['vite', '--port', port], {
     stdio: 'inherit',

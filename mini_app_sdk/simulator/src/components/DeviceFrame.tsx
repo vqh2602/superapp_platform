@@ -4,7 +4,7 @@ import { TopStatusBar } from './TopStatusBar.js';
 import { AppHeaderBar } from './AppHeaderBar.js';
 
 export const DeviceFrame: React.FC = () => {
-  const { deviceType, scale, miniAppUrl, iframeKey } = useSimulator();
+  const { deviceType, scale, miniAppUrl, iframeKey, urlError } = useSimulator();
 
   const width = deviceType === 'iphone' ? 390 : 412;
   const height = deviceType === 'iphone' ? 844 : 880;
@@ -50,30 +50,53 @@ export const DeviceFrame: React.FC = () => {
 
           {/* Iframe hosting Mini App */}
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <iframe
-              key={iframeKey}
-              src={miniAppUrl}
-              title="Mini App Simulator View"
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                backgroundColor: '#f8fafc',
-              }}
-              allow="geolocation; camera; microphone"
-              onLoad={(e) => {
-                try {
-                  const targetOrigin = new URL(miniAppUrl).origin;
-                  e.currentTarget.contentWindow?.postMessage({
-                    type: 'SUPERAPP_SIMULATOR_HANDSHAKE',
-                    hostOrigin: window.location.origin,
-                    timestamp: Date.now(),
-                  }, targetOrigin);
-                } catch (_) {}
-              }}
-            />
-
-
+            {urlError ? (
+              <div
+                style={{
+                  height: '100%',
+                  padding: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  backgroundColor: '#0f172a',
+                  color: '#f87171',
+                }}
+              >
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🛡️</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#fca5a5', marginBottom: 8 }}>
+                  URL Bị Chặn Bởi Chính Sách An Toàn
+                </div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#94a3b8' }}>
+                  {urlError}
+                </div>
+              </div>
+            ) : (
+              <iframe
+                key={iframeKey}
+                src={miniAppUrl}
+                title="Mini App Simulator View"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: '#f8fafc',
+                }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+                allow="geolocation; camera; microphone"
+                onLoad={(e) => {
+                  try {
+                    const targetOrigin = new URL(miniAppUrl).origin;
+                    e.currentTarget.contentWindow?.postMessage({
+                      type: 'SUPERAPP_SIMULATOR_HANDSHAKE',
+                      hostOrigin: window.location.origin,
+                      timestamp: Date.now(),
+                    }, targetOrigin);
+                  } catch (_) {}
+                }}
+              />
+            )}
           </div>
 
           {/* iPhone Home Indicator bar */}
