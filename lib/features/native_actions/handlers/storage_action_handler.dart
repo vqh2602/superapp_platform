@@ -39,6 +39,7 @@ class StorageSetSecureItemHandler implements NativeActionHandler {
       key: key,
       value: value,
       domain: domain,
+      userId: context.userId,
     );
   }
 }
@@ -72,6 +73,7 @@ class StorageGetSecureItemHandler implements NativeActionHandler {
       appId: context.appId,
       key: key,
       domain: domain,
+      userId: context.userId,
     );
   }
 }
@@ -105,6 +107,7 @@ class StorageRemoveSecureItemHandler implements NativeActionHandler {
       appId: context.appId,
       key: key,
       domain: domain,
+      userId: context.userId,
     );
   }
 }
@@ -129,6 +132,7 @@ class StorageClearHandler implements NativeActionHandler {
     return await secureStorageRepo.clear(
       appId: context.appId,
       domain: (domain != null && domain.isNotEmpty) ? domain : null,
+      userId: context.userId,
     );
   }
 }
@@ -153,9 +157,16 @@ class StorageGetAllHandler implements NativeActionHandler {
         ? payload['domain'].toString()
         : 'default';
 
+    final limitRaw = payload['limit'];
+    final int limit = (limitRaw is int && limitRaw > 0 && limitRaw <= 100)
+        ? limitRaw
+        : SecureStorageRepositoryImpl.defaultMaxBulkLimit;
+
     return await secureStorageRepo.getAll(
       appId: context.appId,
       domain: domain,
+      userId: context.userId,
+      maxLimit: limit,
     );
   }
 }
@@ -195,6 +206,7 @@ class StorageSetCredentialsHandler implements NativeActionHandler {
       domain: domain,
       username: username,
       password: password,
+      userId: context.userId,
     );
   }
 }
@@ -223,6 +235,7 @@ class StorageGetCredentialsHandler implements NativeActionHandler {
     return await secureStorageRepo.getCredentials(
       appId: context.appId,
       domain: domain,
+      userId: context.userId,
     );
   }
 }
@@ -251,6 +264,7 @@ class StorageDeleteCredentialsHandler implements NativeActionHandler {
     return await secureStorageRepo.deleteCredentials(
       appId: context.appId,
       domain: domain,
+      userId: context.userId,
     );
   }
 }

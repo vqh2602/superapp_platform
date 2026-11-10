@@ -59,6 +59,7 @@ dependencies:
   serp_debug_overlay:
     hosted: https://pub.bkholding.vn/
     version: ^12.0.7
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_test:

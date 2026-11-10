@@ -8,6 +8,7 @@ import '../../domain/models/platform_user.dart';
 import '../../data/auth_repository_impl.dart';
 import '../../data/auth_code_service_shim.dart';
 import '../../data/token_service_shim.dart';
+import '../../../storage/data/secure_storage_repository_impl.dart';
 
 /// Core provider for AuthRepositoryImpl connected to backend endpoint
 final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
@@ -112,9 +113,15 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool purgeUserData = true}) async {
+    final currentUserId = state.currentUser?.id;
     state = state.copyWith(isLoading: true);
     await _repository.logout();
+    if (purgeUserData && currentUserId != null && currentUserId.isNotEmpty) {
+      try {
+        await ref.read(secureStorageRepositoryProvider).clearUserData(currentUserId);
+      } catch (_) {}
+    }
     state = const AuthState();
   }
 

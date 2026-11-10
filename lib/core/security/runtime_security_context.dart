@@ -170,3 +170,4 @@ class RuntimeSecurityContext {
   String toString() =>
       'RuntimeSecurityContext(appId: $appId, user: $userId, origin: $approvedOrigin, v: $activeVersion, caps: ${allowedCapabilities.length}, session: $runtimeSessionId)';
 }
+
