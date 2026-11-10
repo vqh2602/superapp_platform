@@ -93,19 +93,22 @@ class AuthLoginHandler implements NativeActionHandler {
     if (session == null || !authRepo.isAuthenticated) {
       throw BridgeError.authRequired();
     }
-    final user = authRepo.currentUser;
+    final user = authRepo.currentUser ?? session.user;
     final scopes = (payload['scopes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+    final expiresIn = session.expiresAt.difference(DateTime.now()).inSeconds.clamp(0, 86400);
 
     return {
       'authCode': 'authcode_${DateTime.now().millisecondsSinceEpoch}_${context.appId}',
       'accessToken': session.accessToken,
-      'expiresIn': session.expiresIn,
+      'expiresIn': expiresIn > 0 ? expiresIn : 3600,
       'user': {
-        'id': user?.id ?? session.userId,
-        'name': user?.fullName ?? user?.email ?? 'Người dùng SuperApp',
-        'avatarUrl': user?.avatarUrl,
-        if (scopes.contains('user.phone') || scopes.contains('phone')) 'phone': user?.phone,
-        if (scopes.contains('user.email') || scopes.contains('email')) 'email': user?.email,
+        'id': user.id,
+        'name': user.name.isNotEmpty
+            ? user.name
+            : (user.email.isNotEmpty ? user.email : 'Người dùng SuperApp'),
+        'avatarUrl': user.avatarUrl,
+        if (scopes.contains('user.phone') || scopes.contains('phone')) 'phone': user.phone,
+        if (scopes.contains('user.email') || scopes.contains('email')) 'email': user.email,
       },
     };
   }
@@ -132,10 +135,11 @@ class AuthGetAccessTokenHandler implements NativeActionHandler {
     if (session == null || !authRepo.isAuthenticated) {
       throw BridgeError.authRequired();
     }
+    final expiresIn = session.expiresAt.difference(DateTime.now()).inSeconds.clamp(0, 86400);
     return {
       'accessToken': session.accessToken,
       'tokenType': 'Bearer',
-      'expiresIn': session.expiresIn,
+      'expiresIn': expiresIn > 0 ? expiresIn : 3600,
     };
   }
 }

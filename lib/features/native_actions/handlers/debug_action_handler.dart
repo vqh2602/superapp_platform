@@ -49,11 +49,14 @@ class DebugSimulateFailureHandler implements NativeActionHandler {
       case 'rate_limit_exceeded':
         throw BridgeError.rateLimitExceeded();
       case 'payload_too_large':
-        throw BridgeError.payloadTooLarge(1024 * 1024, 2 * 1024 * 1024);
+        throw BridgeError.payloadTooLarge();
       case 'timeout':
-        throw BridgeError.timeout(5000);
+        throw BridgeError.timeout('Simulated timeout error');
       default:
-        throw BridgeError.internalError('Simulated native error ($type)');
+        throw BridgeError(
+          code: BridgeErrorCode.internalError,
+          message: 'Simulated native error ($type)',
+        );
     }
   }
 }

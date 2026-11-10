@@ -80,6 +80,14 @@ class NativeActionDispatcher {
     String? miniappUrl,
     String? authUrl,
   }) {
+    final createOrderHandler = PaymentCreateOrderHandler(store: paymentOrderStore);
+    final openCheckoutHandler = PaymentOpenCheckoutHandler(store: paymentOrderStore);
+    final checkStatusHandler = PaymentCheckStatusHandler(store: paymentOrderStore);
+    final requestPaymentHandler = PaymentRequestPaymentHandler(
+      createOrderHandler: createOrderHandler,
+      openCheckoutHandler: openCheckoutHandler,
+    );
+
     final list = <NativeActionHandler>[
       // Auth
       AuthRequestCodeHandler(
@@ -99,6 +107,8 @@ class NativeActionDispatcher {
         authUrl: authUrl,
       ),
       AuthLogoutHandler(authRepo: authRepo),
+      AuthLoginHandler(authRepo: authRepo),
+      AuthGetAccessTokenHandler(authRepo: authRepo),
 
       // User
       UserGetProfileHandler(userRepo: userRepo),
@@ -131,6 +141,13 @@ class NativeActionDispatcher {
 
       // Debug
       DebugEchoHandler(),
+      DebugSimulateFailureHandler(),
+
+      // Payment
+      createOrderHandler,
+      openCheckoutHandler,
+      checkStatusHandler,
+      requestPaymentHandler,
 
 
       // System & Device Info
@@ -273,8 +290,13 @@ class NativeActionDispatcher {
     _handlers['openSMS'] = OpenSmsHandler();
     _handlers['openExternalBrowser'] = OpenExternalBrowserHandler();
     _handlers['openDeepLink'] = OpenDeepLinkHandler();
+    _handlers['phone.openExternalBrowser'] = OpenExternalBrowserHandler();
+    _handlers['phone.openDeepLink'] = OpenDeepLinkHandler();
     _handlers['speechToText'] = SpeechToTextHandler(permissionRepo: permissionRepo);
     _handlers['hideKeyboard'] = HideKeyboardHandler();
+
+    // Payment aliases
+    _handlers['payment.checkTransaction'] = checkStatusHandler;
   }
 
   /// Registers or overrides a handler (useful for testing or extensions)
