@@ -11,6 +11,7 @@ import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
 import '../../mini_app_catalog/data/mini_app_repository.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
+import '../../mini_app_catalog/domain/mini_app_execution_authorization.dart';
 import '../../mini_app_bridge/bridge_channel.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';
 import '../../mini_app_bridge/bridge_event_emitter.dart';
@@ -498,23 +499,24 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       initialStatus: 'Đang kiểm tra Mini App...',
     );
 
-    // Revalidate visibility, active version and current grants on every launch.
-    final manifest = await ref
-        .read(miniAppRepositoryProvider)
-        .fetchRemoteManifest(_currentAppId);
+    // Revalidate execution authorization & active version with backend on every launch.
+    final repo = ref.read(miniAppRepositoryProvider);
+    final authorization = await repo.authorizeExecution(_currentAppId);
     if (!mounted) return;
 
-    if (manifest == null) {
+    if (authorization == null || !authorization.isValid) {
       if (!mounted) return;
       _progressTicker?.cancel();
       setState(() {
         _isLoading = false;
         _showLoadingOverlay = false;
         _loadError =
-            'Mini App "$_currentAppId" không tồn tại hoặc chưa được publish';
+            'Mini App "$_currentAppId" chưa được cấp phép thực thi hoặc đã bị thu hồi quyền';
       });
       return;
     }
+
+    final manifest = authorization.manifest;
 
     // Stage 2: Validating permissions & security environment
     _updateProgressTarget(

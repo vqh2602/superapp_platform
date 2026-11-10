@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:superapp_platform/features/mini_app_catalog/data/mini_app_repository.dart';
+import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_execution_authorization.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 
 void main() {
@@ -189,6 +190,132 @@ void main() {
       final searchResults = await repo.getPublishedMiniApps(search: 'Playground');
       expect(searchResults.length, equals(1));
       expect(searchResults.first.id, equals('sdk_playground'));
+    });
+  });
+
+  group('Execution Authorization vs Catalog Cache Tests', () {
+    test('Catalog cache exists for UI display but cannot authorize execution if unverified', () async {
+      // 1. Initial successful catalog query puts app into Catalog Cache (_dynamicApps)
+      final repo = MiniAppRepository(
+        httpClient: MockClient((request) async {
+          if (request.url.path.endsWith('/apps')) {
+            return http.Response(jsonEncode({
+              'items': [
+                {
+                  'id': 'promo_app',
+                  'name': 'Promo App',
+                  'version': '1.0.0',
+                  'entryUrl': 'https://example.com/promo.html',
+                  'category': 'Shopping',
+                  'capabilities': [],
+                }
+              ]
+            }), 200);
+          }
+          // Single app authorization endpoint fails with 500 / Network Error
+          return http.Response('Server Internal Error', 500);
+        }),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+
+      // Populate catalog cache
+      final apps = await repo.getPublishedMiniApps();
+      expect(apps, hasLength(1));
+      // Catalog cache can be read for UI display
+      expect(repo.getAppById('promo_app'), isNotNull);
+
+      // But execution authorization MUST fail and reject launch
+      final auth = await repo.authorizeExecution('promo_app');
+      expect(auth, isNull);
+      expect(await repo.fetchRemoteManifest('promo_app'), isNull);
+    });
+
+    test('Execution authorization has valid TTL and expires accurately', () async {
+      final repo = MiniAppRepository(
+        httpClient: MockClient((request) async {
+          return http.Response(jsonEncode({
+            'id': 'verified_app',
+            'name': 'Verified App',
+            'version': '2.1.0',
+            'entryUrl': 'https://example.com/v2.html',
+            'capabilities': ['device.getDeviceInfo'],
+            'authorizationToken': 'jwt_auth_proof_999',
+          }), 200);
+        }),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+
+      // Authorize with short 50ms TTL
+      final auth = await repo.authorizeExecution(
+        'verified_app',
+        ttl: const Duration(milliseconds: 50),
+      );
+
+      expect(auth, isNotNull);
+      expect(auth!.isValid, isTrue);
+      expect(auth.isExpired, isFalse);
+      expect(auth.authorizationToken, 'jwt_auth_proof_999');
+      expect(auth.version, '2.1.0');
+
+      // Wait for TTL expiration
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      expect(auth.isExpired, isTrue);
+      expect(auth.isValid, isFalse);
+    });
+
+    test('Immediate revocation: Backend 403 or 404 destroys cached authorization and catalog entry', () async {
+      var isRevoked = false;
+      final repo = MiniAppRepository(
+        httpClient: MockClient((request) async {
+          if (isRevoked) {
+            return http.Response('Forbidden: App Revoked', 403);
+          }
+          return http.Response(jsonEncode({
+            'id': 'revocable_app',
+            'name': 'Revocable App',
+            'version': '1.0.0',
+            'entryUrl': 'https://example.com/app.html',
+            'capabilities': [],
+          }), 200);
+        }),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+
+      // 1. App is authorized initially
+      final initialAuth = await repo.authorizeExecution('revocable_app');
+      expect(initialAuth, isNotNull);
+      expect(repo.getAppById('revocable_app'), isNotNull);
+
+      // 2. Developer / SuperApp admin revokes app on backend
+      isRevoked = true;
+      final revokedAuth = await repo.authorizeExecution('revocable_app', forceRevalidate: true);
+
+      expect(revokedAuth, isNull);
+      // Both execution authorization and catalog cache are immediately purged
+      expect(repo.getActiveAuthorization('revocable_app'), isNull);
+      expect(repo.getAppById('revocable_app'), isNull);
+    });
+
+    test('Revocation via status payload (status: "revoked" or published: false) terminates authorization', () async {
+      final repo = MiniAppRepository(
+        httpClient: MockClient((request) async {
+          return http.Response(jsonEncode({
+            'id': 'banned_app',
+            'name': 'Banned App',
+            'version': '1.0.0',
+            'entryUrl': 'https://example.com/banned.html',
+            'published': false, // Uninstalled or suspended
+            'status': 'revoked',
+            'capabilities': [],
+          }), 200);
+        }),
+        catalogUrl: 'http://mock.catalog.local',
+      );
+
+      final auth = await repo.authorizeExecution('banned_app');
+      expect(auth, isNull);
+      expect(repo.getAppById('banned_app'), isNull);
     });
   });
 }
