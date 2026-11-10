@@ -3,7 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../../core/bridge_protocol/bridge_request.dart';
 import '../../../core/bridge_protocol/bridge_response.dart';
+import '../../../core/config/endpoint_config.dart';
 import '../../../core/errors/bridge_error.dart';
+import '../../../core/security/mini_app_security_policy.dart';
 import '../debug_center/data/debug_log_repository.dart';
 import '../debug_center/domain/bridge_log_entry.dart';
 import '../mini_app_catalog/domain/mini_app_manifest.dart';
@@ -17,6 +19,7 @@ class BridgeDispatcher {
   final WebViewController controller;
   final MiniAppManifest manifest;
   final MiniAppUiDelegate? uiDelegate;
+  final String backendBaseUrl;
 
   BridgeDispatcher({
     required this.actionDispatcher,
@@ -24,9 +27,10 @@ class BridgeDispatcher {
     required this.controller,
     required this.manifest,
     this.uiDelegate,
-  });
+    String? backendBaseUrl,
+  }) : backendBaseUrl = backendBaseUrl ?? EndpointConfig.alwaysdataEndpoint;
 
-  Future<void> handleMessage(String rawJson, BuildContext buildContext) async {
+  Future<void> handleMessage(String rawJson, BuildContext? buildContext) async {
     final stopwatch = Stopwatch()..start();
     String requestId = 'unknown';
     String actionName = 'unknown';
@@ -39,10 +43,38 @@ class BridgeDispatcher {
       actionName = request.action;
       payload = request.payload;
 
+      // 1. Kiểm tra tính toàn vẹn danh tính Mini App
+      if (parsed['appId'] != null && parsed['appId'] != manifest.id) {
+        throw BridgeError.permissionDenied(
+          'Định danh Mini App không hợp lệ (${parsed['appId']} != ${manifest.id})',
+        );
+      }
+
+      // 2. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
+      // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
+      String? currentUrl;
+      try {
+        currentUrl = await controller.currentUrl();
+      } catch (_) {
+        // Fallback khi chạy trên môi trường test không có native webview
+      }
+
+      final isOriginValid = MiniAppSecurityPolicy.validateCallerOrigin(
+        currentUrl: currentUrl,
+        manifest: manifest,
+        backendBaseUrl: backendBaseUrl,
+      );
+
+      if (!isOriginValid) {
+        throw BridgeError.permissionDenied(
+          'Nguồn gọi Bridge ($currentUrl) không thuộc phạm vi Mini App hợp lệ của "${manifest.id}"',
+        );
+      }
+
       final context = ActionContext(
         buildContext: buildContext,
         appId: manifest.id,
-        origin: request.origin,
+        origin: currentUrl ?? request.origin,
         manifest: manifest,
         uiDelegate: uiDelegate,
       );

@@ -27,6 +27,7 @@ import 'widgets/webview_debug_bottom_sheet.dart';
 import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
+import '../../../../core/security/mini_app_security_policy.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
@@ -578,6 +579,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       controller: controller,
       manifest: validManifest,
       uiDelegate: this,
+      backendBaseUrl: endpoint.baseUrl,
     );
 
     final emitter = BridgeEventEmitter(controller);
@@ -659,6 +661,56 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     await controller.setNavigationDelegate(
       NavigationDelegate(
+        onNavigationRequest: (NavigationRequest request) async {
+          final rawUrl = request.url;
+          final uri = Uri.tryParse(rawUrl);
+
+          // 1. Chặn đứng các scheme nguy hiểm (javascript:, data:, file:, ...)
+          if (uri == null || MiniAppSecurityPolicy.isBlockedScheme(uri)) {
+            debugPrint('[Security] Đã chặn điều hướng scheme nguy hiểm: $rawUrl');
+            _recordWebLog(
+              WebLogEntry(
+                id: 'sec_${DateTime.now().microsecondsSinceEpoch}',
+                type: 'error',
+                level: 'error',
+                message: 'Chặn điều hướng tới URL không an toàn: $rawUrl',
+              ),
+            );
+            return NavigationDecision.prevent;
+          }
+
+          // 2. Cho phép in-page anchor navigation (ví dụ: #section)
+          if (uri.hasFragment && (!uri.hasScheme || uri.scheme.isEmpty) && uri.host.isEmpty) {
+            return NavigationDecision.navigate;
+          }
+
+          // 3. Kiểm tra xem URL đích có thuộc phạm vi phân phối tin cậy của Mini App không
+          final isTrusted = MiniAppSecurityPolicy.isTrustedMiniAppUrl(
+            uri,
+            manifest: validManifest,
+            backendBaseUrl: endpoint.baseUrl,
+          );
+
+          if (isTrusted) {
+            return NavigationDecision.navigate;
+          }
+
+          // 4. Nếu là liên kết ngoài: CHẶN trong WebView, mở bằng trình duyệt hệ thống
+          debugPrint(
+            '[Security] Chặn liên kết ngoài trong WebView, mở trình duyệt hệ thống: $rawUrl',
+          );
+          _recordWebLog(
+            WebLogEntry(
+              id: 'nav_${DateTime.now().microsecondsSinceEpoch}',
+              type: 'navigation',
+              level: 'warn',
+              message: 'Liên kết ngoài được mở bằng trình duyệt hệ thống: $rawUrl',
+            ),
+          );
+
+          await MiniAppSecurityPolicy.openExternalUrl(uri);
+          return NavigationDecision.prevent;
+        },
         onProgress: (int progress) {
           if (mounted && _isLoading) {
             // Map webview resource loading (0..100) to progress range (70..95)
@@ -769,9 +821,22 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         final isWeb = validManifest.isWebApp;
         final targetApp = isWeb ? validManifest.id : 'schema_runtime';
         targetUri =
-            '${EndpointConfig.alwaysdataEndpoint}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
+            '${endpoint.baseUrl}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
       }
-      controller.loadRequest(Uri.parse(targetUri));
+
+      // Xác thực bảo mật URL khởi chạy (Entry URL Verification)
+      final validation = MiniAppSecurityPolicy.validateEntryUrl(
+        targetUri,
+        manifest: validManifest,
+        backendBaseUrl: endpoint.baseUrl,
+      );
+
+      if (!validation.isValid) {
+        _failStartup('Bảo mật: ${validation.errorMessage}');
+        return;
+      }
+
+      controller.loadRequest(validation.uri ?? Uri.parse(targetUri));
     }
   }
 

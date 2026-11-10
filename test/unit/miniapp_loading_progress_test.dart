@@ -71,6 +71,9 @@ class FakeWebViewController extends PlatformWebViewController {
 
   @override
   Future<void> reload() async {}
+
+  @override
+  Future<String?> currentUrl() async => 'https://example.com/test';
 }
 
 class FakeNavigationDelegate extends PlatformNavigationDelegate {
@@ -79,6 +82,12 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   void Function(int progress)? onProgressCallback;
   void Function(String url)? onPageStartedCallback;
   void Function(String url)? onPageFinishedCallback;
+  NavigationRequestCallback? onNavigationRequestCallback;
+
+  @override
+  Future<void> setOnNavigationRequest(NavigationRequestCallback onNavigationRequest) async {
+    onNavigationRequestCallback = onNavigationRequest;
+  }
 
   @override
   Future<void> setOnProgress(void Function(int progress) onProgress) async {
