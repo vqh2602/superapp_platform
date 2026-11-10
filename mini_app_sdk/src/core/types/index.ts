@@ -1,3 +1,19 @@
+export interface BiometricStatus {
+  supported: boolean;
+  enrolled: boolean;
+  canAuthenticate: boolean;
+  availableBiometrics: string[];
+}
+
+export interface BiometricAuthOptions {
+  /** Nội dung hộp thoại hệ thống, từ 1 đến 200 ký tự. */
+  reason?: string;
+}
+
+export interface BiometricAuthResult {
+  authenticated: boolean;
+}
+
 export interface UserProfile {
   id: string;
   name: string;

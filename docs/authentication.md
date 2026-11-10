@@ -86,6 +86,84 @@ Refresh token được dùng một lần: sau refresh, cả access/refresh token
 
 Logout phiên Super App cũng làm code chưa đổi và mọi token Mini App sinh từ phiên đó mất hiệu lực. Logout một phiên Mini App chỉ thoát phiên Mini App đó. Logout-all không tác động user khác.
 
+## Xác thực sinh trắc học trong Mini App
+
+SDK có hai API mới:
+
+- `superApp.auth.checkBiometrics()`: kiểm tra phần cứng và sinh trắc học đã thiết lập/được phép dùng, không mở hộp thoại.
+- `superApp.auth.authenticateBiometric({ reason? })`: kiểm tra lại khả dụng rồi mở hộp thoại hệ thống, yêu cầu phiên SuperApp đang đăng nhập.
+
+Kết quả kiểm tra có dạng:
+
+```ts
+{
+  supported: true,
+  enrolled: true,
+  canAuthenticate: true, // supported && enrolled
+  availableBiometrics: ['face'] // Có thể là fingerprint, face, strong, weak...
+}
+```
+
+`enrolled` phản ánh sinh trắc học ứng dụng được phép sử dụng. Không suy ra loại
+cảm biến từ một tên cụ thể; Android có thể chỉ trả `strong`/`weak`. Khả dụng
+không bảo đảm xác thực thành công: trạng thái có thể thay đổi hoặc bị khóa.
+
+```ts
+async function verifyWithBiometrics() {
+  const status = await superApp.auth.checkBiometrics();
+  if (!status.supported) {
+    return { authenticated: false, message: 'Thiết bị không hỗ trợ sinh trắc học.' };
+  }
+  if (!status.canAuthenticate) {
+    return { authenticated: false, message: 'Hãy thiết lập hoặc cho phép vân tay / Face ID trong Cài đặt thiết bị.' };
+  }
+  return superApp.auth.authenticateBiometric({
+    reason: 'Xác thực để xem thông tin cá nhân',
+  });
+}
+
+try {
+  const result = await verifyWithBiometrics();
+  if (result.authenticated === true) {
+    // Tiếp tục thao tác cần xác nhận cục bộ.
+  }
+} catch (error) {
+  // Hiển thị thông báo theo error.code; dừng thao tác cần xác nhận.
+}
+```
+
+`reason` tùy chọn, mặc định “Xác thực sinh trắc học để tiếp tục”; nếu truyền phải
+là chuỗi không rỗng, tối đa 200 ký tự. Host dùng `biometricOnly: true`, không
+chuyển sang PIN/passcode. Hộp thoại đi qua hàng đợi tương tác; SDK dành timeout
+5 phút cho action xác thực.
+
+| Kết quả / mã lỗi | Ý nghĩa |
+| --- | --- |
+| `{ authenticated: true }` | Xác thực cục bộ thành công |
+| `{ authenticated: false }` | Không thành công, dừng thao tác cần xác nhận |
+| `UNSUPPORTED` | Không hỗ trợ, chưa thiết lập/cho phép hoặc phần cứng chưa sẵn sàng |
+| `AUTH_REQUIRED` | Cần đăng nhập SuperApp |
+| `CANCELLED` | Người dùng/hệ thống hủy |
+| `RATE_LIMIT_EXCEEDED` | Đang xác thực hoặc bị khóa; thử lại sau / xử lý khóa trong Cài đặt |
+| `TIMEOUT` | Hết thời gian xác thực |
+| `INVALID_PARAMS` | Kiểm tra `reason` |
+| `INTERNAL_ERROR` | Không thể kiểm tra/mở hộp thoại trên thiết bị |
+
+Đây là xác nhận chủ thiết bị trong phiên hiện tại. API không trả dữ liệu vân tay/
+khuôn mặt, không tạo hoặc làm mới token, không thay thế đăng nhập email/password.
+Kết quả JavaScript không phải bằng chứng xác thực cho backend; backend vẫn phải
+kiểm tra token và quyền truy cập.
+
+Host hỗ trợ Android, iOS và macOS; web, Linux và Windows trả `supported: false`.
+Android đã cấu hình `FlutterFragmentActivity`, `USE_BIOMETRIC` và theme AppCompat;
+iOS có `NSFaceIDUsageDescription`. Sau khi thêm plugin cần build lại ứng dụng
+native; hot reload không đủ. Tham khảo [tài liệu local_auth](https://pub.dev/packages/local_auth).
+
+Ví dụ tương tác: SDK Playground → **A. Authentication Flow** → **Kiểm tra sinh trắc học**
+và **Xác thực sinh trắc học**. Chạy trong SuperApp trên thiết bị đã thiết lập
+sinh trắc học; trình duyệt riêng không có Native Bridge. Kiểm tra thủ công các
+trường hợp không hỗ trợ, chưa đăng ký, thành công, hủy và khóa sinh trắc học.
+
 ## Quyền theo user/app
 
 Có ba lớp quyền riêng:

@@ -1165,3 +1165,12 @@ npm run package:miniapp -- ../examples/miniapps/web-demo ../dist/web_demo-1.0.0.
 - **Tối ưu hình ảnh**: Sử dụng định dạng WebP hoặc SVG cho icon và hình minh họa.
 - **Bộ nhớ đệm (Cache)**: Tận dụng `superApp.storage` để lưu cache thông tin danh mục hoặc cấu hình thay vì gọi API liên tục mỗi lần mở app.
 - **Kích thước bundle**: Với Flutter Web, hãy ưu tiên cờ `--web-renderer html` để kích thước tải ban đầu dưới 2MB.
+
+## Sinh trắc học
+
+Dùng `superApp.auth.checkBiometrics()` để kiểm tra hỗ trợ và thiết lập; nếu
+`canAuthenticate === true`, gọi `superApp.auth.authenticateBiometric({ reason: "Xác thực để tiếp tục" })`
+và chỉ tiếp tục khi `authenticated === true`. Host tự kiểm tra lại trước khi mở
+hộp thoại hệ thống; yêu cầu phiên SuperApp đang đăng nhập.
+
+[Hợp đồng API, lỗi và ví dụ đầy đủ](authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).

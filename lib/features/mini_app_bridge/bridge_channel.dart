@@ -177,6 +177,7 @@ class BridgeChannel {
 
       // Universal MiniApp Promise Invocation Channel
       var interactiveActions = [
+        'auth.authenticateBiometric',
         'scanQr', 'scanQRCode', 'scanBarcode', 'device.scanQr', 'device.scanQRCode',
         'device.scanBarcode', 'media.scanQRCode', 'getPhoto', 'pickImages', 'pickVideo',
         'chooseImage', 'device.pickImage', 'media.chooseImage', 'media.getPhoto',

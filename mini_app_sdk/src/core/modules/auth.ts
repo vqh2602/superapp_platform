@@ -1,5 +1,5 @@
 import { ITransport } from '../../transport/index.js';
-import { AccessTokenResult, AuthLoginOptions, AuthLoginResult, MiniAppTokenResult, UserProfile } from '../types/index.js';
+import { BiometricStatus, BiometricAuthOptions, BiometricAuthResult, AccessTokenResult, AuthLoginOptions, AuthLoginResult, MiniAppTokenResult, UserProfile } from '../types/index.js';
 
 export interface PkceEntry {
   verifier: string;
@@ -155,6 +155,16 @@ function url64(bytes: Uint8Array): string {
 
 export class AuthModule {
   constructor(private transport: ITransport) {}
+
+  /** Kiểm tra hỗ trợ phần cứng và sinh trắc học đã thiết lập/được phép dùng. */
+  public checkBiometrics(): Promise<BiometricStatus> {
+    return this.transport.invoke<BiometricStatus>('auth.checkBiometrics');
+  }
+
+  /** Xác thực cục bộ bằng sinh trắc học; yêu cầu phiên SuperApp đang đăng nhập. */
+  public authenticateBiometric(options: BiometricAuthOptions = {}): Promise<BiometricAuthResult> {
+    return this.transport.invoke<BiometricAuthResult>('auth.authenticateBiometric', options);
+  }
 
   public async requestCode(options: { codeChallenge?: string; scopes?: string[] } = {}): Promise<{
     authCode: string;

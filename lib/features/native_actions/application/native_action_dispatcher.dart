@@ -16,6 +16,8 @@ import '../../storage/data/secure_storage_repository_impl.dart';
 import '../domain/action_context.dart';
 import '../domain/action_definition.dart';
 import '../handlers/auth_action_handler.dart';
+import '../handlers/biometric_action_handler.dart';
+import '../../authentication/data/biometric_service.dart';
 import '../handlers/user_action_handler.dart';
 import '../handlers/navigation_action_handler.dart';
 import '../handlers/device_action_handler.dart';
@@ -89,7 +91,10 @@ class NativeActionDispatcher {
       openCheckoutHandler: openCheckoutHandler,
     );
 
+    final biometricService = BiometricService();
     final list = <NativeActionHandler>[
+      AuthCheckBiometricsHandler(service: biometricService),
+      AuthAuthenticateBiometricHandler(service: biometricService),
       // Auth
       AuthRequestCodeHandler(
         authRepo: authRepo,

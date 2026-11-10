@@ -12,3 +12,14 @@ Tên trong catalog backend, manifest `app.json` và giao diện miniapp được
 Chạy `npm run build:miniapps` từ thư mục gốc. Pipeline đóng gói toàn bộ `dist/`, gồm JS/WASM/font của Flutter Scanner, vào `backend/seed-bundles/` và ZIP. Release backend phải mang theo `seed-bundles/` và chạy seed để cập nhật catalog, manifest và package key.
 
 Flutter dùng SDK ở `.fvm/flutter_sdk/bin/flutter` nếu có; CI dùng `flutter` trên PATH. Có thể chọn SDK bằng biến `FLUTTER_BIN`. Các asset Flutter dùng đường dẫn tương đối trong URL của package.
+
+### Ví dụ sinh trắc học
+
+SDK Playground có hai mục trong **A. Authentication Flow**: kiểm tra hỗ trợ/
+thiết lập và xác thực vân tay / Face ID. Đăng nhập SuperApp, mở Playground,
+kiểm tra trạng thái rồi chạy xác thực. Khi chưa thiết lập, ví dụ hiển thị hướng
+dẫn kiểm tra Cài đặt thiết bị. Xem [API và xử lý lỗi](../docs/authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
+
+Playground dùng SDK trong repo (`file:../../mini_app_sdk`) để thử API mới trước
+khi phát hành npm. Chạy `npm run build:ts` tại `mini_app_sdk`, sau đó `npm install`
+và `npm run build` tại `mini_apps/sdk_playground`.

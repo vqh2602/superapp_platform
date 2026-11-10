@@ -460,6 +460,35 @@ export const FeatureCatalog: React.FC = () => {
   // ==========================================
   // AUTH & USER & PAYMENT & PERMISSIONS
   // ==========================================
+  const biometricCheckConfig: RunnerConfig = {
+    id: 'auth_biometric_check',
+    category: 'A. Authentication',
+    title: 'Kiểm tra sinh trắc học',
+    description: 'Kiểm tra thiết bị hỗ trợ và đã thiết lập vân tay / Face ID.',
+    actionCode: 'superApp.auth.checkBiometrics()',
+    hasParams: false,
+    run: async () => superApp.auth.checkBiometrics(),
+  };
+
+  const biometricAuthConfig: RunnerConfig = {
+    id: 'auth_biometric_verify',
+    category: 'A. Authentication',
+    title: 'Xác thực sinh trắc học',
+    description: 'Kiểm tra khả dụng rồi mở xác thực hệ thống. Cần đăng nhập SuperApp.',
+    actionCode: 'superApp.auth.authenticateBiometric({ reason: "Xác thực để tiếp tục" })',
+    hasParams: true,
+    defaultParams: { reason: 'Xác thực để tiếp tục' },
+    run: async (p) => {
+      const status = await superApp.auth.checkBiometrics();
+      if (!status.canAuthenticate) {
+        return { ...status, authenticated: false, message: status.supported
+          ? 'Hãy thiết lập hoặc cho phép sinh trắc học trong Cài đặt thiết bị.'
+          : 'Thiết bị không hỗ trợ sinh trắc học.' };
+      }
+      return superApp.auth.authenticateBiometric({ reason: p.reason });
+    },
+  };
+
   const authRequestCodeConfig: RunnerConfig = {
     id: 'auth_req_code',
     category: 'A. Authentication',
@@ -835,6 +864,8 @@ export const FeatureCatalog: React.FC = () => {
           <h2 className="category-title">A. Authentication Flow</h2>
         </div>
         <div className="feature-grid">
+          <FeatureItem icon={<ShieldCheck size={20} />} config={biometricCheckConfig} statusText="Device" />
+          <FeatureItem icon={<ShieldCheck size={20} />} config={biometricAuthConfig} statusText="Biometric" />
           <FeatureItem icon={<Key size={20} />} config={authRequestCodeConfig} statusText="60s TTL" />
           <FeatureItem icon={<RefreshCw size={20} />} config={authExchangeTokenConfig} statusText="Token Exchange" />
           <FeatureItem icon={<RefreshCw size={20} />} config={authRefreshTokenConfig} statusText="Refresh" />

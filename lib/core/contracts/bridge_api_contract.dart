@@ -41,6 +41,18 @@ class BridgeApiContract {
   static const List<BridgeActionSpec> actions = [
     // --- Auth Module ---
     BridgeActionSpec(
+      action: 'auth.checkBiometrics',
+      module: 'auth',
+      description: 'Kiểm tra hỗ trợ và sinh trắc học đã thiết lập',
+    ),
+    BridgeActionSpec(
+      action: 'auth.authenticateBiometric',
+      module: 'auth',
+      description: 'Xác thực sinh trắc học trên thiết bị',
+      requiresAuth: true,
+      isInteractive: true,
+    ),
+    BridgeActionSpec(
       action: 'auth.requestCode',
       module: 'auth',
       description: 'Yêu cầu mã xác thực OAuth2/PKCE',
@@ -539,8 +551,10 @@ class BridgeApiContract {
     ),
   ];
 
-  /// Set of 77 exact action names invoked directly by the official JS SDK (@vqh2602/mini-app-sdk).
+  /// Set of exact action names invoked directly by the official JS SDK (@vqh2602/mini-app-sdk).
   static const Set<String> requiredSdkActionNames = {
+    'auth.checkBiometrics',
+    'auth.authenticateBiometric',
     'auth.exchangeCode',
     'auth.getAccessToken',
     'auth.getUserProfile',
