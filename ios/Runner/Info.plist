@@ -34,6 +34,10 @@
 	<string>Đọc danh bạ thiết bị cho Mini App sau khi bạn cấp quyền.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cung cấp vị trí và thông tin Wi-Fi cho Mini App khi bạn cho phép.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Cung cấp vị trí cho Mini App khi bạn sử dụng ứng dụng hoặc khi chạy ngầm nếu được cho phép.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Cung cấp vị trí liên tục cho Mini App khi bạn cho phép.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần quyền sử dụng Camera để quét mã QR, mã vạch và chụp ảnh tài liệu.</string>
 	<key>NSMicrophoneUsageDescription</key>
