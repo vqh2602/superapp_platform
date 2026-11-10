@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import '../../../core/errors/bridge_error.dart';
 import '../../../core/security/runtime_security_context.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
 import 'mini_app_ui_delegate.dart';
@@ -11,6 +12,8 @@ class ActionContext {
   final MiniAppManifest? manifest;
   final MiniAppUiDelegate? uiDelegate;
   final RuntimeSecurityContext? securityContext;
+  final bool Function()? isSessionActive;
+  final String? _explicitSessionId;
 
   const ActionContext({
     this.buildContext,
@@ -19,13 +22,26 @@ class ActionContext {
     this.manifest,
     this.uiDelegate,
     this.securityContext,
-  });
+    this.isSessionActive,
+    String? runtimeSessionId,
+  }) : _explicitSessionId = runtimeSessionId;
+
+  /// Indicates whether the session that triggered this action has been cancelled or disposed.
+  bool get isCancelled => isSessionActive != null && !isSessionActive!();
+
+  /// Throws [BridgeError.cancelled] if this action context was cancelled due to session switch or disposal.
+  void checkCancelled([String? message]) {
+    if (isCancelled) {
+      throw BridgeError.cancelled(message ?? 'Phiên làm việc đã bị hủy hoặc chuyển đổi');
+    }
+  }
 
   /// Host-verified User ID (if authenticated)
   String? get userId => securityContext?.userId;
 
   /// Host-managed Runtime Session ID
-  String? get runtimeSessionId => securityContext?.runtimeSessionId;
+  String? get runtimeSessionId =>
+      securityContext?.runtimeSessionId ?? _explicitSessionId;
 
   /// Host-managed approved origin
   String get approvedOrigin => securityContext?.approvedOrigin ?? origin ?? '';

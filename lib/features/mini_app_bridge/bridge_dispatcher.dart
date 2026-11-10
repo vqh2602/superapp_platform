@@ -25,6 +25,8 @@ class BridgeDispatcher {
   final String? userId;
   final String runtimeSessionId;
   RuntimeSecurityContext? securityContext;
+  bool _isDisposed = false;
+  final Set<String> _inFlightRequestIds = {};
 
   BridgeDispatcher({
     required this.actionDispatcher,
@@ -39,7 +41,24 @@ class BridgeDispatcher {
   })  : backendBaseUrl = backendBaseUrl ?? EndpointConfig.alwaysdataEndpoint,
         runtimeSessionId = runtimeSessionId ?? const Uuid().v4();
 
+  /// Cho biết Dispatcher của phiên làm việc này đã bị hủy hay chưa.
+  bool get isDisposed => _isDisposed;
+
+  /// Danh sách các RPC request ID đang được thực thi trong phiên này.
+  Set<String> get inFlightRequestIds => Set.unmodifiable(_inFlightRequestIds);
+
+  /// Hủy Dispatcher, ngắt gửi response và hủy các RPC đang xử lý dở.
+  void dispose() {
+    _isDisposed = true;
+    _inFlightRequestIds.clear();
+  }
+
   Future<void> handleMessage(String rawJson, BuildContext? buildContext) async {
+    if (_isDisposed) {
+      debugPrint('[BridgeDispatcher] Bỏ qua request vì phiên $runtimeSessionId đã bị hủy');
+      return;
+    }
+
     final stopwatch = Stopwatch()..start();
     String requestId = 'unknown';
     String actionName = 'unknown';
@@ -52,6 +71,13 @@ class BridgeDispatcher {
       actionName = request.action;
       payload = request.payload;
 
+      if (_isDisposed) {
+        debugPrint('[BridgeDispatcher] Bỏ qua request "$actionName" ($requestId) vì phiên đã bị hủy');
+        return;
+      }
+
+      _inFlightRequestIds.add(requestId);
+
       // 1. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
       // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
       String? currentUrl;
@@ -60,6 +86,9 @@ class BridgeDispatcher {
       } catch (_) {
         // Fallback khi chạy trên môi trường test không có native webview
       }
+
+      if (_isDisposed || !_inFlightRequestIds.contains(requestId)) return;
+      if (buildContext != null && !buildContext.mounted) return;
 
       final isOriginValid = MiniAppSecurityPolicy.validateCallerOrigin(
         currentUrl: currentUrl,
@@ -107,10 +136,18 @@ class BridgeDispatcher {
         manifest: manifest,
         uiDelegate: uiDelegate,
         securityContext: activeSecContext,
+        runtimeSessionId: runtimeSessionId,
+        isSessionActive: () => !_isDisposed && _inFlightRequestIds.contains(requestId),
       );
 
       final resultData = await actionDispatcher.dispatch(actionName, payload, context);
       stopwatch.stop();
+
+      // Nếu phiên đã bị hủy trong lúc actionDispatcher đang xử lý bất đồng bộ, ngắt ngay lập tức
+      if (_isDisposed || !_inFlightRequestIds.contains(requestId)) {
+        debugPrint('[BridgeDispatcher] Bỏ qua gửi response cho "$actionName" vì phiên $runtimeSessionId đã bị hủy trong quá trình xử lý');
+        return;
+      }
 
       final response = BridgeResponse.ok(
         requestId,
@@ -133,6 +170,10 @@ class BridgeDispatcher {
 
       await _sendResponse(response);
     } on BridgeError catch (err) {
+      if (_isDisposed || (requestId != 'unknown' && !_inFlightRequestIds.contains(requestId))) {
+        debugPrint('[BridgeDispatcher] Bỏ qua gửi response lỗi cho "$actionName" vì phiên $runtimeSessionId đã bị hủy trong quá trình xử lý');
+        return;
+      }
       stopwatch.stop();
       final response = BridgeResponse.failure(
         requestId,
@@ -154,6 +195,10 @@ class BridgeDispatcher {
 
       await _sendResponse(response);
     } catch (e) {
+      if (_isDisposed || (requestId != 'unknown' && !_inFlightRequestIds.contains(requestId))) {
+        debugPrint('[BridgeDispatcher] Bỏ qua gửi response lỗi cho "$actionName" vì phiên $runtimeSessionId đã bị hủy trong quá trình xử lý');
+        return;
+      }
       stopwatch.stop();
       final bridgeErr = BridgeError.internal(e.toString());
       final response = BridgeResponse.failure(
@@ -175,10 +220,13 @@ class BridgeDispatcher {
       ));
 
       await _sendResponse(response);
+    } finally {
+      _inFlightRequestIds.remove(requestId);
     }
   }
 
   Future<void> _sendResponse(BridgeResponse response) async {
+    if (_isDisposed) return;
     final jsonStr = jsonEncode(response.toJson());
     final script = '''
       try {

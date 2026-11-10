@@ -259,13 +259,19 @@ class NativeActionDispatcher {
     _handlers['hideKeyboard'] = HideKeyboardHandler();
   }
 
+  /// Registers or overrides a handler (useful for testing or extensions)
+  void registerHandler(NativeActionHandler handler) {
+    _handlers[handler.actionName] = handler;
+  }
+
   /// Dispatches an action with all security and capability checks.
   Future<dynamic> dispatch(
     String actionName,
     Map<String, dynamic> payload,
     ActionContext context,
   ) async {
-    // 1. Mini App identity verification
+    // 1. Session cancellation & Mini App identity verification
+    context.checkCancelled();
     if (context.appId.isEmpty) {
       throw BridgeError.invalidParams('Mini App identifier (appId) is missing');
     }
@@ -303,7 +309,9 @@ class NativeActionDispatcher {
     }
 
     // Restore this user's saved grants before handlers inspect or prompt.
+    context.checkCancelled();
     await permissionRepo.ensurePermissionsLoaded(context.appId);
+    context.checkCancelled();
 
     // 4. Runtime permission check
     if (handler.requiredCapability != null) {
@@ -317,6 +325,7 @@ class NativeActionDispatcher {
             appName: context.manifest?.name ?? context.appId,
             capabilityKey: cap,
           );
+          context.checkCancelled();
           permissionRepo.setPermission(context.appId, cap, granted);
           if (!granted) {
             throw BridgeError.permissionDenied(cap);
@@ -333,7 +342,10 @@ class NativeActionDispatcher {
     }
 
     // 6. Execute action
-    return await handler.handle(payload, context);
+    context.checkCancelled();
+    final result = await handler.handle(payload, context);
+    context.checkCancelled();
+    return result;
   }
 }
 

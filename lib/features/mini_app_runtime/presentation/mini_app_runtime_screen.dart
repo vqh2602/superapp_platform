@@ -22,6 +22,7 @@ import '../../storage/data/secure_storage_repository_impl.dart';
 import '../../native_actions/domain/mini_app_ui_delegate.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../domain/mini_app_runtime_session.dart';
 import '../domain/web_log_entry.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
 import 'widgets/webview_debug_bottom_sheet.dart';
@@ -45,6 +46,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     with WidgetsBindingObserver
     implements MiniAppUiDelegate {
   late String _currentAppId;
+  MiniAppRuntimeSession? _currentSession;
   WebViewController? _webViewController;
   BridgeEventEmitter? _eventEmitter;
   bool _isLoading = true;
@@ -57,10 +59,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   final ValueNotifier<String> _statusNotifier =
       ValueNotifier<String>('Đang kiểm tra Mini App...');
   bool _isFinished = false;
-  Timer? _progressTicker;
-  Timer? _loadTimeoutTimer;
-  Timer? _overlayDismissTimer;
-  Timer? _diagnosticTimer;
   String? _loadError;
   final List<WebLogEntry> _webLogs = [];
   final ValueNotifier<int> _webLogRevision = ValueNotifier(0);
@@ -81,15 +79,19 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   bool _hasPaddingBottom = true;
   Color? _bottomNavColor;
   bool _isKeepScreenOn = false;
-  String _runtimeSessionId = const Uuid().v4();
+
+  @visibleForTesting
+  MiniAppRuntimeSession? get currentSession => _currentSession;
+
+  @visibleForTesting
+  String get runtimeSessionId => _currentSession?.sessionId ?? '';
 
   @override
   void initState() {
     super.initState();
-    _runtimeSessionId = const Uuid().v4();
     WidgetsBinding.instance.addObserver(this);
     _currentAppId = widget.appId;
-    _initMiniApp();
+    _startNewSession(_currentAppId);
   }
 
   @override
@@ -98,10 +100,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     _webLogRevision.dispose();
     _progressNotifier.dispose();
     _statusNotifier.dispose();
-    _progressTicker?.cancel();
-    _loadTimeoutTimer?.cancel();
-    _overlayDismissTimer?.cancel();
-    _diagnosticTimer?.cancel();
+    _currentSession?.dispose();
+    _currentSession = null;
     if (_isKeepScreenOn) {
       try {
         WakelockPlus.disable();
@@ -236,10 +236,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     _webLogRevision.value++;
   }
 
-  void _failStartup(String message) {
-    if (!mounted) return;
-    _loadTimeoutTimer?.cancel();
-    _progressTicker?.cancel();
+  void _failStartup(MiniAppRuntimeSession session, String message) {
+    if (!mounted || session.isDisposed || _currentSession != session) return;
+    session.dispose();
     _recordWebLog(
       WebLogEntry(
         id: 'startup_${DateTime.now().microsecondsSinceEpoch}',
@@ -255,11 +254,16 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     });
   }
 
-  void _startLoadDeadline() {
-    _loadTimeoutTimer?.cancel();
-    _loadTimeoutTimer = Timer(const Duration(minutes: 2), () {
-      if (mounted && _isLoading && _loadError == null) {
+  void _startLoadDeadline(MiniAppRuntimeSession session) {
+    session.loadTimeoutTimer?.cancel();
+    session.loadTimeoutTimer = Timer(const Duration(minutes: 2), () {
+      if (mounted &&
+          session.isActive &&
+          _currentSession == session &&
+          _isLoading &&
+          _loadError == null) {
         _failStartup(
+          session,
           'Mini App chưa khởi tạo sau 120 giây. Mở Web Debug để xem lỗi tải JS / WASM, hoặc thử tải lại.',
         );
       }
@@ -267,20 +271,23 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   Future<void> _checkPageStartup(
+    MiniAppRuntimeSession session,
     BridgeEventEmitter emitter,
     MiniAppManifest manifest,
   ) async {
-    final result = await _webViewController?.runJavaScriptReturningResult(
+    if (session.isDisposed || _currentSession != session || !mounted) return;
+    final result = await session.controller?.runJavaScriptReturningResult(
       'JSON.stringify(window.__SUPERAPP_STARTUP__ || null)',
     );
+    if (session.isDisposed || _currentSession != session || !mounted) return;
     var value = jsonDecode(result.toString());
     if (value is String) value = jsonDecode(value);
-    if (!mounted) return;
+    if (!mounted || session.isDisposed || _currentSession != session) return;
     if (value is Map) {
       if (value['stage'] == 'error') {
-        _failStartup('Flutter Web: ${value['error']}');
+        _failStartup(session, 'Flutter Web: ${value['error']}');
       } else if (value['stage'] == 'ready') {
-        await _finishLoading(emitter, manifest);
+        await _finishLoading(session, emitter, manifest);
       } else {
         _updateProgressTarget(
           96,
@@ -289,7 +296,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         );
       }
     } else {
-      await _finishLoading(emitter, manifest);
+      await _finishLoading(session, emitter, manifest);
     }
   }
 
@@ -336,12 +343,13 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   void _startProgressTicker({
+    required MiniAppRuntimeSession session,
     required double initialProgress,
     required double initialTarget,
     required double initialCeiling,
     required String initialStatus,
   }) {
-    _progressTicker?.cancel();
+    session.progressTicker?.cancel();
     _isFinished = false;
     _displayedProgress = initialProgress;
     _targetProgress = initialTarget;
@@ -350,8 +358,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     _progressNotifier.value = initialProgress;
     _statusNotifier.value = initialStatus;
 
-    _progressTicker = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      if (!mounted) {
+    session.progressTicker =
+        Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted || session.isDisposed || _currentSession != session) {
         timer.cancel();
         return;
       }
@@ -385,7 +394,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     double? newCeiling,
     String? status,
   }) {
-    if (!mounted) return;
+    if (!mounted || _currentSession?.isDisposed == true) return;
     if (newCeiling != null && newCeiling > _stageCeiling) {
       _stageCeiling = newCeiling;
     }
@@ -402,11 +411,18 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   }
 
   Future<void> _finishLoading(
+    MiniAppRuntimeSession session,
     BridgeEventEmitter emitter,
     MiniAppManifest manifest,
   ) async {
-    if (!mounted || !_isLoading || _isFinished) return;
-    _loadTimeoutTimer?.cancel();
+    if (!mounted ||
+        session.isDisposed ||
+        _currentSession != session ||
+        !_isLoading ||
+        _isFinished) {
+      return;
+    }
+    session.loadTimeoutTimer?.cancel();
 
     _isFinished = true;
     _updateProgressTarget(
@@ -418,13 +434,15 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     // Give visual time for progress animation to smoothly hit 100%
     final start = DateTime.now();
     while (mounted &&
+        session.isActive &&
+        _currentSession == session &&
         _displayedProgress < 99.5 &&
         DateTime.now().difference(start).inMilliseconds < 450) {
       await Future.delayed(const Duration(milliseconds: 25));
     }
 
-    if (!mounted) return;
-    _progressTicker?.cancel();
+    if (!mounted || session.isDisposed || _currentSession != session) return;
+    session.progressTicker?.cancel();
 
     _displayedProgress = 100.0;
     _progressNotifier.value = 100.0;
@@ -439,9 +457,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     emitter.emit('miniapp.show');
 
     // Fade out overlay completely after transition
-    _overlayDismissTimer?.cancel();
-    _overlayDismissTimer = Timer(const Duration(milliseconds: 350), () {
-      if (mounted && !_isLoading) {
+    session.overlayDismissTimer?.cancel();
+    session.overlayDismissTimer = Timer(const Duration(milliseconds: 350), () {
+      if (mounted &&
+          session.isActive &&
+          _currentSession == session &&
+          !_isLoading) {
         setState(() {
           _showLoadingOverlay = false;
         });
@@ -449,13 +470,20 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     });
 
     // Check if root element mounted (diagnostic alert)
-    _diagnosticTimer?.cancel();
-    _diagnosticTimer = Timer(const Duration(milliseconds: 2500), () async {
-      if (!mounted || _webViewController == null) return;
+    session.diagnosticTimer?.cancel();
+    session.diagnosticTimer =
+        Timer(const Duration(milliseconds: 2500), () async {
+      if (!mounted ||
+          session.isDisposed ||
+          _currentSession != session ||
+          session.controller == null) {
+        return;
+      }
       try {
-        final res = await _webViewController!.runJavaScriptReturningResult(
+        final res = await session.controller!.runJavaScriptReturningResult(
           '(function() { var r = document.getElementById("root"); return !!((r && (r.childElementCount > 0 || r.innerHTML.length > 0)) || document.querySelector("flutter-view, flt-glass-pane, canvas") || (!r && document.body && document.body.innerText.trim())); })()',
         );
+        if (session.isDisposed || _currentSession != session) return;
         final isRendered = res.toString() == 'true';
         if (!isRendered && mounted) {
           setState(() {
@@ -466,59 +494,71 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     });
   }
 
-  void _reloadMiniApp(MiniAppManifest? manifest) {
-    _loadTimeoutTimer?.cancel();
-    setState(() {
-      _isLoading = true;
-      _showLoadingOverlay = true;
-      _hasBlankScreenWarning = false;
-      _loadError = null;
-    });
-
-    _startProgressTicker(
-      initialProgress: 10.0,
-      initialTarget: 40.0,
-      initialCeiling: 68.0,
-      initialStatus: 'Đang làm mới giao diện...',
-    );
-
-    _startLoadDeadline();
-
-    _webViewController?.reload();
+  void _initMiniApp([String? appId]) {
+    if (!mounted) return;
+    _startNewSession(appId ?? _currentAppId, isReload: true);
   }
 
-  Future<void> _initMiniApp() async {
-    _progressTicker?.cancel();
-    _loadTimeoutTimer?.cancel();
+  void _reloadMiniApp(MiniAppManifest? manifest) {
+    _initMiniApp(_currentAppId);
+  }
 
-    setState(() {
-      _hasBlankScreenWarning = false;
-      _isLoading = true;
-      _showLoadingOverlay = true;
-      _loadError = null;
-    });
+  void _startNewSession(String appId, {bool isReload = false}) {
+    // 1. Hủy phiên làm việc cũ ngay lập tức (hủy timers, ngắt dispatcher RPCs, dọn controller)
+    _currentSession?.dispose();
+    _currentSession = null;
 
-    // Stage 1: Fetching Mini App Manifest & specifications
-    _startProgressTicker(
-      initialProgress: 0.0,
-      initialTarget: 22.0,
-      initialCeiling: 28.0,
-      initialStatus: 'Đang kiểm tra Mini App...',
+    // 2. Cập nhật state UI và unmount WebView cũ
+    if (mounted) {
+      setState(() {
+        _currentAppId = appId;
+        _webViewController = null;
+        _eventEmitter = null;
+        _isLoading = true;
+        _showLoadingOverlay = true;
+        _hasBlankScreenWarning = false;
+        _loadError = null;
+      });
+    }
+
+    // 3. Khởi tạo phiên cô lập mới với session ID ngẫu nhiên
+    final session = MiniAppRuntimeSession(
+      sessionId: const Uuid().v4(),
+      appId: appId,
     );
+    _currentSession = session;
+
+    // 4. Bắt đầu tiến độ tiến trình gắn liền với phiên mới
+    _startProgressTicker(
+      session: session,
+      initialProgress: isReload ? 10.0 : 0.0,
+      initialTarget: isReload ? 40.0 : 22.0,
+      initialCeiling: isReload ? 68.0 : 28.0,
+      initialStatus: isReload
+          ? 'Đang làm mới giao diện...'
+          : 'Đang kiểm tra Mini App...',
+    );
+
+    // 5. Khởi tạo tài nguyên phiên
+    _initSession(session);
+  }
+
+  Future<void> _initSession(MiniAppRuntimeSession session) async {
+    if (session.isDisposed || _currentSession != session || !mounted) return;
 
     // Revalidate execution authorization & active version with backend on every launch.
     final repo = ref.read(miniAppRepositoryProvider);
-    final authorization = await repo.authorizeExecution(_currentAppId);
-    if (!mounted) return;
+    final authorization = await repo.authorizeExecution(session.appId);
+    if (!mounted || session.isDisposed || _currentSession != session) return;
 
     if (authorization == null || !authorization.isValid) {
-      if (!mounted) return;
-      _progressTicker?.cancel();
+      if (!mounted || session.isDisposed || _currentSession != session) return;
+      session.dispose();
       setState(() {
         _isLoading = false;
         _showLoadingOverlay = false;
         _loadError =
-            'Mini App "$_currentAppId" chưa được cấp phép thực thi hoặc đã bị thu hồi quyền';
+            'Mini App "${session.appId}" chưa được cấp phép thực thi hoặc đã bị thu hồi quyền';
       });
       return;
     }
@@ -535,10 +575,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     // Refresh saved consent on every launch, before WebView startup actions run.
     final permissionRepo = ref.read(permissionRepositoryProvider);
     try {
-      await permissionRepo.fetchPermissionsFromBackend(_currentAppId);
+      await permissionRepo.fetchPermissionsFromBackend(session.appId);
     } catch (_) {
-      if (!mounted) return;
-      _progressTicker?.cancel();
+      if (!mounted || session.isDisposed || _currentSession != session) return;
+      session.dispose();
       setState(() {
         _isLoading = false;
         _showLoadingOverlay = false;
@@ -546,7 +586,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       });
       return;
     }
-    if (!mounted) return;
+    if (!mounted || session.isDisposed || _currentSession != session) return;
 
     // Stage 3: Initializing Runtime & Bridge
     _updateProgressTarget(
@@ -577,12 +617,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       miniappUrl: endpoint.miniappUrl,
       authUrl: endpoint.authUrl,
       onSwitchMiniApp: (targetAppId) {
-        setState(() {
-          _currentAppId = targetAppId;
-          _isLoading = true;
-          _showLoadingOverlay = true;
-          _initMiniApp();
-        });
+        if (!mounted || session.isDisposed || _currentSession != session) return;
+        _startNewSession(targetAppId);
       },
     );
 
@@ -602,7 +638,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       userId: currentUserId,
       backendBaseUrl: endpoint.baseUrl,
       currentUrl: initialApprovedOrigin,
-      customSessionId: _runtimeSessionId,
+      customSessionId: session.sessionId,
     );
 
     final dispatcher = BridgeDispatcher(
@@ -613,29 +649,37 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       uiDelegate: this,
       backendBaseUrl: endpoint.baseUrl,
       userId: currentUserId,
-      runtimeSessionId: _runtimeSessionId,
+      runtimeSessionId: session.sessionId,
       securityContext: secContext,
     );
 
     final emitter = BridgeEventEmitter(controller);
+
+    // Gắn tài nguyên vào session để giải phóng đồng bộ
+    session.controller = controller;
+    session.dispatcher = dispatcher;
+    session.eventEmitter = emitter;
 
     await BridgeChannel.register(
       controller: controller,
       dispatcher: dispatcher,
       contextGetter: () => context,
       onWebDebugMessage: (rawMessage) {
+        if (session.isDisposed || _currentSession != session || !mounted) return;
         try {
           final data = jsonDecode(rawMessage) as Map<String, dynamic>;
           final entry = WebLogEntry.fromJson(data);
           _recordWebLog(entry);
           if (entry.type == 'startup' &&
               mounted &&
+              session.isActive &&
+              _currentSession == session &&
               _isLoading &&
               _loadError == null) {
             if (entry.message == 'ready') {
-              _finishLoading(emitter, validManifest);
+              _finishLoading(session, emitter, validManifest);
             } else if (entry.message == 'error') {
-              _failStartup('Flutter Web: ${entry.stack ?? entry.message}');
+              _failStartup(session, 'Flutter Web: ${entry.stack ?? entry.message}');
             } else {
               _updateProgressTarget(
                 96,
@@ -650,7 +694,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       },
     );
 
+    if (session.isDisposed || _currentSession != session || !mounted) return;
+
     await controller.setOnConsoleMessage((JavaScriptConsoleMessage message) {
+      if (session.isDisposed || _currentSession != session || !mounted) return;
       debugPrint(
         '[MiniApp Web Console] (${message.level.name}): ${message.message}',
       );
@@ -672,6 +719,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       }
     });
 
+    if (session.isDisposed || _currentSession != session || !mounted) return;
+
     if (await controller.isUserScriptInjectionSupported(
       WebViewUserScriptInjectionTime.documentStart,
     )) {
@@ -682,6 +731,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         ),
       );
     }
+
+    if (session.isDisposed || _currentSession != session || !mounted) return;
 
     const resetScript = '''
       (function() {
@@ -697,6 +748,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     await controller.setNavigationDelegate(
       NavigationDelegate(
         onNavigationRequest: (NavigationRequest request) async {
+          if (session.isDisposed || _currentSession != session) {
+            return NavigationDecision.prevent;
+          }
           final rawUrl = request.url;
           final uri = Uri.tryParse(rawUrl);
 
@@ -747,6 +801,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           return NavigationDecision.prevent;
         },
         onProgress: (int progress) {
+          if (session.isDisposed || _currentSession != session) return;
           if (mounted && _isLoading) {
             // Map webview resource loading (0..100) to progress range (70..95)
             final mapped = 70.0 + (progress.clamp(0, 100) / 100.0) * 25.0;
@@ -758,6 +813,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           }
         },
         onPageStarted: (url) {
+          if (session.isDisposed || _currentSession != session) return;
           _updateProgressTarget(
             68.0,
             newCeiling: 92.0,
@@ -781,6 +837,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           }
         },
         onPageFinished: (url) async {
+          if (session.isDisposed || _currentSession != session) return;
           await _safeRunScript(controller, resetScript);
           await _safeRunScript(
             controller,
@@ -801,12 +858,13 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
             );
           }
           try {
-            await _checkPageStartup(emitter, validManifest);
+            await _checkPageStartup(session, emitter, validManifest);
           } catch (error) {
-            _failStartup('Không thể kiểm tra khởi tạo Mini App: $error');
+            _failStartup(session, 'Không thể kiểm tra khởi tạo Mini App: $error');
           }
         },
         onWebResourceError: (error) {
+          if (session.isDisposed || _currentSession != session) return;
           final message =
               'WebView ${error.errorCode}: ${error.description} (${error.url ?? "unknown URL"})';
           _recordWebLog(
@@ -817,10 +875,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
               message: message,
             ),
           );
-          if (error.isForMainFrame == true) _failStartup(message);
+          if (error.isForMainFrame == true) _failStartup(session, message);
         },
       ),
     );
+
+    if (session.isDisposed || _currentSession != session || !mounted) return;
 
     if (mounted) {
       setState(() {
@@ -838,7 +898,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       status: 'Đang kết nối tài nguyên...',
     );
 
-    _startLoadDeadline();
+    _startLoadDeadline(session);
 
     // Load entry point: remote Backend URL is the primary runtime loader
     if (validManifest.isAsset &&
@@ -867,7 +927,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       );
 
       if (!validation.isValid) {
-        _failStartup('Bảo mật: ${validation.errorMessage}');
+        _failStartup(session, 'Bảo mật: ${validation.errorMessage}');
         return;
       }
 
