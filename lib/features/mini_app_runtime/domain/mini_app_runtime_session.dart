@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:webview_all/webview_all.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';
 import '../../mini_app_bridge/bridge_event_emitter.dart';
+import '../../native_actions/application/native_action_dispatcher.dart';
 
 /// Quản lý vòng đời và tập hợp tài nguyên cô lập của một phiên chạy Mini App WebView.
 ///
@@ -26,6 +27,7 @@ class MiniAppRuntimeSession {
 
   WebViewController? controller;
   BridgeDispatcher? dispatcher;
+  NativeActionDispatcher? actionDispatcher;
   BridgeEventEmitter? eventEmitter;
 
   Timer? progressTicker;
@@ -78,9 +80,11 @@ class MiniAppRuntimeSession {
     }
     _activeTimers.clear();
 
-    // 2. Hủy Bridge Dispatcher (ngắt gửi response và chặn các RPC đang xử lý dở)
+    // 2. Hủy Bridge Dispatcher và Action Dispatcher (ngắt gửi response và hủy hàng đợi UI)
     dispatcher?.dispose();
     dispatcher = null;
+    actionDispatcher?.dispose();
+    actionDispatcher = null;
     eventEmitter = null;
 
     // 3. Giải phóng WebViewController cũ

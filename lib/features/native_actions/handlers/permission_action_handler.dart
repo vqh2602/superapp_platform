@@ -34,11 +34,17 @@ class PermissionRequestHandler implements NativeActionHandler {
       throw BridgeError.internal('BuildContext is null for permission dialog');
     }
 
-    final granted = await PermissionPromptDialog.show(
-      context.buildContext!,
-      appName: context.manifest?.name ?? context.appId,
-      capabilityKey: capability,
-    );
+    final granted = await context.runInteractive<bool>(() async {
+      context.checkCancelled();
+      if (permissionRepo.isGranted(context.appId, capability)) {
+        return true;
+      }
+      return await PermissionPromptDialog.show(
+        context.buildContext!,
+        appName: context.manifest?.name ?? context.appId,
+        capabilityKey: capability,
+      );
+    });
 
     permissionRepo.setPermission(context.appId, capability, granted);
 

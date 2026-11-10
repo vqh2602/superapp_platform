@@ -98,19 +98,24 @@ class ShowAlertHandler implements NativeActionHandler {
     final buttonText = payload['buttonText']?.toString() ?? 'Đóng';
 
     if (context.buildContext != null) {
-      await showDialog(
-        context: context.buildContext!,
-        builder: (ctx) => AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(buttonText),
+      await context.runInteractive(() async {
+        context.checkCancelled();
+        if (context.buildContext != null) {
+          await showDialog(
+            context: context.buildContext!,
+            builder: (ctx) => AlertDialog(
+              title: Text(title),
+              content: Text(message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(buttonText),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
+          );
+        }
+      });
     }
 
     return {'success': true};
@@ -137,24 +142,30 @@ class ShowConfirmHandler implements NativeActionHandler {
 
     var confirmed = false;
     if (context.buildContext != null) {
-      confirmed = await showDialog<bool>(
-            context: context.buildContext!,
-            builder: (ctx) => AlertDialog(
-              title: Text(title),
-              content: Text(message),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(cancelText),
+      confirmed = await context.runInteractive<bool>(() async {
+        context.checkCancelled();
+        if (context.buildContext != null) {
+          return await showDialog<bool>(
+                context: context.buildContext!,
+                builder: (ctx) => AlertDialog(
+                  title: Text(title),
+                  content: Text(message),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(cancelText),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(confirmText),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(confirmText),
-                ),
-              ],
-            ),
-          ) ??
-          false;
+              ) ??
+              false;
+        }
+        return false;
+      });
     }
 
     return {'confirmed': confirmed};
@@ -576,62 +587,67 @@ class ShowMiniappMenuHandler implements NativeActionHandler {
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
     if (context.buildContext != null) {
-      showModalBottomSheet(
-        context: context.buildContext!,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (ctx) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      await context.runInteractive(() async {
+        context.checkCancelled();
+        if (context.buildContext != null) {
+          await showModalBottomSheet(
+            context: context.buildContext!,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            builder: (ctx) {
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        context.manifest?.name ?? 'SuperApp Mini App',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.manifest?.name ?? 'SuperApp Mini App',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.refresh, color: Colors.blue),
+                        title: const Text('Khởi động lại Mini App'),
+                        onTap: () => Navigator.pop(ctx),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.security, color: Colors.green),
+                        title: const Text('Cài đặt quyền riêng tư'),
+                        onTap: () => Navigator.pop(ctx),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.share, color: Colors.amber),
+                        title: const Text('Chia sẻ Mini App'),
+                        onTap: () => Navigator.pop(ctx),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.exit_to_app, color: Colors.red),
+                        title: const Text('Đóng ứng dụng'),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          onCloseApp?.call();
+                        },
                       ),
                     ],
                   ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.refresh, color: Colors.blue),
-                    title: const Text('Khởi động lại Mini App'),
-                    onTap: () => Navigator.pop(ctx),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.security, color: Colors.green),
-                    title: const Text('Cài đặt quyền riêng tư'),
-                    onTap: () => Navigator.pop(ctx),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.share, color: Colors.amber),
-                    title: const Text('Chia sẻ Mini App'),
-                    onTap: () => Navigator.pop(ctx),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.exit_to_app, color: Colors.red),
-                    title: const Text('Đóng ứng dụng'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      onCloseApp?.call();
-                    },
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
-        },
-      );
+        }
+      });
     }
 
     return {

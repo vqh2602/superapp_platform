@@ -658,6 +658,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     // Gắn tài nguyên vào session để giải phóng đồng bộ
     session.controller = controller;
     session.dispatcher = dispatcher;
+    session.actionDispatcher = actionDispatcher;
     session.eventEmitter = emitter;
 
     await BridgeChannel.register(

@@ -14,6 +14,7 @@ import '../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../native_actions/application/native_action_dispatcher.dart';
 import '../native_actions/domain/action_context.dart';
 import '../native_actions/domain/mini_app_ui_delegate.dart';
+import 'bridge_load_config.dart';
 
 class BridgeDispatcher {
   final NativeActionDispatcher actionDispatcher;
@@ -24,9 +25,13 @@ class BridgeDispatcher {
   final String backendBaseUrl;
   final String? userId;
   final String runtimeSessionId;
+  final BridgeLoadConfig loadConfig;
+  final BridgeRateLimiter _rateLimiter;
   RuntimeSecurityContext? securityContext;
   bool _isDisposed = false;
   final Set<String> _inFlightRequestIds = {};
+
+  static final RegExp _idRegex = RegExp(r'"id"\s*:\s*"([^"]+)"');
 
   BridgeDispatcher({
     required this.actionDispatcher,
@@ -38,8 +43,18 @@ class BridgeDispatcher {
     this.userId,
     String? runtimeSessionId,
     this.securityContext,
+    BridgeLoadConfig? loadConfig,
+    BridgeRateLimiter? rateLimiter,
   })  : backendBaseUrl = backendBaseUrl ?? EndpointConfig.alwaysdataEndpoint,
-        runtimeSessionId = runtimeSessionId ?? const Uuid().v4();
+        runtimeSessionId = runtimeSessionId ?? const Uuid().v4(),
+        loadConfig = loadConfig ?? BridgeLoadConfig.defaultConfig,
+        _rateLimiter = rateLimiter ??
+            BridgeRateLimiter(
+              maxRequestsPerWindow:
+                  (loadConfig ?? BridgeLoadConfig.defaultConfig).maxRequestsPerWindow,
+              windowDuration:
+                  (loadConfig ?? BridgeLoadConfig.defaultConfig).rateLimitWindow,
+            );
 
   /// Cho biết Dispatcher của phiên làm việc này đã bị hủy hay chưa.
   bool get isDisposed => _isDisposed;
@@ -47,10 +62,52 @@ class BridgeDispatcher {
   /// Danh sách các RPC request ID đang được thực thi trong phiên này.
   Set<String> get inFlightRequestIds => Set.unmodifiable(_inFlightRequestIds);
 
+  /// Bộ giới hạn tần suất gọi Bridge.
+  BridgeRateLimiter get rateLimiter => _rateLimiter;
+
   /// Hủy Dispatcher, ngắt gửi response và hủy các RPC đang xử lý dở.
   void dispose() {
     _isDisposed = true;
     _inFlightRequestIds.clear();
+    _rateLimiter.reset();
+  }
+
+  String? _extractRequestId(String raw) {
+    if (raw.length <= 1024) {
+      final match = _idRegex.firstMatch(raw);
+      return match?.group(1);
+    }
+    final match = _idRegex.firstMatch(raw.substring(0, 1024));
+    return match?.group(1);
+  }
+
+  Future<void> _rejectFast(
+    String requestId,
+    String actionName,
+    BridgeError error,
+    Stopwatch stopwatch,
+  ) async {
+    stopwatch.stop();
+    debugLogRepo.addLog(BridgeLogEntry(
+      id: requestId,
+      action: actionName,
+      params: const {},
+      success: false,
+      errorMessage: error.message,
+      executionTimeMs: stopwatch.elapsedMilliseconds,
+      timestamp: DateTime.now(),
+      appId: manifest.id,
+    ));
+
+    if (requestId != 'unknown' && !_isDisposed) {
+      final response = BridgeResponse.failure(
+        requestId,
+        error,
+        stopwatch.elapsedMilliseconds,
+        actionName,
+      );
+      await _sendResponse(response);
+    }
   }
 
   Future<void> handleMessage(String rawJson, BuildContext? buildContext) async {
@@ -60,6 +117,40 @@ class BridgeDispatcher {
     }
 
     final stopwatch = Stopwatch()..start();
+
+    // 1. Message Size Limit check (trước khi parse JSON để bảo vệ UI isolate)
+    if (rawJson.length > loadConfig.maxMessageSizeBytes) {
+      final reqId = _extractRequestId(rawJson) ?? 'unknown';
+      final err = BridgeError.payloadTooLarge(
+        'Kích thước tin nhắn (${rawJson.length} bytes) vượt quá giới hạn cho phép (${loadConfig.maxMessageSizeBytes} bytes)',
+      );
+      debugPrint('[BridgeDispatcher] Từ chối request vì payload quá lớn: ${rawJson.length} bytes');
+      await _rejectFast(reqId, 'unknown', err, stopwatch);
+      return;
+    }
+
+    // 2. Concurrency Limit check (theo Mini App session)
+    if (_inFlightRequestIds.length >= loadConfig.maxConcurrentRequests) {
+      final reqId = _extractRequestId(rawJson) ?? 'unknown';
+      final err = BridgeError.rateLimitExceeded(
+        'Số lượng RPC đang thực thi vượt quá giới hạn (tối đa ${loadConfig.maxConcurrentRequests} RPC đồng thời)',
+      );
+      debugPrint('[BridgeDispatcher] Từ chối request vì vượt giới hạn RPC đồng thời (${_inFlightRequestIds.length}/${loadConfig.maxConcurrentRequests})');
+      await _rejectFast(reqId, 'unknown', err, stopwatch);
+      return;
+    }
+
+    // 3. Rate Limit check (tần suất gọi theo Mini App)
+    if (!_rateLimiter.allowRequest()) {
+      final reqId = _extractRequestId(rawJson) ?? 'unknown';
+      final err = BridgeError.rateLimitExceeded(
+        'Tần suất gọi Bridge vượt quá giới hạn cho phép (${loadConfig.maxRequestsPerWindow} req / ${loadConfig.rateLimitWindow.inSeconds}s)',
+      );
+      debugPrint('[BridgeDispatcher] Từ chối request vì vượt tần suất gọi');
+      await _rejectFast(reqId, 'unknown', err, stopwatch);
+      return;
+    }
+
     String requestId = 'unknown';
     String actionName = 'unknown';
     Map<String, dynamic> payload = {};
@@ -78,7 +169,7 @@ class BridgeDispatcher {
 
       _inFlightRequestIds.add(requestId);
 
-      // 1. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
+      // 4. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
       // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
       String? currentUrl;
       try {
@@ -102,7 +193,7 @@ class BridgeDispatcher {
         );
       }
 
-      // 2. Khởi tạo / Đồng bộ RuntimeSecurityContext do Flutter Host quản lý
+      // 5. Khởi tạo / Đồng bộ RuntimeSecurityContext do Flutter Host quản lý
       final activeSecContext = (securityContext ??
           RuntimeSecurityContext.create(
             manifest: manifest,
@@ -118,8 +209,7 @@ class BridgeDispatcher {
       );
       securityContext = activeSecContext;
 
-      // 3. Thực thi kiểm tra bảo mật nghiêm ngặt qua RuntimeSecurityContext
-      // Không tin cậy appId, origin, permissions hoặc sessionId do Mini App gửi.
+      // 6. Thực thi kiểm tra bảo mật nghiêm ngặt qua RuntimeSecurityContext
       activeSecContext.validateBridgeCall(
         requestAppId: parsed['appId']?.toString(),
         requestOrigin: parsed['origin']?.toString(),
@@ -127,8 +217,7 @@ class BridgeDispatcher {
         requestSessionId: parsed['sessionId']?.toString() ?? payload['sessionId']?.toString(),
       );
 
-      // 4. Tạo ActionContext với các giá trị đã được Host xác thực
-      // origin lấy từ activeSecContext.approvedOrigin (WebView thực tế), tuyệt đối KHÔNG lấy request.origin từ JS
+      // 7. Tạo ActionContext với các giá trị đã được Host xác thực
       final context = ActionContext(
         buildContext: buildContext,
         appId: activeSecContext.appId,
@@ -137,6 +226,7 @@ class BridgeDispatcher {
         uiDelegate: uiDelegate,
         securityContext: activeSecContext,
         runtimeSessionId: runtimeSessionId,
+        userInteractionQueue: actionDispatcher.userInteractionQueue,
         isSessionActive: () => !_isDisposed && _inFlightRequestIds.contains(requestId),
       );
 

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
@@ -9,6 +10,7 @@ import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../device/data/device_adapter_impl.dart';
 import '../../permissions/data/permission_repository_impl.dart';
 import '../../permissions/presentation/permission_prompt_dialog.dart';
+import '../../mini_app_bridge/user_interaction_queue.dart';
 import '../../user_profile/data/user_repository_impl.dart';
 import '../../debug_center/data/debug_log_repository.dart';
 import '../../storage/data/secure_storage_repository_impl.dart';
@@ -25,6 +27,7 @@ import '../handlers/system_action_handler.dart';
 import '../handlers/ui_action_handler.dart';
 import '../handlers/media_file_action_handler.dart';
 import '../handlers/phone_utility_action_handler.dart';
+import '../handlers/payment_action_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NativeActionDispatcher {
@@ -36,9 +39,12 @@ class NativeActionDispatcher {
   final PermissionRepositoryImpl permissionRepo;
   final DebugLogRepository debugLogRepo;
   final SecureStorageRepositoryImpl secureStorageRepo;
+  final PaymentOrderStore paymentOrderStore;
   final http.Client? httpClient;
+  final UserInteractionQueue userInteractionQueue;
 
   final Map<String, NativeActionHandler> _handlers = {};
+  final Map<String, Future<bool>> _inFlightPermissionPrompts = {};
 
   NativeActionDispatcher({
     required this.authRepo,
@@ -49,13 +55,25 @@ class NativeActionDispatcher {
     required this.permissionRepo,
     required this.debugLogRepo,
     SecureStorageRepositoryImpl? secureStorageRepo,
+    PaymentOrderStore? paymentOrderStore,
     String? miniappUrl,
     String? authUrl,
     this.httpClient,
     Function(String appId)? onSwitchMiniApp,
-  }) : secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
+    UserInteractionQueue? userInteractionQueue,
+  })  : userInteractionQueue = userInteractionQueue ?? UserInteractionQueue(),
+        paymentOrderStore = paymentOrderStore ?? PaymentOrderStore(),
+        secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
     _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
   }
+
+  void dispose() {
+    userInteractionQueue.dispose();
+    _inFlightPermissionPrompts.clear();
+  }
+
+  /// Danh sách tất cả các action name và alias đã đăng ký trong Flutter Host
+  Set<String> get registeredActionNames => _handlers.keys.toSet();
 
   void _registerHandlers(
     Function(String appId)? onSwitchMiniApp, {
@@ -264,22 +282,63 @@ class NativeActionDispatcher {
     _handlers[handler.actionName] = handler;
   }
 
+  Future<bool> _promptPermissionWithDeduplication({
+    required BuildContext buildContext,
+    required String appId,
+    required String appName,
+    required String capability,
+    required ActionContext context,
+  }) {
+    final key = '$appId:$capability';
+    final inFlight = _inFlightPermissionPrompts[key];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = context.runInteractive<bool>(() async {
+      context.checkCancelled();
+      if (permissionRepo.isGranted(appId, capability)) {
+        return true;
+      }
+      final granted = await PermissionPromptDialog.show(
+        buildContext,
+        appName: appName,
+        capabilityKey: capability,
+      );
+      context.checkCancelled();
+      permissionRepo.setPermission(appId, capability, granted);
+      return granted;
+    });
+
+    _inFlightPermissionPrompts[key] = future;
+    future.whenComplete(() {
+      _inFlightPermissionPrompts.remove(key);
+    });
+
+    return future;
+  }
+
   /// Dispatches an action with all security and capability checks.
   Future<dynamic> dispatch(
     String actionName,
     Map<String, dynamic> payload,
     ActionContext context,
   ) async {
+    final effectiveContext = context.userInteractionQueue != null
+        ? context
+        : context.copyWith(userInteractionQueue: userInteractionQueue);
+
     // 1. Session cancellation & Mini App identity verification
-    context.checkCancelled();
-    if (context.appId.isEmpty) {
+    effectiveContext.checkCancelled();
+    if (effectiveContext.appId.isEmpty) {
       throw BridgeError.invalidParams('Mini App identifier (appId) is missing');
     }
 
     // Xác thực tính toàn vẹn giữa ActionContext và RuntimeSecurityContext
-    if (context.securityContext != null && context.securityContext!.appId != context.appId) {
+    if (effectiveContext.securityContext != null &&
+        effectiveContext.securityContext!.appId != effectiveContext.appId) {
       throw BridgeError.permissionDenied(
-        'Identity mismatch between ActionContext (${context.appId}) and RuntimeSecurityContext (${context.securityContext!.appId})',
+        'Identity mismatch between ActionContext (${effectiveContext.appId}) and RuntimeSecurityContext (${effectiveContext.securityContext!.appId})',
       );
     }
 
@@ -293,14 +352,14 @@ class NativeActionDispatcher {
     // Quyền capabilities phải được khai báo trong manifest do Flutter Host quản lý
     if (handler.requiredCapability != null) {
       final cap = handler.requiredCapability!;
-      if (context.securityContext != null) {
-        if (!context.securityContext!.isCapabilityAllowed(cap)) {
+      if (effectiveContext.securityContext != null) {
+        if (!effectiveContext.securityContext!.isCapabilityAllowed(cap)) {
           throw BridgeError.permissionDenied(
             'Capability "$cap" is not declared in Mini App manifest',
           );
         }
-      } else if (context.manifest != null) {
-        if (!context.manifest!.capabilities.contains(cap)) {
+      } else if (effectiveContext.manifest != null) {
+        if (!effectiveContext.manifest!.capabilities.contains(cap)) {
           throw BridgeError.permissionDenied(
             'Capability "$cap" is not declared in Mini App manifest',
           );
@@ -309,24 +368,25 @@ class NativeActionDispatcher {
     }
 
     // Restore this user's saved grants before handlers inspect or prompt.
-    context.checkCancelled();
-    await permissionRepo.ensurePermissionsLoaded(context.appId);
-    context.checkCancelled();
+    effectiveContext.checkCancelled();
+    await permissionRepo.ensurePermissionsLoaded(effectiveContext.appId);
+    effectiveContext.checkCancelled();
 
-    // 4. Runtime permission check
+    // 4. Runtime permission check với hàng đợi tuần tự hóa và khử trùng lặp
     if (handler.requiredCapability != null) {
       final cap = handler.requiredCapability!;
-      final isGranted = permissionRepo.isGranted(context.appId, cap);
+      final isGranted = permissionRepo.isGranted(effectiveContext.appId, cap);
       if (!isGranted) {
         // If not yet granted and context has UI, prompt user
-        if (context.buildContext != null) {
-          final granted = await PermissionPromptDialog.show(
-            context.buildContext!,
-            appName: context.manifest?.name ?? context.appId,
-            capabilityKey: cap,
+        if (effectiveContext.buildContext != null) {
+          final granted = await _promptPermissionWithDeduplication(
+            buildContext: effectiveContext.buildContext!,
+            appId: effectiveContext.appId,
+            appName: effectiveContext.manifest?.name ?? effectiveContext.appId,
+            capability: cap,
+            context: effectiveContext,
           );
-          context.checkCancelled();
-          permissionRepo.setPermission(context.appId, cap, granted);
+          effectiveContext.checkCancelled();
           if (!granted) {
             throw BridgeError.permissionDenied(cap);
           }
@@ -342,9 +402,9 @@ class NativeActionDispatcher {
     }
 
     // 6. Execute action
-    context.checkCancelled();
-    final result = await handler.handle(payload, context);
-    context.checkCancelled();
+    effectiveContext.checkCancelled();
+    final result = await handler.handle(payload, effectiveContext);
+    effectiveContext.checkCancelled();
     return result;
   }
 }

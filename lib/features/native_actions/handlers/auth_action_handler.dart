@@ -71,3 +71,72 @@ class AuthLogoutHandler implements NativeActionHandler {
     await authRepo.logout(); return {'status': 'logged_out', 'timestamp': DateTime.now().toIso8601String()};
   }
 }
+
+class AuthLoginHandler implements NativeActionHandler {
+  final AuthRepositoryImpl authRepo;
+
+  AuthLoginHandler({required this.authRepo});
+
+  @override
+  String get actionName => 'auth.login';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => true;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    context.checkCancelled();
+    final session = authRepo.currentSession;
+    if (session == null || !authRepo.isAuthenticated) {
+      throw BridgeError.authRequired();
+    }
+    final user = authRepo.currentUser;
+    final scopes = (payload['scopes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    return {
+      'authCode': 'authcode_${DateTime.now().millisecondsSinceEpoch}_${context.appId}',
+      'accessToken': session.accessToken,
+      'expiresIn': session.expiresIn,
+      'user': {
+        'id': user?.id ?? session.userId,
+        'name': user?.fullName ?? user?.email ?? 'Người dùng SuperApp',
+        'avatarUrl': user?.avatarUrl,
+        if (scopes.contains('user.phone') || scopes.contains('phone')) 'phone': user?.phone,
+        if (scopes.contains('user.email') || scopes.contains('email')) 'email': user?.email,
+      },
+    };
+  }
+}
+
+class AuthGetAccessTokenHandler implements NativeActionHandler {
+  final AuthRepositoryImpl authRepo;
+
+  AuthGetAccessTokenHandler({required this.authRepo});
+
+  @override
+  String get actionName => 'auth.getAccessToken';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => true;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    context.checkCancelled();
+    final session = authRepo.currentSession;
+    if (session == null || !authRepo.isAuthenticated) {
+      throw BridgeError.authRequired();
+    }
+    return {
+      'accessToken': session.accessToken,
+      'tokenType': 'Bearer',
+      'expiresIn': session.expiresIn,
+    };
+  }
+}
+

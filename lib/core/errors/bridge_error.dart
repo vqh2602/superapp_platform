@@ -7,6 +7,8 @@ enum BridgeErrorCode {
   unsupported('UNSUPPORTED'),
   timeout('TIMEOUT'),
   cancelled('CANCELLED'),
+  rateLimitExceeded('RATE_LIMIT_EXCEEDED'),
+  payloadTooLarge('PAYLOAD_TOO_LARGE'),
   internalError('INTERNAL_ERROR');
 
   final String code;
@@ -73,6 +75,14 @@ class BridgeError implements Exception {
 
   factory BridgeError.cancelled([String message = 'Action was cancelled by user']) {
     return BridgeError(code: BridgeErrorCode.cancelled, message: message);
+  }
+
+  factory BridgeError.rateLimitExceeded([String message = 'Rate limit or concurrency limit exceeded']) {
+    return BridgeError(code: BridgeErrorCode.rateLimitExceeded, message: message);
+  }
+
+  factory BridgeError.payloadTooLarge([String message = 'Message size exceeds limit']) {
+    return BridgeError(code: BridgeErrorCode.payloadTooLarge, message: message);
   }
 
   factory BridgeError.internal(String message, [Map<String, dynamic>? details]) {
