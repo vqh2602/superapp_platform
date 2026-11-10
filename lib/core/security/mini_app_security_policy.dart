@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/endpoint_config.dart';
 import '../../features/mini_app_catalog/domain/mini_app_manifest.dart';
 
 /// Kết quả kiểm tra an toàn URL khởi chạy Mini App.

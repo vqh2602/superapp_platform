@@ -11,7 +11,6 @@ import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../debug_center/data/debug_log_repository.dart';
 import '../../mini_app_catalog/data/mini_app_repository.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
-import '../../mini_app_catalog/domain/mini_app_execution_authorization.dart';
 import '../../mini_app_bridge/bridge_channel.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';
 import '../../mini_app_bridge/bridge_event_emitter.dart';
@@ -54,6 +53,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   double _targetProgress = 15.0;
   double _stageCeiling = 25.0;
   String _statusMessage = 'Đang kiểm tra Mini App...';
+  final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<String> _statusNotifier =
+      ValueNotifier<String>('Đang kiểm tra Mini App...');
   bool _isFinished = false;
   Timer? _progressTicker;
   Timer? _loadTimeoutTimer;
@@ -94,6 +96,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _webLogRevision.dispose();
+    _progressNotifier.dispose();
+    _statusNotifier.dispose();
     _progressTicker?.cancel();
     _loadTimeoutTimer?.cancel();
     _overlayDismissTimer?.cancel();
@@ -343,6 +347,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     _targetProgress = initialTarget;
     _stageCeiling = initialCeiling;
     _statusMessage = initialStatus;
+    _progressNotifier.value = initialProgress;
+    _statusNotifier.value = initialStatus;
 
     _progressTicker = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       if (!mounted) {
@@ -360,7 +366,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           _targetProgress,
           _displayedProgress + step,
         );
-        setState(() {});
+        _progressNotifier.value = _displayedProgress;
       } else if (_displayedProgress < _stageCeiling && !_isFinished) {
         // While waiting for asynchronous response, gently advance so progress is active
         final remaining = _stageCeiling - _displayedProgress;
@@ -369,7 +375,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           _stageCeiling,
           _displayedProgress + creepStep,
         );
-        setState(() {});
+        _progressNotifier.value = _displayedProgress;
       }
     });
   }
@@ -389,10 +395,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     if (_targetProgress > _stageCeiling) {
       _stageCeiling = _targetProgress;
     }
-    if (status != null) {
+    if (status != null && status != _statusMessage) {
       _statusMessage = status;
+      _statusNotifier.value = status;
     }
-    setState(() {});
   }
 
   Future<void> _finishLoading(
@@ -420,8 +426,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     if (!mounted) return;
     _progressTicker?.cancel();
 
+    _displayedProgress = 100.0;
+    _progressNotifier.value = 100.0;
     setState(() {
-      _displayedProgress = 100.0;
       _isLoading = false;
     });
 
@@ -1509,8 +1516,6 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         ? manifest!.name
         : (_overrideTitle ?? 'Mini App');
 
-    final percent = _displayedProgress.clamp(0.0, 100.0).toInt();
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1531,57 +1536,98 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           ),
         ),
         const SizedBox(height: 24),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$percent%',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: brandColor,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: 170,
-              height: 6,
-              decoration: BoxDecoration(
-                color: isDarkTheme ? Colors.white12 : const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: (_displayedProgress / 100.0).clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
+        _MiniAppProgressIndicator(
+          progressNotifier: _progressNotifier,
+          statusNotifier: _statusNotifier,
+          isDarkTheme: isDarkTheme,
+          brandColor: brandColor,
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniAppProgressIndicator extends StatelessWidget {
+  final ValueNotifier<double> progressNotifier;
+  final ValueNotifier<String> statusNotifier;
+  final bool isDarkTheme;
+  final Color brandColor;
+
+  const _MiniAppProgressIndicator({
+    required this.progressNotifier,
+    required this.statusNotifier,
+    required this.isDarkTheme,
+    required this.brandColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, _) {
+            final percent = progress.clamp(0.0, 100.0).toInt();
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
                     color: brandColor,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: brandColor.withValues(alpha: 0.4),
-                        blurRadius: 6,
-                      ),
-                    ],
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            AnimatedSwitcher(
+                const SizedBox(height: 10),
+                Container(
+                  width: 170,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color:
+                        isDarkTheme ? Colors.white12 : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (progress / 100.0).clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: brandColor,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: brandColor.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        ValueListenableBuilder<String>(
+          valueListenable: statusNotifier,
+          builder: (context, status, _) {
+            return AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Text(
-                _statusMessage,
-                key: ValueKey(_statusMessage),
+                status,
+                key: ValueKey(status),
                 style: TextStyle(
                   color: isDarkTheme ? Colors.white60 : const Color(0xFF64748B),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ],
     );

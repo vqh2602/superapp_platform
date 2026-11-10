@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -194,10 +193,7 @@ void main() {
     final currentFinder = find.byWidgetPredicate(
       (widget) => widget is Text && widget.data != null && widget.data!.endsWith('%'),
     );
-    if (currentFinder.evaluate().isNotEmpty) {
-      final t = tester.widget<Text>(currentFinder);
-      print('Current progress after onPageFinished: ${t.data}');
-    }
+    expect(currentFinder, findsOneWidget);
 
     // After animation delay, fade out and diagnostic check:
     await tester.pump(const Duration(milliseconds: 500));
@@ -205,5 +201,55 @@ void main() {
 
     // Loading overlay is now completely dismissed and WebView is active!
     expect(find.byKey(const Key('fake_webview')), findsOneWidget);
+  });
+
+  testWidgets('Loading progress updates are isolated to ValueNotifier and do not trigger full screen rebuilds', (tester) async {
+    final mockClient = MockClient((request) async {
+      return http.Response(
+        '{"id":"perf_app","name":"Performance Test App","version":"1.0.0","runtimeType":"schema","category":"Utilities","entryUrl":"https://example.com/perf","permissions":[],"schema":{}}',
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final testRepo = MiniAppRepository(
+      httpClient: mockClient,
+      catalogUrl: 'https://example.com/api/v1/catalog',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          miniAppRepositoryProvider.overrideWithValue(testRepo),
+          backendEndpointProvider.overrideWith(() => BackendEndpointNotifier()),
+        ],
+        child: const MaterialApp(
+          home: MiniAppRuntimeScreen(appId: 'perf_app'),
+        ),
+      ),
+    );
+
+    // Let async initialization (_initMiniApp setting up controller) settle
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final runtimeElement = tester.element(find.byType(MiniAppRuntimeScreen));
+    expect(runtimeElement.dirty, isFalse);
+
+    // Advance 5 progress ticks (150ms)
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 30));
+      // Root MiniAppRuntimeScreen element must NOT be marked dirty by progress ticker
+      expect(runtimeElement.dirty, isFalse);
+    }
+
+    // Verify progress value did advance smoothly via ValueNotifier
+    final percentFinder = find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data != null && widget.data!.endsWith('%'),
+    );
+    expect(percentFinder, findsOneWidget);
+    final textWidget = tester.widget<Text>(percentFinder);
+    final percentVal = int.parse(textWidget.data!.replaceAll('%', ''));
+    expect(percentVal, greaterThan(0));
   });
 }

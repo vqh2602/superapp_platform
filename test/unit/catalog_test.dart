@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:superapp_platform/features/mini_app_catalog/data/mini_app_repository.dart';
-import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_execution_authorization.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 
 void main() {

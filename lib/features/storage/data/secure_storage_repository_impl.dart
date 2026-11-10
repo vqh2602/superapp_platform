@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Quản lý lưu trữ bảo mật cục bộ (Keychain trên iOS / Keystore EncryptedSharedPreferences trên Android).
 ///
 /// Kiến trúc Namespace & Khóa v2:
-/// superapp:v2:<userHash>:<appHash>:<domainHash>:<keyHash>
+/// `superapp:v2:<userHash>:<appHash>:<domainHash>:<keyHash>`
 ///
 /// Bảo đảm:
 /// 1. Cách ly nghiêm ngặt theo tài khoản người dùng (`userHash`), chống đọc trộm dữ liệu giữa các user trên cùng thiết bị.
