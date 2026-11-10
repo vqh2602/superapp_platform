@@ -7,6 +7,7 @@ export interface BridgeRequest<T = Record<string, any>> {
   appId: string;
   origin?: string;
   timestamp: number;
+  sessionNonce?: string;
 }
 
 export interface BridgeError {
@@ -22,6 +23,7 @@ export interface BridgeResponse<T = any> {
   data?: T;
   error?: BridgeError;
   timestamp?: number;
+  sessionNonce?: string;
 }
 
 export type BridgeEventListener<T = any> = (payload: T) => void;
@@ -30,6 +32,7 @@ export interface TransportConfig {
   appId?: string;
   timeoutMs?: number;
   debug?: boolean;
+  trustedHostOrigin?: string;
 }
 
 export interface NativeWindowBridge {

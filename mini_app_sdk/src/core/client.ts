@@ -58,6 +58,7 @@ export class SuperAppSDK {
       debug: config.debug,
       timeoutMs: config.timeoutMs,
       forceTransport: config.forceTransport,
+      trustedHostOrigin: config.trustedHostOrigin,
     });
 
     this.auth = new AuthModule(this.transport);

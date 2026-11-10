@@ -169,9 +169,21 @@ test('interactive defaults match native, simulator and Flutter raw-JS bridge', a
   let receiver;
   win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
   win.parent = { postMessage({ request }) {
-    receiver({ data: { type: 'SUPERAPP_BRIDGE_RESPONSE', response: { id: request.id, success: true } } });
+    receiver({
+      source: win.parent,
+      origin: 'https://simulator.test',
+      data: {
+        type: 'SUPERAPP_BRIDGE_RESPONSE',
+        response: {
+          id: request.id,
+          action: request.action,
+          success: true,
+          sessionNonce: request.sessionNonce,
+        },
+      },
+    });
   } };
-  const simulator = new PostMessageTransport();
+  const simulator = new PostMessageTransport({ trustedHostOrigin: 'https://simulator.test' });
   for (const action of INTERACTIVE_BRIDGE_ACTIONS) {
     await simulator.invoke(action);
     assert.equal(scheduled.pop(), 300000, action);
@@ -233,4 +245,196 @@ test('legacy mock-engine import cannot generate fake native responses', async ()
   assert.equal(result.success, false);
   assert.equal(result.error.code, 'NATIVE_NOT_AVAILABLE');
   assert.equal(result.data, undefined);
+});
+
+test('PostMessageTransport security: targets specific trustedHostOrigin and rejects wildcard in config', async () => {
+  let postedMessage, postedTarget;
+  win.parent = {
+    postMessage(message, targetOrigin) {
+      postedMessage = message;
+      postedTarget = targetOrigin;
+    },
+  };
+  const transport = new PostMessageTransport({
+    trustedHostOrigin: 'https://trusted.superapp.host',
+    timeoutMs: 20,
+  });
+
+  assert.equal(transport.getTrustedHostOrigin(), 'https://trusted.superapp.host');
+  await assert.rejects(transport.invoke('user.getProfile'), error => error.code === 'TIMEOUT');
+  assert.equal(postedTarget, 'https://trusted.superapp.host');
+  assert.ok(postedMessage.request.sessionNonce.startsWith('nonce_'));
+});
+
+test('PostMessageTransport security: rejects responses from untrusted origin', async () => {
+  let receiver;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  win.parent = {
+    postMessage({ request }) {
+      // Evil origin sending fake response
+      receiver({
+        source: win.parent,
+        origin: 'https://evil-attacker.com',
+        data: {
+          type: 'SUPERAPP_BRIDGE_RESPONSE',
+          response: {
+            id: request.id,
+            action: request.action,
+            success: true,
+            data: { stolen: true },
+            sessionNonce: request.sessionNonce,
+          },
+        },
+      });
+    },
+  };
+
+  const transport = new PostMessageTransport({
+    trustedHostOrigin: 'https://trusted.superapp.host',
+    timeoutMs: 30,
+  });
+
+  await assert.rejects(transport.invoke('user.getProfile'), error => error.code === 'TIMEOUT');
+});
+
+test('PostMessageTransport security: rejects responses where event.source is not window.parent', async () => {
+  let receiver;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  const fakeWindow = { name: 'attackerFrame' };
+  win.parent = {
+    postMessage({ request }) {
+      receiver({
+        source: fakeWindow,
+        origin: 'https://trusted.superapp.host',
+        data: {
+          type: 'SUPERAPP_BRIDGE_RESPONSE',
+          response: {
+            id: request.id,
+            action: request.action,
+            success: true,
+            sessionNonce: request.sessionNonce,
+          },
+        },
+      });
+    },
+  };
+
+  const transport = new PostMessageTransport({
+    trustedHostOrigin: 'https://trusted.superapp.host',
+    timeoutMs: 30,
+  });
+
+  await assert.rejects(transport.invoke('user.getProfile'), error => error.code === 'TIMEOUT');
+});
+
+test('PostMessageTransport security: rejects responses when sessionNonce is forged or missing', async () => {
+  let receiver;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  win.parent = {
+    postMessage({ request }) {
+      receiver({
+        source: win.parent,
+        origin: 'https://trusted.superapp.host',
+        data: {
+          type: 'SUPERAPP_BRIDGE_RESPONSE',
+          response: {
+            id: request.id,
+            action: request.action,
+            success: true,
+            sessionNonce: 'forged_fake_nonce_123',
+          },
+        },
+      });
+    },
+  };
+
+  const transport = new PostMessageTransport({
+    trustedHostOrigin: 'https://trusted.superapp.host',
+    timeoutMs: 50,
+  });
+
+  await assert.rejects(
+    transport.invoke('user.getProfile'),
+    error => error.code === 'SECURITY_ERROR' && error.message.includes('Session nonce')
+  );
+});
+
+test('PostMessageTransport security: rejects responses with mismatched action name', async () => {
+  let receiver;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  win.parent = {
+    postMessage({ request }) {
+      receiver({
+        source: win.parent,
+        origin: 'https://trusted.superapp.host',
+        data: {
+          type: 'SUPERAPP_BRIDGE_RESPONSE',
+          response: {
+            id: request.id,
+            action: 'payment.tamperedAction',
+            success: true,
+            sessionNonce: request.sessionNonce,
+          },
+        },
+      });
+    },
+  };
+
+  const transport = new PostMessageTransport({
+    trustedHostOrigin: 'https://trusted.superapp.host',
+    timeoutMs: 50,
+  });
+
+  await assert.rejects(
+    transport.invoke('user.getProfile'),
+    error => error.code === 'SECURITY_ERROR' && error.message.includes('Action mismatch')
+  );
+});
+
+test('PostMessageTransport handshake: establishes trusted host origin dynamically from parent handshake', async () => {
+  let receiver;
+  let postedMessage, postedTarget;
+  win.addEventListener = (name, listener) => { if (name === 'message') receiver = listener; };
+  win.parent = {
+    postMessage(message, target) {
+      postedMessage = message;
+      postedTarget = target;
+      if (message.type === 'SUPERAPP_BRIDGE_REQUEST') {
+        receiver({
+          source: win.parent,
+          origin: 'http://localhost:5175',
+          data: {
+            type: 'SUPERAPP_BRIDGE_RESPONSE',
+            response: {
+              id: message.request.id,
+              action: message.request.action,
+              success: true,
+              data: { ok: true },
+              sessionNonce: message.request.sessionNonce,
+            },
+          },
+        });
+      }
+    },
+  };
+
+  const transport = new PostMessageTransport({ timeoutMs: 50 });
+  assert.equal(transport.getTrustedHostOrigin(), undefined);
+
+  // Simulator host sends handshake
+  receiver({
+    source: win.parent,
+    origin: 'http://localhost:5175',
+    data: {
+      type: 'SUPERAPP_SIMULATOR_HANDSHAKE',
+      hostOrigin: 'http://localhost:5175',
+    },
+  });
+
+  assert.equal(transport.getTrustedHostOrigin(), 'http://localhost:5175');
+
+  // Next invoke uses the established origin
+  const res = await transport.invoke('user.getProfile');
+  assert.deepEqual(res, { ok: true });
+  assert.equal(postedTarget, 'http://localhost:5175');
 });

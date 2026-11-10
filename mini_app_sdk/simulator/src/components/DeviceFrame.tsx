@@ -61,7 +61,16 @@ export const DeviceFrame: React.FC = () => {
                 backgroundColor: '#f8fafc',
               }}
               allow="geolocation; camera; microphone"
-
+              onLoad={(e) => {
+                try {
+                  const targetOrigin = new URL(miniAppUrl).origin;
+                  e.currentTarget.contentWindow?.postMessage({
+                    type: 'SUPERAPP_SIMULATOR_HANDSHAKE',
+                    hostOrigin: window.location.origin,
+                    timestamp: Date.now(),
+                  }, targetOrigin);
+                } catch (_) {}
+              }}
             />
 
 

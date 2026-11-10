@@ -21,16 +21,27 @@ export const SimulatorProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const onMessage = async (event: MessageEvent) => {
       const iframe = document.querySelector('iframe');
       if (!iframe || event.source !== iframe.contentWindow || event.origin !== new URL(miniAppUrl).origin) return;
+
+      // Handle Mini App handshake
+      if (event.data?.type === 'SUPERAPP_BRIDGE_HANDSHAKE') {
+        iframe.contentWindow?.postMessage({
+          type: 'SUPERAPP_SIMULATOR_HANDSHAKE_ACK',
+          hostOrigin: window.location.origin,
+          timestamp: Date.now(),
+        }, event.origin);
+        return;
+      }
+
       const request: BridgeRequest = event.data?.type === 'SUPERAPP_BRIDGE_REQUEST' ? event.data.request : event.data;
       if (!request?.id || typeof request.action !== 'string') return;
       const start = Date.now(); let response: BridgeResponse;
       try {
         if (!isNativeBridgeAvailable()) throw { code: 'NATIVE_NOT_AVAILABLE', message: 'Open this miniapp in SuperApp to access native data' };
         const data = await transport.invoke(request.action, request.payload);
-        response = { id: request.id, action: request.action, success: true, data };
+        response = { id: request.id, action: request.action, success: true, data, sessionNonce: request.sessionNonce };
       } catch (error) {
         response = { id: request.id, action: request.action, success: false,
-          error: (error && typeof error === 'object' && 'code' in error) ? error as any : { code: 'INTERNAL_ERROR', message: String(error) } };
+          error: (error && typeof error === 'object' && 'code' in error) ? error as any : { code: 'INTERNAL_ERROR', message: String(error) }, sessionNonce: request.sessionNonce };
       }
       setLogs(old => [{ id: request.id, action: request.action, payload: request.payload, success: response.success,
         response: response.data, error: response.error, durationMs: Date.now() - start, timestamp: Date.now() }, ...old].slice(0, 150));

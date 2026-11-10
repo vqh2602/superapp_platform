@@ -64,3 +64,4 @@ class MiniAppExecutionAuthorization {
   String toString() =>
       'MiniAppExecutionAuthorization(appId: $appId, v: $version, expires: $expiresAt, valid: $isValid)';
 }
+

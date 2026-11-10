@@ -93,6 +93,7 @@ export interface SDKInitOptions {
   appId?: string;
   timeoutMs?: number;
   debug?: boolean;
+  trustedHostOrigin?: string;
 }
 
 export interface ConfigAppViewOptions {
