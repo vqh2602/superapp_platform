@@ -1,6 +1,6 @@
 {
   "name": "@vqh2602/mini-app-sdk",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Official Unified TypeScript SDK & CLI for SuperApp Mini Apps: Core API, Bridge Transport, Mock Engine, and Browser Simulator",
   "type": "module",
   "bin": {

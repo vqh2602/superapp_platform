@@ -33,9 +33,10 @@ Tài liệu kỹ thuật chi tiết về kiến trúc mã nguồn, bảng tính 
 | **No-Code Schema Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Render động giao diện từ JSON Schema |
 | **Hai chiều Bridge Protocol** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | JavaScriptChannel & window.postMessage |
 | **Định vị GPS (`device.getLocation`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | GPS native / HTML5 Geolocation API |
-| **Quét mã QR (`device.scanQRCode`)** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | Camera scan / Image file QR / Web BarcodeDetector |
+| **Quét songmã QR (`device.scanQRCode`)** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | Camera scan / Image file QR / Web BarcodeDetector |
 | **Chọn ảnh thiết bị (`device.pickImage`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Photo Gallery / OS File Picker |
 | **Bảo mật (`flutter_secure_storage`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | KeyStore / Keychain / DPAPI / libsecret / Web Storage |
+| **Sinh trắc học (`local_auth`)** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | Cần phần cứng hỗ trợ và sinh trắc học đã thiết lập/được phép dùng |
 | **Thông tin mạng (`connectivity_plus`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | WiFi, Cellular, Ethernet, Offline detection |
 | **Thông tin pin (`battery_plus`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Mức pin, trạng thái sạc |
 | **Thông tin thiết bị (`device_info_plus`)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Model, OS version, Device ID |
@@ -144,6 +145,16 @@ lib/
 - **Cấu hình Endpoint Backend**: Màn hình đăng nhập cung cấp ô nhập URL Backend động (mặc định `http://localhost:3000`), cho phép kết nối linh hoạt tới localhost, máy chủ mạng LAN hoặc cloud. URL được chuẩn hóa và lưu trữ an toàn trong SharedPreferences.
 - **Đăng nhập chuẩn xác thực**: Yêu cầu nhập email và mật khẩu (gọi `POST /api/v1/auth/login`). Token nhận được là Bearer opaque token kèm refresh token, quản lý phiên an toàn.
 - **Đăng ký tài khoản mới**: Cung cấp màn hình Đăng ký (`/register`), người dùng nhập họ tên, email và mật khẩu để tạo tài khoản thật trên PostgreSQL qua `POST /api/v1/auth/register`.
+
+#### 3.2.1. Xác thực sinh trắc học
+
+Mini App có thể kiểm tra khả dụng rồi yêu cầu xác nhận bằng vân tay / Face ID qua Native Bridge:
+
+1. Gọi `superApp.auth.checkBiometrics()` để kiểm tra thiết bị hỗ trợ và đã thiết lập sinh trắc học.
+2. Nếu `canAuthenticate === true`, gọi `superApp.auth.authenticateBiometric()`; host kiểm tra lại trước khi mở hộp thoại hệ thống.
+3. Chỉ tiếp tục thao tác cần xác nhận khi `authenticated === true`. Nếu chưa thiết lập/cho phép, hướng dẫn người dùng kiểm tra Cài đặt thiết bị.
+
+Action xác thực yêu cầu phiên SuperApp đang đăng nhập. Đây là xác nhận cục bộ trên thiết bị, không tạo hoặc làm mới token backend và không thay thế đăng nhập email/password.
 
 ### 3.3. Đơn hàng & Quản lý thanh toán (Backend Orders & Payment)
 - **Tạo và quản lý đơn hàng thật**: Khi Mini App gọi action `payment.createOrder`, Native Host giao tiếp với Backend qua `POST /api/v1/orders` để sinh đơn hàng thật lưu trữ trong database PostgreSQL.
@@ -694,6 +705,71 @@ Lấy thông tin tài khoản người dùng chi tiết (yêu cầu người dù
     isVerified?: boolean;  // Trạng thái tài khoản đã KYC
   }
   ```
+
+---
+
+##### `auth.checkBiometrics`
+
+Kiểm tra khả dụng mà không mở hộp thoại xác thực.
+
+- **SDK Method**: `superApp.auth.checkBiometrics()`
+- **Capability yêu cầu**: Không cần
+- **Yêu cầu đăng nhập**: Không
+- **Request Payload**: `{}`
+- **Response Data (`response.data`)**:
+  ```typescript
+  interface BiometricStatus {
+    supported: boolean;           // Thiết bị hỗ trợ sinh trắc học
+    enrolled: boolean;            // Có sinh trắc học đã thiết lập và được phép dùng
+    canAuthenticate: boolean;     // supported && enrolled
+    availableBiometrics: string[]; // Ví dụ: face, fingerprint, strong, weak
+  }
+  ```
+
+Android, iOS và macOS được hỗ trợ khi thiết bị đáp ứng điều kiện. Web, Linux và Windows trả `supported: false`. Không phụ thuộc vào một tên loại sinh trắc học cụ thể; trạng thái khả dụng vẫn có thể thay đổi trước khi xác thực.
+
+---
+
+##### `auth.authenticateBiometric`
+
+Kiểm tra lại khả dụng rồi mở hộp thoại sinh trắc học của hệ điều hành qua hàng đợi tương tác của host.
+
+- **SDK Method**: `superApp.auth.authenticateBiometric({ reason? })`
+- **Capability yêu cầu**: Không cần
+- **Yêu cầu đăng nhập**: Có; thiếu phiên trả `AUTH_REQUIRED`
+- **Request Payload**: `{ reason?: string }`; chuỗi không rỗng, tối đa 200 ký tự, mặc định “Xác thực sinh trắc học để tiếp tục”.
+- **Response Data**: `{ authenticated: boolean }`; chỉ `true` mới là xác thực thành công.
+- **Chế độ xác thực**: Chỉ sinh trắc học (`biometricOnly: true`), không chuyển sang PIN/passcode.
+- **Timeout Bridge mặc định**: 5 phút.
+
+```typescript
+try {
+  const status = await superApp.auth.checkBiometrics();
+  if (!status.supported) {
+    console.info('Thiết bị không hỗ trợ sinh trắc học.');
+  } else if (!status.canAuthenticate) {
+    console.info('Hãy thiết lập hoặc cho phép vân tay / Face ID trong Cài đặt thiết bị.');
+  } else {
+    const result = await superApp.auth.authenticateBiometric({
+      reason: 'Xác thực để xem thông tin cá nhân',
+    });
+    if (result.authenticated === true) {
+      // Tiếp tục thao tác cần xác nhận cục bộ.
+    }
+  }
+} catch (error) {
+  console.error('Xác thực chưa hoàn tất:', error);
+  // Dừng thao tác cần xác nhận khi lỗi hoặc người dùng hủy.
+}
+```
+
+Các mã lỗi cần xử lý: `UNSUPPORTED` (không hỗ trợ/chưa thiết lập/chưa sẵn sàng), `CANCELLED` (người dùng hoặc hệ thống hủy), `RATE_LIMIT_EXCEEDED` (đang xác thực hoặc bị khóa), `TIMEOUT`, `INVALID_PARAMS` và `INTERNAL_ERROR`.
+
+API không trả dữ liệu vân tay/khuôn mặt; kết quả JavaScript không phải bằng chứng xác thực cho backend. Backend vẫn phải kiểm tra token và quyền truy cập. Xem [hợp đồng và xử lý lỗi chi tiết](authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
+
+**Cấu hình native**: Android dùng `FlutterFragmentActivity`, quyền `USE_BIOMETRIC` và theme AppCompat; iOS khai báo `NSFaceIDUsageDescription`. Cần build lại ứng dụng native sau khi thêm plugin; hot reload không đủ.
+
+**Ví dụ tương tác**: SDK Playground → **A. Authentication Flow** → **Kiểm tra sinh trắc học** và **Xác thực sinh trắc học**. Thử trên thiết bị thật các trường hợp không hỗ trợ, chưa thiết lập, thành công, hủy và bị khóa.
 
 ---
 
