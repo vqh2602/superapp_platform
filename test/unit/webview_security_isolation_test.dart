@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/core/security/mini_app_security_policy.dart';
+import 'package:superapp_platform/core/security/runtime_security_context.dart';
 import 'package:superapp_platform/features/authentication/data/auth_code_service_shim.dart';
 import 'package:superapp_platform/features/authentication/data/auth_repository_impl.dart';
 import 'package:superapp_platform/features/authentication/data/token_service_shim.dart';
@@ -10,6 +11,7 @@ import 'package:superapp_platform/features/device/data/device_adapter_impl.dart'
 import 'package:superapp_platform/features/mini_app_bridge/bridge_dispatcher.dart';
 import 'package:superapp_platform/features/mini_app_catalog/domain/mini_app_manifest.dart';
 import 'package:superapp_platform/features/native_actions/application/native_action_dispatcher.dart';
+import 'package:superapp_platform/features/native_actions/domain/action_context.dart';
 import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
 import 'package:superapp_platform/features/user_profile/data/user_repository_impl.dart';
 import 'package:webview_all/webview_all.dart';
@@ -278,6 +280,127 @@ void main() {
       final lastLog = debugLogRepo.logs.first;
       expect(lastLog.success, isFalse);
       expect(lastLog.errorMessage, contains('Định danh Mini App không hợp lệ'));
+    });
+
+    test('RuntimeSecurityContext contains all 6 required fields', () {
+      final sec = RuntimeSecurityContext(
+        appId: 'test_app',
+        userId: 'user_123',
+        approvedOrigin: 'https://superappplatfrom.alwaysdata.net/api/v1/miniapps/test_app/1.0.0/dist/index.html',
+        activeVersion: '1.0.0',
+        allowedCapabilities: {'device.getDeviceInfo', 'storage.setItem'},
+        runtimeSessionId: 'sess_abc_123',
+      );
+
+      expect(sec.appId, 'test_app');
+      expect(sec.userId, 'user_123');
+      expect(sec.approvedOrigin, contains('test_app'));
+      expect(sec.activeVersion, '1.0.0');
+      expect(sec.allowedCapabilities, contains('device.getDeviceInfo'));
+      expect(sec.allowedCapabilities, contains('storage.setItem'));
+      expect(sec.allowedCapabilities.contains('device.scanQr'), isFalse);
+      expect(sec.runtimeSessionId, 'sess_abc_123');
+      expect(sec.isCapabilityAllowed('device.getDeviceInfo'), isTrue);
+      expect(sec.isCapabilityAllowed('device.scanQr'), isFalse);
+    });
+
+    test('Bridge rejects request when JavaScript declares spoofed origin', () async {
+      final mockPlatform = MockPlatformWebViewController(
+        const PlatformWebViewControllerCreationParams(),
+      )..mockUrl = 'https://superappplatfrom.alwaysdata.net/api/v1/miniapps/secure_app/1.0.0/dist/index.html';
+
+      final controller = WebViewController.fromPlatform(mockPlatform);
+      final dispatcher = BridgeDispatcher(
+        actionDispatcher: actionDispatcher,
+        debugLogRepo: debugLogRepo,
+        controller: controller,
+        manifest: manifest,
+        backendBaseUrl: 'https://superappplatfrom.alwaysdata.net',
+      );
+
+      final rawRequest = jsonEncode({
+        'id': 'req_spoof_origin',
+        'action': 'device.getDeviceInfo',
+        'payload': {},
+        'appId': 'secure_app',
+        'origin': 'https://evil-attacker.com', // Spoofed origin attempt!
+      });
+
+      await dispatcher.handleMessage(rawRequest, null as dynamic);
+
+      expect(debugLogRepo.logs.isNotEmpty, isTrue);
+      final lastLog = debugLogRepo.logs.first;
+      expect(lastLog.success, isFalse);
+      expect(lastLog.errorMessage, contains('Nguồn gốc do JavaScript khai báo'));
+    });
+
+    test('Bridge rejects request when client passes forged runtime sessionId', () async {
+      final mockPlatform = MockPlatformWebViewController(
+        const PlatformWebViewControllerCreationParams(),
+      )..mockUrl = 'https://superappplatfrom.alwaysdata.net/api/v1/miniapps/secure_app/1.0.0/dist/index.html';
+
+      final controller = WebViewController.fromPlatform(mockPlatform);
+      final dispatcher = BridgeDispatcher(
+        actionDispatcher: actionDispatcher,
+        debugLogRepo: debugLogRepo,
+        controller: controller,
+        manifest: manifest,
+        backendBaseUrl: 'https://superappplatfrom.alwaysdata.net',
+        runtimeSessionId: 'valid_host_session_456',
+      );
+
+      final rawRequest = jsonEncode({
+        'id': 'req_spoof_session',
+        'action': 'device.getDeviceInfo',
+        'payload': {},
+        'appId': 'secure_app',
+        'sessionId': 'hacked_session_789', // Forged session attempt!
+      });
+
+      await dispatcher.handleMessage(rawRequest, null as dynamic);
+
+      expect(debugLogRepo.logs.isNotEmpty, isTrue);
+      final lastLog = debugLogRepo.logs.first;
+      expect(lastLog.success, isFalse);
+      expect(lastLog.errorMessage, contains('Runtime session không hợp lệ'));
+    });
+
+    test('ActionContext properly exposes Host-verified properties and ignores payload permissions', () async {
+      final sec = RuntimeSecurityContext(
+        appId: 'secure_app',
+        userId: 'verified_user_99',
+        approvedOrigin: 'https://superappplatfrom.alwaysdata.net/api/v1/miniapps/secure_app/1.0.0/dist/index.html',
+        activeVersion: '1.0.0',
+        allowedCapabilities: {'device.getDeviceInfo'},
+        runtimeSessionId: 'session_xyz',
+      );
+
+      final actionCtx = ActionContext(
+        appId: sec.appId,
+        origin: sec.approvedOrigin,
+        manifest: manifest,
+        securityContext: sec,
+      );
+
+      expect(actionCtx.appId, 'secure_app');
+      expect(actionCtx.userId, 'verified_user_99');
+      expect(actionCtx.approvedOrigin, contains('secure_app'));
+      expect(actionCtx.runtimeSessionId, 'session_xyz');
+      expect(actionCtx.allowedCapabilities, contains('device.getDeviceInfo'));
+
+      // If Mini App tries an action that requires 'camera' or 'scanQr' which is not in allowedCapabilities,
+      // Dispatcher rejects it even if the payload fraudulently claims permissions.
+      expect(
+        () => actionDispatcher.dispatch('device.scanQr', {
+          'permissions': ['device.scanQr'], // Fraudulent payload claim
+          'capabilities': ['device.scanQr'],
+        }, actionCtx),
+        throwsA(isA<BridgeError>().having(
+          (e) => e.code,
+          'code',
+          equals(BridgeErrorCode.permissionDenied),
+        )),
+      );
     });
   });
 }

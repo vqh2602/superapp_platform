@@ -270,20 +270,35 @@ class NativeActionDispatcher {
       throw BridgeError.invalidParams('Mini App identifier (appId) is missing');
     }
 
+    // Xác thực tính toàn vẹn giữa ActionContext và RuntimeSecurityContext
+    if (context.securityContext != null && context.securityContext!.appId != context.appId) {
+      throw BridgeError.permissionDenied(
+        'Identity mismatch between ActionContext (${context.appId}) and RuntimeSecurityContext (${context.securityContext!.appId})',
+      );
+    }
+
     // 2. Action allowlist lookup
     final handler = _handlers[actionName];
     if (handler == null) {
       throw BridgeError.actionNotFound(actionName);
     }
 
-    // 3. Manifest capability check
-    // If mini app has a manifest, the capability must be declared in it
-    if (context.manifest != null && handler.requiredCapability != null) {
-      final declared = context.manifest!.capabilities.contains(handler.requiredCapability);
-      if (!declared) {
-        throw BridgeError.permissionDenied(
-          'Capability "${handler.requiredCapability}" is not declared in Mini App manifest',
-        );
+    // 3. Manifest & RuntimeSecurityContext capability check
+    // Quyền capabilities phải được khai báo trong manifest do Flutter Host quản lý
+    if (handler.requiredCapability != null) {
+      final cap = handler.requiredCapability!;
+      if (context.securityContext != null) {
+        if (!context.securityContext!.isCapabilityAllowed(cap)) {
+          throw BridgeError.permissionDenied(
+            'Capability "$cap" is not declared in Mini App manifest',
+          );
+        }
+      } else if (context.manifest != null) {
+        if (!context.manifest!.capabilities.contains(cap)) {
+          throw BridgeError.permissionDenied(
+            'Capability "$cap" is not declared in Mini App manifest',
+          );
+        }
       }
     }
 

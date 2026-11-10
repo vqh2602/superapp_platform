@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
+import 'package:uuid/uuid.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../../core/bridge_protocol/bridge_request.dart';
 import '../../../core/bridge_protocol/bridge_response.dart';
 import '../../../core/config/endpoint_config.dart';
 import '../../../core/errors/bridge_error.dart';
 import '../../../core/security/mini_app_security_policy.dart';
+import '../../../core/security/runtime_security_context.dart';
 import '../debug_center/data/debug_log_repository.dart';
 import '../debug_center/domain/bridge_log_entry.dart';
 import '../mini_app_catalog/domain/mini_app_manifest.dart';
@@ -20,6 +22,9 @@ class BridgeDispatcher {
   final MiniAppManifest manifest;
   final MiniAppUiDelegate? uiDelegate;
   final String backendBaseUrl;
+  final String? userId;
+  final String runtimeSessionId;
+  RuntimeSecurityContext? securityContext;
 
   BridgeDispatcher({
     required this.actionDispatcher,
@@ -28,7 +33,11 @@ class BridgeDispatcher {
     required this.manifest,
     this.uiDelegate,
     String? backendBaseUrl,
-  }) : backendBaseUrl = backendBaseUrl ?? EndpointConfig.alwaysdataEndpoint;
+    this.userId,
+    String? runtimeSessionId,
+    this.securityContext,
+  })  : backendBaseUrl = backendBaseUrl ?? EndpointConfig.alwaysdataEndpoint,
+        runtimeSessionId = runtimeSessionId ?? const Uuid().v4();
 
   Future<void> handleMessage(String rawJson, BuildContext? buildContext) async {
     final stopwatch = Stopwatch()..start();
@@ -43,14 +52,7 @@ class BridgeDispatcher {
       actionName = request.action;
       payload = request.payload;
 
-      // 1. Kiểm tra tính toàn vẹn danh tính Mini App
-      if (parsed['appId'] != null && parsed['appId'] != manifest.id) {
-        throw BridgeError.permissionDenied(
-          'Định danh Mini App không hợp lệ (${parsed['appId']} != ${manifest.id})',
-        );
-      }
-
-      // 2. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
+      // 1. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
       // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
       String? currentUrl;
       try {
@@ -71,12 +73,40 @@ class BridgeDispatcher {
         );
       }
 
+      // 2. Khởi tạo / Đồng bộ RuntimeSecurityContext do Flutter Host quản lý
+      final activeSecContext = (securityContext ??
+          RuntimeSecurityContext.create(
+            manifest: manifest,
+            userId: userId,
+            backendBaseUrl: backendBaseUrl,
+            currentUrl: currentUrl,
+            customSessionId: runtimeSessionId,
+          )).copyWith(
+        approvedOrigin: (currentUrl != null && currentUrl.isNotEmpty)
+            ? currentUrl
+            : null,
+        userId: userId,
+      );
+      securityContext = activeSecContext;
+
+      // 3. Thực thi kiểm tra bảo mật nghiêm ngặt qua RuntimeSecurityContext
+      // Không tin cậy appId, origin, permissions hoặc sessionId do Mini App gửi.
+      activeSecContext.validateBridgeCall(
+        requestAppId: parsed['appId']?.toString(),
+        requestOrigin: parsed['origin']?.toString(),
+        currentWebViewUrl: currentUrl,
+        requestSessionId: parsed['sessionId']?.toString() ?? payload['sessionId']?.toString(),
+      );
+
+      // 4. Tạo ActionContext với các giá trị đã được Host xác thực
+      // origin lấy từ activeSecContext.approvedOrigin (WebView thực tế), tuyệt đối KHÔNG lấy request.origin từ JS
       final context = ActionContext(
         buildContext: buildContext,
-        appId: manifest.id,
-        origin: currentUrl ?? request.origin,
+        appId: activeSecContext.appId,
+        origin: activeSecContext.approvedOrigin,
         manifest: manifest,
         uiDelegate: uiDelegate,
+        securityContext: activeSecContext,
       );
 
       final resultData = await actionDispatcher.dispatch(actionName, payload, context);

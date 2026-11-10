@@ -20,6 +20,7 @@ import '../../device/data/device_adapter_impl.dart';
 import '../../permissions/data/permission_repository_impl.dart';
 import '../../storage/data/secure_storage_repository_impl.dart';
 import '../../native_actions/domain/mini_app_ui_delegate.dart';
+import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/web_log_entry.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
@@ -28,6 +29,7 @@ import '../../../../core/animations/app_motion.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/security/mini_app_security_policy.dart';
+import '../../../../core/security/runtime_security_context.dart';
 
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
   final String appId;
@@ -76,10 +78,12 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   bool _hasPaddingBottom = true;
   Color? _bottomNavColor;
   bool _isKeepScreenOn = false;
+  String _runtimeSessionId = const Uuid().v4();
 
   @override
   void initState() {
     super.initState();
+    _runtimeSessionId = const Uuid().v4();
     WidgetsBinding.instance.addObserver(this);
     _currentAppId = widget.appId;
     _initMiniApp();
@@ -573,6 +577,25 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       },
     );
 
+    final String initialApprovedOrigin;
+    if (validManifest.entryUrl.startsWith('assets/mini_apps/')) {
+      final isWeb = validManifest.isWebApp;
+      final targetApp = isWeb ? validManifest.id : 'schema_runtime';
+      initialApprovedOrigin =
+          '${endpoint.baseUrl}/api/v1/miniapps/$targetApp/${validManifest.version}/dist/index.html';
+    } else {
+      initialApprovedOrigin = validManifest.entryUrl;
+    }
+
+    final currentUserId = ref.read(authStateProvider).currentUser?.id;
+    final secContext = RuntimeSecurityContext.create(
+      manifest: validManifest,
+      userId: currentUserId,
+      backendBaseUrl: endpoint.baseUrl,
+      currentUrl: initialApprovedOrigin,
+      customSessionId: _runtimeSessionId,
+    );
+
     final dispatcher = BridgeDispatcher(
       actionDispatcher: actionDispatcher,
       debugLogRepo: ref.read(debugLogRepositoryProvider),
@@ -580,6 +603,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       manifest: validManifest,
       uiDelegate: this,
       backendBaseUrl: endpoint.baseUrl,
+      userId: currentUserId,
+      runtimeSessionId: _runtimeSessionId,
+      securityContext: secContext,
     );
 
     final emitter = BridgeEventEmitter(controller);

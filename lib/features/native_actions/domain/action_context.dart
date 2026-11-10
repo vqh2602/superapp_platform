@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import '../../../core/security/runtime_security_context.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
 import 'mini_app_ui_delegate.dart';
 
@@ -9,6 +10,7 @@ class ActionContext {
   final String? origin;
   final MiniAppManifest? manifest;
   final MiniAppUiDelegate? uiDelegate;
+  final RuntimeSecurityContext? securityContext;
 
   const ActionContext({
     this.buildContext,
@@ -16,5 +18,20 @@ class ActionContext {
     this.origin,
     this.manifest,
     this.uiDelegate,
+    this.securityContext,
   });
+
+  /// Host-verified User ID (if authenticated)
+  String? get userId => securityContext?.userId;
+
+  /// Host-managed Runtime Session ID
+  String? get runtimeSessionId => securityContext?.runtimeSessionId;
+
+  /// Host-managed approved origin
+  String get approvedOrigin => securityContext?.approvedOrigin ?? origin ?? '';
+
+  /// Immutable set of allowed capabilities
+  Set<String> get allowedCapabilities =>
+      securityContext?.allowedCapabilities ??
+      (manifest != null ? Set<String>.from(manifest!.capabilities) : const {});
 }
