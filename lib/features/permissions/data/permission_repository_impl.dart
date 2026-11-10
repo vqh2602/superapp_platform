@@ -63,6 +63,59 @@ class PermissionRepositoryImpl {
     return granted == false;
   }
 
+  /// Cập nhật quyền và đồng bộ nguyên tử (atomic) lên Backend nếu người dùng đã đăng nhập.
+  /// Nếu đồng bộ thất bại, tự động rollback lại trạng thái trước đó và ném lỗi.
+  Future<void> updatePermission(String appId, String capability, bool granted) async {
+    _checkUser();
+    final previous = _storage[appId]?[capability];
+    _revisions[appId] = (_revisions[appId] ?? 0) + 1;
+    _storage.putIfAbsent(appId, () => {})[capability] = granted;
+
+    final session = authRepo?.currentSession;
+    if (usersUrl != null &&
+        session != null &&
+        session.accessToken.isNotEmpty) {
+      try {
+        final client = httpClient ?? http.Client();
+        final url = Uri.parse('$usersUrl/me/apps/$appId/permissions');
+        final response = await client
+            .put(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ${session.accessToken}',
+              },
+              body: jsonEncode({
+                'permissions': [capability],
+                'granted': granted,
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+
+        if (response.statusCode != 200 && response.statusCode != 204) {
+          _rollbackPermission(appId, capability, previous);
+          throw BridgeError.internal(
+            'Đồng bộ quyền lên máy chủ thất bại (HTTP ${response.statusCode})',
+          );
+        }
+      } catch (e) {
+        _rollbackPermission(appId, capability, previous);
+        if (e is BridgeError) rethrow;
+        throw BridgeError.internal(
+          'Không thể kết nối đến máy chủ để lưu quyền: $e',
+        );
+      }
+    }
+  }
+
+  void _rollbackPermission(String appId, String capability, bool? previous) {
+    if (previous == null) {
+      _storage[appId]?.remove(capability);
+    } else {
+      _storage.putIfAbsent(appId, () => {})[capability] = previous;
+    }
+  }
+
   void setPermission(String appId, String capability, bool granted) {
     _checkUser();
     _revisions[appId] = (_revisions[appId] ?? 0) + 1;

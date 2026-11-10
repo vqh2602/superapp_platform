@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
@@ -9,7 +8,7 @@ import '../../authentication/data/token_service_shim.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../device/data/device_adapter_impl.dart';
 import '../../permissions/data/permission_repository_impl.dart';
-import '../../permissions/presentation/permission_prompt_dialog.dart';
+import '../../permissions/application/permission_service.dart';
 import '../../mini_app_bridge/user_interaction_queue.dart';
 import '../../user_profile/data/user_repository_impl.dart';
 import '../../debug_center/data/debug_log_repository.dart';
@@ -37,6 +36,7 @@ class NativeActionDispatcher {
   final UserRepositoryImpl userRepo;
   final DeviceAdapterImpl deviceAdapter;
   final PermissionRepositoryImpl permissionRepo;
+  final PermissionService permissionService;
   final DebugLogRepository debugLogRepo;
   final SecureStorageRepositoryImpl secureStorageRepo;
   final PaymentOrderStore paymentOrderStore;
@@ -44,7 +44,6 @@ class NativeActionDispatcher {
   final UserInteractionQueue userInteractionQueue;
 
   final Map<String, NativeActionHandler> _handlers = {};
-  final Map<String, Future<bool>> _inFlightPermissionPrompts = {};
 
   NativeActionDispatcher({
     required this.authRepo,
@@ -54,6 +53,7 @@ class NativeActionDispatcher {
     required this.deviceAdapter,
     required this.permissionRepo,
     required this.debugLogRepo,
+    PermissionService? permissionService,
     SecureStorageRepositoryImpl? secureStorageRepo,
     PaymentOrderStore? paymentOrderStore,
     String? miniappUrl,
@@ -63,13 +63,14 @@ class NativeActionDispatcher {
     UserInteractionQueue? userInteractionQueue,
   })  : userInteractionQueue = userInteractionQueue ?? UserInteractionQueue(),
         paymentOrderStore = paymentOrderStore ?? PaymentOrderStore(),
+        permissionService = permissionService ?? PermissionService(permissionRepo: permissionRepo),
         secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
     _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
   }
 
   void dispose() {
     userInteractionQueue.dispose();
-    _inFlightPermissionPrompts.clear();
+    permissionService.dispose();
   }
 
   /// Danh sách tất cả các action name và alias đã đăng ký trong Flutter Host
@@ -125,9 +126,9 @@ class NativeActionDispatcher {
       DevicePickImageHandler(deviceAdapter: deviceAdapter),
 
       // Permission
-      PermissionRequestHandler(permissionRepo: permissionRepo),
-      PermissionCheckHandler(permissionRepo: permissionRepo),
-      PermissionGetPermissionsHandler(permissionRepo: permissionRepo),
+      PermissionRequestHandler(permissionService: permissionService),
+      PermissionCheckHandler(permissionService: permissionService),
+      PermissionGetPermissionsHandler(permissionService: permissionService),
 
       // Secure Storage & Credentials
       StorageSetSecureItemHandler(secureStorageRepo: secureStorageRepo),
@@ -223,7 +224,7 @@ class NativeActionDispatcher {
     _handlers['credentials.setCredentials'] = setCredHandler;
     _handlers['credentials.getCredentials'] = getCredHandler;
     _handlers['credentials.deleteCredentials'] = delCredHandler;
-    _handlers['permission.getAll'] = PermissionGetPermissionsHandler(permissionRepo: permissionRepo);
+    _handlers['permission.getAll'] = PermissionGetPermissionsHandler(permissionService: permissionService);
 
     // Bare action names directly matching API spec
     _handlers['getNetworkInfo'] = GetNetworkInfoHandler();
@@ -304,42 +305,6 @@ class NativeActionDispatcher {
     _handlers[handler.actionName] = handler;
   }
 
-  Future<bool> _promptPermissionWithDeduplication({
-    required BuildContext buildContext,
-    required String appId,
-    required String appName,
-    required String capability,
-    required ActionContext context,
-  }) {
-    final key = '$appId:$capability';
-    final inFlight = _inFlightPermissionPrompts[key];
-    if (inFlight != null) {
-      return inFlight;
-    }
-
-    final future = context.runInteractive<bool>(() async {
-      context.checkCancelled();
-      if (permissionRepo.isGranted(appId, capability)) {
-        return true;
-      }
-      final granted = await PermissionPromptDialog.show(
-        buildContext,
-        appName: appName,
-        capabilityKey: capability,
-      );
-      context.checkCancelled();
-      permissionRepo.setPermission(appId, capability, granted);
-      return granted;
-    });
-
-    _inFlightPermissionPrompts[key] = future;
-    future.whenComplete(() {
-      _inFlightPermissionPrompts.remove(key);
-    });
-
-    return future;
-  }
-
   /// Dispatches an action with all security and capability checks.
   Future<dynamic> dispatch(
     String actionName,
@@ -374,45 +339,25 @@ class NativeActionDispatcher {
     // Quyền capabilities phải được khai báo trong manifest do Flutter Host quản lý
     if (handler.requiredCapability != null) {
       final cap = handler.requiredCapability!;
-      if (effectiveContext.securityContext != null) {
-        if (!effectiveContext.securityContext!.isCapabilityAllowed(cap)) {
-          throw BridgeError.permissionDenied(
-            'Capability "$cap" is not declared in Mini App manifest',
-          );
-        }
-      } else if (effectiveContext.manifest != null) {
-        if (!effectiveContext.manifest!.capabilities.contains(cap)) {
-          throw BridgeError.permissionDenied(
-            'Capability "$cap" is not declared in Mini App manifest',
-          );
-        }
-      }
+      permissionService.verifyCapabilityInManifest(effectiveContext, cap);
     }
 
     // Restore this user's saved grants before handlers inspect or prompt.
     effectiveContext.checkCancelled();
-    await permissionRepo.ensurePermissionsLoaded(effectiveContext.appId);
+    await permissionService.ensurePermissionsLoaded(effectiveContext.appId);
     effectiveContext.checkCancelled();
 
-    // 4. Runtime permission check với hàng đợi tuần tự hóa và khử trùng lặp
+    // 4. Runtime permission check với quy trình duy nhất qua PermissionService
     if (handler.requiredCapability != null) {
       final cap = handler.requiredCapability!;
-      final isGranted = permissionRepo.isGranted(effectiveContext.appId, cap);
+      final isGranted = permissionService.isGranted(effectiveContext.appId, cap);
       if (!isGranted) {
-        // If not yet granted and context has UI, prompt user
-        if (effectiveContext.buildContext != null) {
-          final granted = await _promptPermissionWithDeduplication(
-            buildContext: effectiveContext.buildContext!,
-            appId: effectiveContext.appId,
-            appName: effectiveContext.manifest?.name ?? effectiveContext.appId,
-            capability: cap,
-            context: effectiveContext,
-          );
-          effectiveContext.checkCancelled();
-          if (!granted) {
-            throw BridgeError.permissionDenied(cap);
-          }
-        } else {
+        final granted = await permissionService.requestPermission(
+          context: effectiveContext,
+          capability: cap,
+        );
+        effectiveContext.checkCancelled();
+        if (!granted) {
           throw BridgeError.permissionDenied(cap);
         }
       }
@@ -441,6 +386,7 @@ final nativeActionDispatcherProvider = Provider<NativeActionDispatcher>((ref) {
     userRepo: ref.watch(userRepositoryProvider),
     deviceAdapter: ref.watch(deviceAdapterProvider),
     permissionRepo: ref.watch(permissionRepositoryProvider),
+    permissionService: ref.watch(permissionServiceProvider),
     debugLogRepo: ref.watch(debugLogRepositoryProvider),
     secureStorageRepo: ref.watch(secureStorageRepositoryProvider),
     miniappUrl: endpoint.miniappUrl,

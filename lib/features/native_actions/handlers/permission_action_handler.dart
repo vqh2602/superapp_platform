@@ -1,13 +1,17 @@
 import '../../../../core/errors/bridge_error.dart';
+import '../../permissions/application/permission_service.dart';
 import '../../permissions/data/permission_repository_impl.dart';
-import '../../permissions/presentation/permission_prompt_dialog.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
 class PermissionRequestHandler implements NativeActionHandler {
-  final PermissionRepositoryImpl permissionRepo;
+  final PermissionService permissionService;
 
-  PermissionRequestHandler({required this.permissionRepo});
+  PermissionRequestHandler({
+    PermissionService? permissionService,
+    PermissionRepositoryImpl? permissionRepo,
+  }) : permissionService = permissionService ??
+            PermissionService(permissionRepo: permissionRepo ?? PermissionRepositoryImpl());
 
   @override
   String get actionName => 'permission.request';
@@ -20,45 +24,32 @@ class PermissionRequestHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    context.checkCancelled();
     final capability = payload['capability'] as String?;
-    if (capability == null || capability.isEmpty) {
+    if (capability == null || capability.trim().isEmpty) {
       throw BridgeError.invalidParams('capability is required');
     }
 
-    // If already granted, return true
-    if (permissionRepo.isGranted(context.appId, capability)) {
-      return {'capability': capability, 'granted': true};
-    }
-
-    if (context.buildContext == null) {
-      throw BridgeError.internal('BuildContext is null for permission dialog');
-    }
-
-    final granted = await context.runInteractive<bool>(() async {
-      context.checkCancelled();
-      if (permissionRepo.isGranted(context.appId, capability)) {
-        return true;
-      }
-      return await PermissionPromptDialog.show(
-        context.buildContext!,
-        appName: context.manifest?.name ?? context.appId,
-        capabilityKey: capability,
-      );
-    });
-
-    permissionRepo.setPermission(context.appId, capability, granted);
+    final granted = await permissionService.requestPermission(
+      context: context,
+      capability: capability,
+    );
 
     return {
-      'capability': capability,
+      'capability': capability.trim(),
       'granted': granted,
     };
   }
 }
 
 class PermissionCheckHandler implements NativeActionHandler {
-  final PermissionRepositoryImpl permissionRepo;
+  final PermissionService permissionService;
 
-  PermissionCheckHandler({required this.permissionRepo});
+  PermissionCheckHandler({
+    PermissionService? permissionService,
+    PermissionRepositoryImpl? permissionRepo,
+  }) : permissionService = permissionService ??
+            PermissionService(permissionRepo: permissionRepo ?? PermissionRepositoryImpl());
 
   @override
   String get actionName => 'permission.check';
@@ -71,23 +62,28 @@ class PermissionCheckHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    context.checkCancelled();
     final capability = payload['capability'] as String?;
-    if (capability == null || capability.isEmpty) {
+    if (capability == null || capability.trim().isEmpty) {
       throw BridgeError.invalidParams('capability is required');
     }
 
-    final granted = permissionRepo.isGranted(context.appId, capability);
+    final granted = permissionService.isGranted(context.appId, capability.trim());
     return {
-      'capability': capability,
+      'capability': capability.trim(),
       'granted': granted,
     };
   }
 }
 
 class PermissionGetPermissionsHandler implements NativeActionHandler {
-  final PermissionRepositoryImpl permissionRepo;
+  final PermissionService permissionService;
 
-  PermissionGetPermissionsHandler({required this.permissionRepo});
+  PermissionGetPermissionsHandler({
+    PermissionService? permissionService,
+    PermissionRepositoryImpl? permissionRepo,
+  }) : permissionService = permissionService ??
+            PermissionService(permissionRepo: permissionRepo ?? PermissionRepositoryImpl());
 
   @override
   String get actionName => 'permission.getPermissions';
@@ -100,7 +96,8 @@ class PermissionGetPermissionsHandler implements NativeActionHandler {
 
   @override
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
-    final permissions = permissionRepo.getPermissionsForApp(context.appId);
+    context.checkCancelled();
+    final permissions = permissionService.getPermissionsForApp(context.appId);
     return {
       'appId': context.appId,
       'permissions': permissions,
