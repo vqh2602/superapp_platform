@@ -53,6 +53,8 @@ program
   .command('upload')
   .description('Tải lên bản nháp hoặc gửi xét duyệt Mini App lên Dynamic Registry Backend')
   .option('-r, --registry <url>', 'Địa chỉ backend registry API', 'http://localhost:3000')
+  .option('-k, --token <token>', 'Access Token hoặc Developer API Token (Bearer)')
+  .option('-s, --secret <secret>', 'Developer Secret Key dùng để ký điện tử (HMAC-SHA256)')
   .option('-t, --tenant-id <tenantId>', 'Mã định danh Tenant', 'tenant_001')
   .option('-a, --actor-id <actorId>', 'Mã người thực hiện tải lên', 'dev_partner_001')
   .option('--submit', 'Gửi trực tiếp vào hàng đợi xét duyệt (SUBMITTED)')
