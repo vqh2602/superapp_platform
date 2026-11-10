@@ -175,4 +175,15 @@ export class SuperAppSDK {
   public off(event: string, callback: (payload: any) => void): void {
     this.transport.off(event, callback);
   }
+
+  // Lifecycle & Resource Cleanup
+  public destroy(): void {
+    if (this.transport && typeof this.transport.destroy === 'function') {
+      this.transport.destroy();
+    }
+  }
+
+  public dispose(): void {
+    this.destroy();
+  }
 }

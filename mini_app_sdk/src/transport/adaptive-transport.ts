@@ -100,4 +100,14 @@ export class AdaptiveBridgeTransport implements ITransport {
   public emit(event: string, payload: any): void {
     this.getActiveTransport().emit(event, payload);
   }
+
+  public destroy(): void {
+    this.nativeTransport.destroy();
+    this.postmessageTransport.destroy();
+    this.mockTransport.destroy();
+  }
+
+  public dispose(): void {
+    this.destroy();
+  }
 }

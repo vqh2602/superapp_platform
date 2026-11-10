@@ -358,8 +358,23 @@ export class PostMessageTransport implements ITransport {
   }
 
   public destroy(): void {
+    for (const [id, pending] of this.callbacks.entries()) {
+      clearTimeout(pending.timer);
+      pending.reject({
+        code: 'ABORTED',
+        message: 'PostMessageTransport was destroyed',
+      } as BridgeError);
+    }
+    this.callbacks.clear();
+    this.listeners.clear();
+
     if (typeof window !== 'undefined' && this.messageListener) {
       window.removeEventListener('message', this.messageListener);
+      this.messageListener = undefined;
     }
+  }
+
+  public dispose(): void {
+    this.destroy();
   }
 }

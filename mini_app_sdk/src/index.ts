@@ -9,6 +9,7 @@ export * from './core/index.js';
 // Re-export transport interfaces & classes
 export {
   ITransport,
+  BridgeHub,
   NativeBridgeTransport,
   PostMessageTransport,
   MockBridgeTransport,

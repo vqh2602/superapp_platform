@@ -90,4 +90,12 @@ export class MockBridgeTransport implements ITransport {
       });
     }
   }
+
+  public destroy(): void {
+    this.listeners.clear();
+  }
+
+  public dispose(): void {
+    this.destroy();
+  }
 }

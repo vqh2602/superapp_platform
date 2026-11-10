@@ -438,3 +438,128 @@ test('PostMessageTransport handshake: establishes trusted host origin dynamicall
   assert.deepEqual(res, { ok: true });
   assert.equal(postedTarget, 'http://localhost:5175');
 });
+
+const { BridgeHub } = await import('../dist/transport/bridge-hub.js');
+
+test('BridgeHub: zero wrapper accumulation across multiple SDK instances', async () => {
+  attachHost();
+  const hub = BridgeHub.getShared();
+  hub.installOnGlobalBridge();
+
+  const originalDispatcher = win.SuperAppBridge.dispatchResponse;
+  const originalEventDispatcher = win.SuperAppBridge.dispatchEvent;
+
+  // Create 15 SDK / NativeBridgeTransport instances
+  const transports = [];
+  for (let i = 0; i < 15; i++) {
+    transports.push(new NativeBridgeTransport({ appId: `app_${i}` }));
+  }
+
+  // Verify function references on win.SuperAppBridge did not mutate or get wrapped into a recursive chain
+  assert.equal(win.SuperAppBridge.dispatchResponse, originalDispatcher);
+  assert.equal(win.SuperAppBridge.dispatchEvent, originalEventDispatcher);
+
+  // Clean up
+  for (const t of transports) {
+    t.destroy();
+  }
+});
+
+test('NativeBridgeTransport destroy(): cancels pending promises and cleans up timers', async () => {
+  attachHost();
+  win.FlutterBridge.postMessage = () => {}; // Host doesn't respond
+
+  const transport = new NativeBridgeTransport({ timeoutMs: 10000 });
+  const pending = transport.invoke('slow.operation');
+
+  const hub = BridgeHub.getShared();
+  assert.equal(hub.getPendingCount(), 1);
+
+  // Destroy the transport while request is pending
+  transport.destroy();
+
+  // Pending call must reject immediately with ABORTED
+  await assert.rejects(
+    pending,
+    error => error.code === 'ABORTED' && error.message.includes('destroyed')
+  );
+
+  // Hub pending registry must be clean
+  assert.equal(hub.getPendingCount(), 0);
+
+  // Calling invoke after destroy rejects immediately
+  await assert.rejects(
+    transport.invoke('another.action'),
+    error => error.code === 'TRANSPORT_DESTROYED'
+  );
+});
+
+test('NativeBridgeTransport destroy(): unregisters only that transport listeners', async () => {
+  attachHost();
+  const transportA = new NativeBridgeTransport();
+  const transportB = new NativeBridgeTransport();
+
+  let countA = 0;
+  let countB = 0;
+
+  transportA.on('app.event', () => countA++);
+  transportB.on('app.event', () => countB++);
+
+  // Fire event to both
+  win.SuperAppBridge.dispatchEvent({ event: 'app.event', payload: {} });
+  assert.equal(countA, 1);
+  assert.equal(countB, 1);
+
+  // Destroy transportA
+  transportA.destroy();
+
+  // Fire event again: only transportB should receive it
+  win.SuperAppBridge.dispatchEvent({ event: 'app.event', payload: {} });
+  assert.equal(countA, 1);
+  assert.equal(countB, 2);
+
+  transportB.destroy();
+  win.SuperAppBridge.dispatchEvent({ event: 'app.event', payload: {} });
+  assert.equal(countA, 1);
+  assert.equal(countB, 2);
+});
+
+test('BridgeHub page unload cleanup: cancels all pending requests and listeners', async () => {
+  attachHost();
+  win.FlutterBridge.postMessage = () => {}; // Never responds
+
+  let unloadHandler;
+  win.addEventListener = (evt, fn) => {
+    if (evt === 'pagehide' || evt === 'beforeunload') unloadHandler = fn;
+  };
+
+  const transport = new NativeBridgeTransport({ timeoutMs: 10000 });
+  const pending = transport.invoke('hanging.request');
+
+  const hub = BridgeHub.getShared();
+  assert.equal(hub.getPendingCount(), 1);
+
+  // Trigger page unload
+  hub.cleanupAll('PAGE_UNLOADED', 'Mini App page unloaded');
+
+  await assert.rejects(
+    pending,
+    error => error.code === 'PAGE_UNLOADED'
+  );
+  assert.equal(hub.getPendingCount(), 0);
+});
+
+test('SuperAppSDK dispose() aliases destroy() and cleans up underlying transport', async () => {
+  attachHost();
+  win.FlutterBridge.postMessage = () => {};
+
+  const sdk = new SuperAppSDK();
+  const pending = sdk.transport.invoke('hanging.action', {}, 10000);
+
+  sdk.dispose();
+
+  await assert.rejects(
+    pending,
+    error => error.code === 'ABORTED'
+  );
+});

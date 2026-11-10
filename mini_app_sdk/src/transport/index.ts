@@ -1,5 +1,6 @@
 export * from './types.js';
 export * from './transport.interface.js';
+export * from './bridge-hub.js';
 export * from './native-transport.js';
 export * from './postmessage-transport.js';
 export * from './mock-transport.js';

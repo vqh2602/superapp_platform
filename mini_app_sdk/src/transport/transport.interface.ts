@@ -7,4 +7,6 @@ export interface ITransport {
   on(event: string, listener: BridgeEventListener): () => void;
   off(event: string, listener: BridgeEventListener): void;
   emit(event: string, payload: any): void;
+  destroy(): void;
+  dispose(): void;
 }
