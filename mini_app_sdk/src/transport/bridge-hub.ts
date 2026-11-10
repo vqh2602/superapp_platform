@@ -304,3 +304,4 @@ export class BridgeHub {
     return total;
   }
 }
+

@@ -563,3 +563,101 @@ test('SuperAppSDK dispose() aliases destroy() and cleans up underlying transport
     error => error.code === 'ABORTED'
   );
 });
+
+const { PkceVerifierStore, pkceStore } = await import('../dist/core/modules/auth.js');
+
+test('PkceVerifierStore: evicts expired verifier after TTL expires', async () => {
+  const store = new PkceVerifierStore({ defaultTtlMs: 25 });
+  store.set('auth_code_1', 'verifier_secret_1');
+
+  assert.equal(store.has('auth_code_1'), true);
+  assert.equal(store.get('auth_code_1'), 'verifier_secret_1');
+
+  // Wait for TTL expiration
+  await new Promise(r => setTimeout(r, 35));
+
+  assert.equal(store.has('auth_code_1'), false);
+  assert.equal(store.consume('auth_code_1'), undefined);
+  assert.equal(store.size(), 0);
+});
+
+test('PkceVerifierStore: enforces single-use consumption', () => {
+  const store = new PkceVerifierStore();
+  store.set('single_code', 'single_verifier');
+
+  assert.equal(store.consume('single_code'), 'single_verifier');
+  // Second consumption attempt must be undefined
+  assert.equal(store.consume('single_code'), undefined);
+  assert.equal(store.has('single_code'), false);
+});
+
+test('PkceVerifierStore: caps max pending sessions and evicts oldest unexchanged verifier', () => {
+  const store = new PkceVerifierStore({ maxPendingSessions: 3 });
+  store.set('code_1', 'verifier_1');
+  store.set('code_2', 'verifier_2');
+  store.set('code_3', 'verifier_3');
+  assert.equal(store.size(), 3);
+
+  // Adding 4th must evict code_1 (oldest)
+  store.set('code_4', 'verifier_4');
+  assert.equal(store.size(), 3);
+  assert.equal(store.has('code_1'), false);
+  assert.equal(store.has('code_2'), true);
+  assert.equal(store.has('code_3'), true);
+  assert.equal(store.has('code_4'), true);
+});
+
+test('AuthModule: cleans up PKCE verifier on error during exchangeCode', async () => {
+  attachHost();
+  win.FlutterBridge.postMessage = raw => {
+    const req = JSON.parse(raw);
+    if (req.action === 'auth.exchangeCode') {
+      win.SuperAppBridge.dispatchResponse({
+        id: req.id,
+        success: false,
+        error: { code: 'INVALID_GRANT', message: 'Auth code already used or expired' },
+      });
+    }
+  };
+
+  pkceStore.clear();
+  pkceStore.set('error_test_code', 'error_test_verifier', 60000);
+  assert.equal(pkceStore.has('error_test_code'), true);
+
+  const sdk = new SuperAppSDK();
+  await assert.rejects(
+    sdk.auth.exchangeCode({ authCode: 'error_test_code' }),
+    err => err.code === 'INVALID_GRANT'
+  );
+
+  // Verifier must be cleaned up, not orphaned
+  assert.equal(pkceStore.has('error_test_code'), false);
+});
+
+test('AuthModule: logout() clears all pending PKCE verifiers', async () => {
+  attachHost();
+  win.FlutterBridge.postMessage = raw => {
+    const req = JSON.parse(raw);
+    win.SuperAppBridge.dispatchResponse({ id: req.id, success: true, data: { status: 'logged_out' } });
+  };
+
+  pkceStore.set('logout_code_1', 'verifier_1');
+  pkceStore.set('logout_code_2', 'verifier_2');
+  assert.equal(pkceStore.size() >= 2, true);
+
+  const sdk = new SuperAppSDK();
+  await sdk.auth.logout();
+
+  assert.equal(pkceStore.size(), 0);
+});
+
+test('SuperAppSDK: destroy() clears all pending PKCE verifiers and timers', () => {
+  pkceStore.set('destroy_code_1', 'verifier_1');
+  pkceStore.set('destroy_code_2', 'verifier_2');
+  assert.equal(pkceStore.size() >= 2, true);
+
+  const sdk = new SuperAppSDK();
+  sdk.destroy();
+
+  assert.equal(pkceStore.size(), 0);
+});

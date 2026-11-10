@@ -178,6 +178,9 @@ export class SuperAppSDK {
 
   // Lifecycle & Resource Cleanup
   public destroy(): void {
+    if (this.auth && typeof this.auth.destroy === 'function') {
+      this.auth.destroy();
+    }
     if (this.transport && typeof this.transport.destroy === 'function') {
       this.transport.destroy();
     }
