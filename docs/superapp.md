@@ -868,6 +868,27 @@ Kích hoạt microphone nhận diện giọng nói và chuyển đổi thành v�
 
 ---
 
+##### `utility.share`
+
+Flutter Host dùng `share_plus` để mở bảng chia sẻ hệ thống. Mini App gọi action này khi người dùng bấm nút chia sẻ. Action cần giao diện Mini App đang hoạt động và có thể gọi mà không cần đăng nhập hoặc khai báo capability trong manifest.
+
+```typescript
+const { status } = await superApp.utility.share({
+  text: 'Xin chào',
+  url: 'https://flutter.dev',
+});
+```
+
+Payload cần ít nhất một trong hai trường `text` và `url`. `url` phải là liên kết HTTP(S) tuyệt đối. Có thể truyền thêm `title` và `subject`. Payload sai trả `INVALID_PARAMS`. Bridge chờ tối đa 5 phút theo mặc định.
+
+- `success` nghĩa là hệ điều hành đã ghi nhận đích chia sẻ được chọn. Việc gửi nội dung tiếp theo phụ thuộc vào ứng dụng đích.
+- `dismissed` nghĩa là người dùng đóng bảng chia sẻ.
+- `unavailable` nghĩa là nền tảng không trả được kết quả chia sẻ.
+
+Chạy thử mục **Nhập liệu & Tiện ích → share** trong SDK Playground bằng SuperApp Host đã tích hợp action này. [Hướng dẫn tích hợp SDK](sdk.md#chia-sẻ-văn-bản-và-liên-kết)
+
+---
+
 #### 7. Nhóm Kiểm tra & Cấp Quyền Động (Runtime Permissions)
 
 ##### `permission.request` & `permission.check`

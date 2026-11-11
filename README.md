@@ -34,7 +34,6 @@ Tài liệu dự án được phân tách thành 3 phần chuyên biệt phục 
 2. 🧰 **[Tài liệu Mini App Developer SDK (docs/sdk.md)](docs/sdk.md)** (Tham khảo thêm [`mini_app_sdk/`](mini_app_sdk/README.md)):
    - **Danh mục tính năng SDK**: SSO Auth Code (60s TTL), Hồ sơ người dùng, Camera QR Scanner, GPS Geolocation, Thư viện ảnh, Tạo đơn & Checkout BottomSheet, Quản lý quyền, Lưu trữ mã hóa.
    - **Hướng dẫn sử dụng & Code mẫu**: Gọi hàm Async/Await, xử lý mã lỗi `BridgeError`, lắng nghe sự kiện vòng đời (`onReady`, `onShow`, `session.changed`).
-   - **Chia sẻ**: Gọi `superApp.utility.share({ text: 'Xin chào', url: 'https://flutter.dev' })` để mở bảng chia sẻ hệ thống. Chạy thử mục **Nhập liệu & Tiện ích → share** trong SDK Playground. [Hướng dẫn tích hợp](docs/sdk.md#chia-sẻ-văn-bản-và-liên-kết)
    - **Kiến trúc SDK**: Cấu trúc `BridgeTransport`, đối tượng `window.SuperAppBridge`, tự động fallback dữ liệu thật khi chạy trên Trình duyệt web.
    - **Quy trình đóng gói**: Cấu hình Vite xuất bản Single-file inlined bundle (`index.html`).
 
