@@ -10,9 +10,9 @@ Toàn bộ hệ thống SDK, Mock Engine, Bridge Transport, CLI và Browser Simu
 
 | Khối chức năng | Thư mục source | Vai trò & Trách nhiệm |
 | :--- | :--- | :--- |
-| **Mini App Core SDK** | `src/core/` | Bộ API chính thức cho bên thứ ba (`npm install @vqh2602/mini-app-sdk`): `auth`, `payment`, `device`, `storage`, `ui`, `media`, `lifecycle`. |
+| **Mini App Core SDK** | `src/core/` | Bộ API chính thức cho bên thứ ba (`npm install @vqh2602/mini-app-sdk`): `auth`, `device`, `storage`, `ui`, `media`, `lifecycle`. |
 | **Bridge Transport** | `src/transport/` | Lớp trừu tượng hoá Bridge: chuyển đổi linh hoạt giữa Flutter WebView Native (`FlutterBridge`), PostMessage trong iframe Simulator, hoặc Mock cục bộ. |
-| **SDK Mock Engine** | `src/mock/` | Động cơ giả lập Native: sinh mã `authCode`, cấp `accessToken`, hồ sơ người dùng, quản lý số dư ví, trừ tiền thanh toán, giả lập pin, mạng, độ trễ và lưu trữ cách ly. |
+| **SDK Mock Engine** | `src/mock/` | Động cơ giả lập Native: sinh mã `authCode`, cấp `accessToken`, hồ sơ người dùng, giả lập pin, mạng, độ trễ và lưu trữ cách ly. |
 | **Mini App CLI** | `src/cli/` & `bin/` | Công cụ dòng lệnh: `create` (tạo dự án mẫu), `dev` (khởi chạy dev server + simulator), `build` (biên dịch + checksum), `upload` (gửi lên Registry), `simulator`. |
 | **Browser Simulator** | `simulator/` & `simulator-dist/` | Giao diện web giả lập điện thoại đã được build sẵn tĩnh, tích hợp trực tiếp vào lệnh `miniapp dev` và `miniapp simulator`. |
 
@@ -32,7 +32,7 @@ miniapp create my_awesome_app
 Lệnh này sẽ tự động sinh:
 - `app.json`: Manifest khai báo `appId`, `name`, `version`, `permissions`, `themeColor`.
 - `package.json`: Cài đặt sẵn `@vqh2602/mini-app-sdk`.
-- `src/main.ts`: Code mẫu gọi các hàm đăng nhập, thanh toán, pin, toast.
+- `src/main.ts`: Code mẫu gọi các hàm đăng nhập, pin, toast.
 - `index.html` & `vite.config.ts`.
 
 ### Bước 2: Chạy Dev Server & Browser Simulator đồng thời
@@ -76,27 +76,6 @@ const token = await superApp.auth.getAccessToken();
 
 // Đăng xuất
 await superApp.auth.logout();
-```
-
-### 💳 3.2. Thanh toán SuperApp Pay (`superApp.payment`)
-```typescript
-try {
-  const result = await superApp.payment.requestPayment({
-    orderId: 'ORDER_2026_001',
-    amount: 150000,
-    description: 'Thanh toán Combo Cơm Trưa',
-  });
-  
-  if (result.status === 'SUCCESS') {
-    await superApp.ui.showToast('Thanh toán thành công qua Ví SuperApp!');
-  }
-} catch (error: any) {
-  if (error.code === 'INSUFFICIENT_FUNDS') {
-    await superApp.ui.showAlert({ title: 'Lỗi', message: 'Số dư ví không đủ' });
-  } else if (error.code === 'USER_CANCELLED') {
-    await superApp.ui.showToast('Bạn đã huỷ thanh toán');
-  }
-}
 ```
 
 ### 📱 3.3. Thiết bị & Phần cứng (`superApp.device`)
@@ -217,7 +196,7 @@ Sau khi sửa SDK trong repository, chạy `npm run build:miniapps` từ thư m�
 
 ### Timeout khi chờ người dùng
 
-Native và simulator mặc định chờ tối đa 5 phút cho quét QR/mã vạch, camera, chọn ảnh/video/file, ghi âm, hộp thoại quyền và checkout; các action khác chờ tối đa 60 giây. Huỷ thao tác từ giao diện native vẫn trả lỗi `CANCELLED` ngay. `timeoutMs` khi khởi tạo SDK hoặc tham số thứ ba của `transport.invoke` sẽ ghi đè mặc định này. Playground dùng chính sách của SDK, không ép timeout 8 giây.
+Native và simulator mặc định chờ tối đa 5 phút cho quét QR/mã vạch, camera, chọn ảnh/video/file, ghi âm, hộp thoại quyền; các action khác chờ tối đa 60 giây. Huỷ thao tác từ giao diện native vẫn trả lỗi `CANCELLED` ngay. `timeoutMs` khi khởi tạo SDK hoặc tham số thứ ba của `transport.invoke` sẽ ghi đè mặc định này. Playground dùng chính sách của SDK, không ép timeout 8 giây.
 
 ## Sinh trắc học
 
@@ -227,3 +206,17 @@ và chỉ tiếp tục khi `authenticated === true`. Host tự kiểm tra lại 
 hộp thoại hệ thống; yêu cầu phiên SuperApp đang đăng nhập.
 
 [Hợp đồng API, lỗi và ví dụ đầy đủ](../docs/authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
+
+## App ID và hộp thoại cấp quyền native
+
+Từ SDK `2.0.0`, singleton `superApp` và `new SuperAppSDK()` không gửi App ID
+mặc định khi gọi native. Host xác định Mini App đang chạy từ manifest đã xác
+thực, rồi mới kiểm tra capability và hỏi người dùng cấp quyền khi cần. Nếu
+truyền `appId` trong cấu hình SDK, giá trị phải khớp App ID của Mini App đang
+chạy; ID sai bị chặn trước hộp thoại cấp quyền.
+
+Quyền chưa được người dùng đồng ý sẽ hiện bảng cấp quyền nếu capability đã
+được manifest/nền tảng cho phép. Capability không khai báo vẫn bị từ chối;
+`permission.check()` chỉ đọc trạng thái và không tự mở bảng cấp quyền.
+
+SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

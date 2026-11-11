@@ -188,5 +188,3 @@ export interface BridgeLogRecord {
   durationMs?: number;
   status: 'pending' | 'success' | 'error';
 }
-
-export type MockOrder = import('../modules/payment.js').PaymentOrder;

@@ -1,5 +1,5 @@
 // Interactive native screens include time spent reading permission prompts,
-// aiming a camera, choosing a file, or completing a checkout.
+// aiming a camera or choosing a file.
 export const INTERACTIVE_BRIDGE_TIMEOUT_MS = 5 * 60 * 1000;
 export const DEFAULT_BRIDGE_TIMEOUT_MS = 60 * 1000;
 export const INTERACTIVE_BRIDGE_ACTIONS = new Set([
@@ -9,8 +9,8 @@ export const INTERACTIVE_BRIDGE_ACTIONS = new Set([
   'chooseImage', 'device.pickImage', 'media.chooseImage', 'media.getPhoto',
   'media.pickImages', 'media.pickVideo', 'pickFile', 'saveFile', 'filePreview',
   'saveImageToGallery', 'saveVideoToGallery', 'speechToText', 'utility.speechToText',
-  'permission.request', 'getContacts', 'device.getContacts', 'payment.openCheckout',
-  'payment.requestPayment', 'requestSendNotification', 'ui.requestSendNotification',
+  'permission.request', 'getContacts', 'device.getContacts',
+  'requestSendNotification', 'ui.requestSendNotification',
   'notification.requestSendNotification', 'ui.showAlert', 'ui.showConfirm',
   'showAlert', 'showConfirm',
 ]);

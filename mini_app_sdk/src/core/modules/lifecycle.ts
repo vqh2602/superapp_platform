@@ -54,10 +54,4 @@ export class LifecycleModule {
     return this.transport.on('auth.sessionChanged', callback);
   }
 
-  /**
-   * Lắng nghe trạng thái thanh toán đơn hàng cập nhật
-   */
-  public onPaymentStatusChanged(callback: (payload: any) => void): () => void {
-    return this.transport.on('payment.statusChanged', callback);
-  }
 }

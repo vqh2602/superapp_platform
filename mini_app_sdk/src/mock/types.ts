@@ -17,24 +17,6 @@ export interface MockTokenSession {
   issuedAt: number;
 }
 
-export interface MockPaymentOrder {
-  orderId: string;
-  amount: number;
-  description: string;
-  partnerCode?: string;
-  extraData?: Record<string, any>;
-}
-
-export interface MockPaymentResult {
-  transactionId: string;
-  orderId: string;
-  status: 'SUCCESS' | 'FAILED' | 'CANCELLED';
-  amount: number;
-  timestamp: number;
-  paymentMethod: 'SUPERAPP_WALLET' | 'BANK_TRANSFER' | 'CREDIT_CARD';
-  message: string;
-}
-
 export interface MockNetworkCondition {
   online: boolean;
   type: 'wifi' | '4g' | '5g' | '2g' | 'none';
@@ -59,7 +41,6 @@ export interface MockPermissions {
 }
 
 export interface MockEngineOptions {
-  autoApprovePayment?: boolean;
   autoApproveAuth?: boolean;
   simulatedLatencyMs?: number;
   storageKeyPrefix?: string;

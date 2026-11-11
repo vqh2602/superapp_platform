@@ -3,7 +3,6 @@
 > **Tích hợp Backend hoàn chỉnh**: Toàn bộ các chức năng cốt lõi của SuperApp đã kết nối trực tiếp với Backend NestJS + PostgreSQL thật:
 > - **Đăng nhập & Đăng ký**: Màn hình đăng nhập yêu cầu nhập email, mật khẩu và ô cấu hình endpoint Backend URL động. Màn hình đăng ký tài khoản mới gọi `POST /api/v1/auth/register`.
 > - **Mini App Catalog**: Tải 100% danh sách Mini App từ Backend Catalog API (`/api/v1/catalog/apps`), không còn phụ thuộc dữ liệu mock hay fallback từ assets.
-> - **Đơn hàng & Thanh toán (Orders)**: Kết nối Backend Order API (`/api/v1/orders`), lưu trữ và đồng bộ trạng thái thanh toán trên cơ sở dữ liệu PostgreSQL.
 > - **Bảo mật & Quyền riêng tư (Consent)**: Đồng bộ quyết định cấp/từ chối quyền người dùng với Backend (`/api/v1/users/me/apps/:appId/permissions`).
 > - **Mini App PKCE Bridge**: Tích hợp luồng xin auth code và đổi token PKCE S256 cho Mini App qua Native Bridge.
 
@@ -125,7 +124,6 @@ lib/
     ├── mini_app_catalog/        # Hiển thị Catalog Mini App, tải Manifest từ backend, cơ chế offline cache
     ├── mini_app_runtime/        # Khởi chạy WebView, thanh điều hướng WeChat Capsule, watchdog màn hình trắng
     ├── native_actions/          # Bộ phân phối NativeActionDispatcher và toàn bộ các Action Handlers
-    ├── payment/                 # Xử lý đơn hàng, BottomSheet Checkout giả lập nhiều phương thức thanh toán
     ├── permissions/             # Kiểm tra quyền Manifest, hiển thị Dialog xin cấp quyền thiết bị
     ├── storage/                 # Kho lưu trữ an toàn cách ly theo từng Mini App (KeyStore / Keychain)
     └── user_profile/            # Thông tin người dùng, màn hình Native Profile đồng bộ với Mini App
@@ -156,17 +154,12 @@ Mini App có thể kiểm tra khả dụng rồi yêu cầu xác nhận bằng v
 
 Action xác thực yêu cầu phiên SuperApp đang đăng nhập. Đây là xác nhận cục bộ trên thiết bị, không tạo hoặc làm mới token backend và không thay thế đăng nhập email/password.
 
-### 3.3. Đơn hàng & Quản lý thanh toán (Backend Orders & Payment)
-- **Tạo và quản lý đơn hàng thật**: Khi Mini App gọi action `payment.createOrder`, Native Host giao tiếp với Backend qua `POST /api/v1/orders` để sinh đơn hàng thật lưu trữ trong database PostgreSQL.
-- **Thanh toán thời gian thực**: Khi người dùng hoàn tất thanh toán trên Native Checkout Sheet (MoMo, ZaloPay, Thẻ ngân hàng), trạng thái đơn hàng được cập nhật tức thì lên Backend qua `PATCH /api/v1/orders/:id/status`.
-- **Lịch sử giao dịch**: Màn hình Profile Tab tích hợp mục "Lịch sử đơn hàng (Backend Orders)" cho phép xem toàn bộ danh sách đơn hàng đã thanh toán cùng trạng thái trực tiếp từ server.
-
-### 3.4. Quản lý Quyền riêng tư & Thu hồi Consent (Backend Permissions)
+### 3.3. Quản lý Quyền riêng tư & Thu hồi Consent (Backend Permissions)
 - **Kiểm soát quyền 3 lớp**: Quyền hiệu lực của Mini App được xác thực qua Manifest ∩ Quyền nền tảng Registry ∩ Đồng ý của người dùng (User Consent).
 - **Đồng bộ quyết định lên Backend**: Khi người dùng đồng ý cấp quyền, quyết định được lưu trên Backend qua `PUT /api/v1/users/me/apps/:appId/permissions`.
 - **Trung tâm Quyền riêng tư**: Trong Profile Tab, người dùng có thể xem danh sách các Mini App đã từng cấp quyền và dễ dàng thu hồi quyền (DELETE / PUT) trực tiếp về Backend.
 
-### 3.5. WeChat/Zalo-Style Capsule Bar & Action Bottom Sheet
+### 3.4. WeChat/Zalo-Style Capsule Bar & Action Bottom Sheet
 - Tích hợp thanh điều khiển chuẩn hiện đại ở góc trên bên phải gồm 2 nút:
   - **Nút ba chấm (`•••`)**: Mở Action Bottom Sheet thông tin và điều khiển ứng dụng chuẩn Zalo/WeChat:
     - *Header ứng dụng*: Icon, tên Mini App, nhãn xác thực đơn vị chủ quản, và nút `(i)` xem chi tiết metadata kỹ thuật.
@@ -177,16 +170,16 @@ Action xác thực yêu cầu phiên SuperApp đang đăng nhập. Đây là xá
       2. **Tạo phím tắt**: Tạo lối tắt truy cập nhanh trên màn hình chính.
       3. **Yêu thích**: Đánh dấu / bỏ đánh dấu Mini App yêu thích (icon sao vàng).
       4. **Thu nhỏ**: Thu nhỏ Mini App và trở về màn hình chủ SuperApp mà không mất phiên.
-      5. **Quản lý quyền**: Xem và bật/tắt quyền (Camera, QR, Thanh toán, v.v.), thu hồi quyền trực tiếp với Backend.
+      5. **Quản lý quyền**: Xem và bật/tắt quyền (Camera, QR, v.v.), thu hồi quyền trực tiếp với Backend.
       6. **Tải lại**: Khởi động lại và làm mới trang WebView.
   - **Nút tròn thoát (`⊙`)**: Gửi sự kiện `miniapp.close` tới Mini App và đóng runtime an toàn.
 - Giao diện tràn viền (Edge-to-Edge) tự động đồng bộ màu nền theo theme của Mini App.
 
-### 3.6. Watchdog phát hiện màn hình trắng (Blank Screen Watchdog)
+### 3.5. Watchdog phát hiện màn hình trắng (Blank Screen Watchdog)
 - Tự động kiểm tra DOM sau 2.5 giây từ khi tải xong trang (`document.getElementById("root")`).
 - Nếu phát hiện webview bị trắng (chưa mount được React hoặc lỗi script), hệ thống sẽ hiển thị một Diagnostic Alert Banner cảnh báo người dùng và gợi ý mở trình kiểm tra lỗi.
 
-### 3.7. Kho lưu trữ an toàn độc lập (Isolated Secure Storage)
+### 3.6. Kho lưu trữ an toàn độc lập (Isolated Secure Storage)
 - Cung cấp cơ chế lưu trữ bảo mật dựa trên phần cứng (Hardware Keystore trên Android, Keychain trên iOS/macOS).
 - Tự động tiền tố namespace theo từng `appId` và `domain` (`sec_{appId}_{domain}_{key}`), ngăn chặn tuyệt đối tình trạng rò rỉ dữ liệu chéo giữa các Mini App.
 
@@ -894,9 +887,15 @@ Kiểm tra hoặc chủ động yêu cầu người dùng cấp quyền truy c�
 
 ## 5. Hệ thống Kiểm soát Quyền (Capabilities Gatekeeper)
 
+SDK `2.0.0` dùng định danh Mini App do host xác thực khi không cấu hình `appId`.
+Các yêu cầu có App ID khai báo sai bị chặn trước bước hỏi quyền. Với capability
+đã khai báo nhưng chưa có đồng ý của người dùng, host mở bảng cấp quyền trước
+khi thực thi action; `permission.check()` chỉ kiểm tra và không mở bảng này.
+
+
 Để đảm bảo an toàn cho người dùng, **SuperApp Platform** triển khai mô hình cấp phép nghiêm ngặt (Zero Trust):
 
-1. **Manifest Declaration**: Mini App phải khai báo trước các capability cần dùng trong tệp `manifest.json` (ví dụ: `device.scanQRCode`, `payment.createOrder`).
+1. **Manifest Declaration**: Mini App phải khai báo trước các capability cần dùng trong tệp `manifest.json` (ví dụ: `device.scanQRCode`, `device.getLocation`).
 2. **Pre-flight Capability Check**: Trước khi gọi bất kỳ Action Handler nào, `NativeActionDispatcher` sẽ kiểm tra capability có nằm trong danh sách được cấp phép không. Nếu không, trả ngay mã lỗi `PERMISSION_DENIED`.
 3. **Interactive User Consent**: Đối với các quyền nhạy cảm (Camera, GPS, Đọc hồ sơ cá nhân), hệ thống sẽ bật hộp thoại Native Dialog hỏi ý kiến người dùng tại thời điểm gọi đầu tiên.
 
@@ -936,3 +935,5 @@ flutter run -d chrome     # Chạy trên Web Browser
 flutter run -d android    # Chạy trên thiết bị / Giả lập Android
 flutter run -d ios        # Chạy trên thiết bị / Simulator iOS
 ```
+
+SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

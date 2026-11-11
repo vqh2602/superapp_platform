@@ -72,7 +72,6 @@ export const SDKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLoginStatus('authenticated');
         }
       }),
-      superApp.lifecycle.onPaymentStatusChanged((p) => addEvent('payment.statusChanged', p)),
     ];
 
     // Check basic user info to detect initial auth status

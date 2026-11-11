@@ -52,7 +52,7 @@ export async function createProject(projectName: string, options: CreateCommandO
       preview: 'vite preview',
     },
     dependencies: {
-      '@vqh2602/mini-app-sdk': '^1.0.7',
+      '@vqh2602/mini-app-sdk': '^2.0.0',
     },
     devDependencies: {
       typescript: '^5.6.3',
@@ -61,7 +61,7 @@ export async function createProject(projectName: string, options: CreateCommandO
   };
   fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(packageJson, null, 2));
 
-  // 3. tsconfig.json
+  // 2. tsconfig.json
   const tsconfig = {
     compilerOptions: {
       target: 'ES2020',
@@ -83,7 +83,7 @@ export async function createProject(projectName: string, options: CreateCommandO
   };
   fs.writeFileSync(path.join(targetDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
 
-  // 4. vite.config.ts
+  // 3. vite.config.ts
   const viteConfig = `import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -127,9 +127,8 @@ export default defineConfig({
 
     <div class="card">
       <button id="btnLogin" class="btn btn-primary">👤 1. Đăng nhập SuperApp</button>
-      <button id="btnPay" class="btn btn-success">💳 2. Thanh toán đơn hàng</button>
-      <button id="btnDevice" class="btn btn-secondary">📱 3. Kiểm tra thông tin thiết bị</button>
-      <button id="btnToast" class="btn btn-secondary">🔔 4. Hiển thị thông báo Toast</button>
+      <button id="btnDevice" class="btn btn-secondary">📱 2. Kiểm tra thông tin thiết bị</button>
+      <button id="btnToast" class="btn btn-secondary">🔔 3. Hiển thị thông báo Toast</button>
     </div>
 
     <div class="card">
@@ -163,22 +162,7 @@ document.getElementById('btnLogin')?.addEventListener('click', async () => {
   }
 });
 
-// 2. Thanh toán
-document.getElementById('btnPay')?.addEventListener('click', async () => {
-  try {
-    const order = await superApp.transport.invoke<{ orderId: string }>('payment.createOrder', {
-      orderId: 'ORDER_' + Date.now(),
-      amount: 45000,
-      description: 'Thanh toán đơn hàng mẫu Mini App',
-    });
-    const res = await superApp.transport.invoke('payment.openCheckout', { orderId: order.orderId });
-    log(res);
-  } catch (err: any) {
-    log({ error: err });
-  }
-});
-
-// 3. Thông tin thiết bị
+// 2. Thông tin thiết bị
 document.getElementById('btnDevice')?.addEventListener('click', async () => {
   try {
     const battery = await superApp.device.getBatteryInfo();
@@ -190,7 +174,7 @@ document.getElementById('btnDevice')?.addEventListener('click', async () => {
   }
 });
 
-// 4. Toast & Rung
+// 3. Toast & Rung
 document.getElementById('btnToast')?.addEventListener('click', async () => {
   await superApp.device.vibrate('light');
   await superApp.ui.showToast('Thông báo Toast từ SuperApp SDK');

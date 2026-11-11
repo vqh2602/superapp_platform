@@ -1,6 +1,6 @@
 # SuperApp Platform
 
-Hệ sinh thái nền tảng **SuperApp Multi-Platform** xây dựng trên **Flutter**, hỗ trợ nạp, khởi chạy và quản lý các **Mini Apps** (Web/HTML/React/TypeScript và Dynamic No-Code Schema) thông qua cơ chế **JavaScript Bridge 2 chiều**, kiểm soát quyền phân tầng (Capabilities Gatekeeper), xác thực SSO, cổng thanh toán và hệ thống máy chủ Registry tập trung.
+Hệ sinh thái nền tảng **SuperApp Multi-Platform** xây dựng trên **Flutter**, hỗ trợ nạp, khởi chạy và quản lý các **Mini Apps** (Web/HTML/React/TypeScript và Dynamic No-Code Schema) thông qua cơ chế **JavaScript Bridge 2 chiều**, kiểm soát quyền phân tầng (Capabilities Gatekeeper), xác thực SSO và hệ thống máy chủ Registry tập trung.
 
 ---
 
@@ -170,7 +170,6 @@ superapp_platform/
 │       ├── mini_app_catalog/    # Hiển thị Catalog, tải Remote Registry, Cache offline
 │       ├── mini_app_runtime/    # WebView container, WeChat Capsule Bar [ ••• | ⊙ ]
 │       ├── native_actions/      # Action Dispatcher & các Action Handlers
-│       ├── payment/             # Đơn hàng, BottomSheet Checkout đa phương thức
 │       ├── permissions/         # Capabilities Gatekeeper, Dialog xin quyền
 │       ├── storage/             # Isolated Secure Storage (Keychain / Keystore)
 │       └── user_profile/        # Màn hình hồ sơ Native & đồng bộ dữ liệu

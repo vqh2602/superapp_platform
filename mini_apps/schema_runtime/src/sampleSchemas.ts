@@ -100,26 +100,6 @@ export const coffeeShopSchema: MiniAppSchema = {
                 },
               },
             },
-            {
-              id: 'checkout_btn',
-              type: 'button',
-              props: {
-                label: 'Đặt Combo Cà Phê + Bánh (75.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 75000,
-                    description: 'Combo Cà Phê + Bánh Sừng Bò Sáng',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
           ],
         },
       ],
@@ -228,26 +208,6 @@ export const shopeeSchema: MiniAppSchema = {
               },
             },
             {
-              id: 'buy_combo_btn',
-              type: 'button',
-              props: {
-                label: 'Mua Nhanh Bộ Sạc GaN Siêu Tốc (490.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 490000,
-                    description: 'Shopee Mall - Củ sạc nhanh GaN 65W 3 Cổng',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
-            {
               id: 'nav_voucher_btn',
               type: 'button',
               props: {
@@ -283,7 +243,7 @@ export const shopeeSchema: MiniAppSchema = {
           id: 'v_desc',
           type: 'text',
           props: {
-            value: 'Mã giảm giá áp dụng tự động khi thanh toán qua SuperApp Native Pay.',
+            value: 'Khám phá các sản phẩm và ưu đãi trong Mini App.',
             variant: 'subtitle',
           },
         },
@@ -442,26 +402,6 @@ export const tiktokSchema: MiniAppSchema = {
           },
           children: [
             {
-              id: 'donate_btn',
-              type: 'button',
-              props: {
-                label: 'Tặng Quà Live Idol (50.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 50000,
-                    description: 'TikTok Live - Quà tặng Kim Cương Sư Tử Vàng',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
-            {
               id: 'scan_creator_btn',
               type: 'button',
               props: {
@@ -585,26 +525,6 @@ export const youtubeSchema: MiniAppSchema = {
             borderRadius: 12,
           },
           children: [
-            {
-              id: 'subscribe_btn',
-              type: 'button',
-              props: {
-                label: 'Nâng Cấp YouTube Premium (79.000 ₫)',
-                variant: 'primary',
-                icon: 'play',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 79000,
-                    description: 'YouTube Premium Cá Nhân 1 Tháng',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
             {
               id: 'user_info_btn',
               type: 'button',
@@ -741,26 +661,6 @@ export const viettelTammiSchema: MiniAppSchema = {
               },
             },
             {
-              id: 'buy_st150k_btn',
-              type: 'button',
-              props: {
-                label: 'Đăng Ký Gói ST150K (150.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 150000,
-                    description: 'Viettel Tammi - Đăng ký gói Data ST150K',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
-            {
               id: 'sub_profile_btn',
               type: 'button',
               props: {
@@ -868,26 +768,6 @@ export const freeFireSchema: MiniAppSchema = {
             borderRadius: 12,
           },
           children: [
-            {
-              id: 'topup_btn',
-              type: 'button',
-              props: {
-                label: 'Nạp 530 Kim Cương Ngay (100.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 100000,
-                    description: 'Free Fire - Gói 530 Kim Cương Siêu Tốc',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
             {
               id: 'giftcode_btn',
               type: 'button',
@@ -1011,26 +891,6 @@ export const capcutSchema: MiniAppSchema = {
                 },
               },
             },
-            {
-              id: 'buy_pro_btn',
-              type: 'button',
-              props: {
-                label: 'Nâng Cấp CapCut Pro 1 Năm (599.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 599000,
-                    description: 'CapCut Pro 1 Năm Không Giới Hạn',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
           ],
         },
       ],
@@ -1116,26 +976,6 @@ export const messengerSchema: MiniAppSchema = {
             borderRadius: 12,
           },
           children: [
-            {
-              id: 'lixi_btn',
-              type: 'button',
-              props: {
-                label: 'Chuyển Tiền Lì Xì Bạn Bè (50.000 ₫)',
-                variant: 'primary',
-                icon: 'cart',
-              },
-              events: {
-                onClick: {
-                  type: 'native_action',
-                  action: 'payment.openCheckout',
-                  params: {
-                    amount: 50000,
-                    description: 'Messenger - Tiền lì xì chúc mừng bạn bè',
-                    currency: 'VND',
-                  },
-                },
-              },
-            },
             {
               id: 'open_form_btn',
               type: 'button',

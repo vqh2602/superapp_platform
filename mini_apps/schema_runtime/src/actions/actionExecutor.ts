@@ -54,36 +54,6 @@ export async function executeAction(
       const act = action.action;
       const params = action.params || {};
 
-      // Smart payment composite flow
-      if (act === 'payment.openCheckout' && (params.amount || params.price)) {
-        notify('Đang khởi tạo đơn hàng...', 'info');
-        const order = await invokeNativeBridge(
-          'payment.createOrder',
-          {
-            amount: params.amount || params.price || 50000,
-            description: params.description || params.title || 'Thanh toán đơn hàng No-Code',
-            currency: params.currency || 'VND',
-          },
-          options.appId,
-        );
-
-        notify(`Đơn hàng ${order.orderId} đã tạo. Đang mở cổng thanh toán Native...`, 'info');
-        const res = await invokeNativeBridge(
-          'payment.openCheckout',
-          { orderId: order.orderId },
-          options.appId,
-        );
-
-        if (res.status === 'SUCCESS') {
-          notify(`🎉 Thanh toán thành công đơn hàng ${order.orderId}!`, 'success');
-        } else if (res.status === 'CANCELLED') {
-          notify(`Đã hủy thanh toán đơn hàng.`, 'info');
-        } else {
-          notify(`Thanh toán thất bại: ${res.status}`, 'error');
-        }
-        return res;
-      }
-
       // Standard native action dispatch
       const res = await invokeNativeBridge(act, params, options.appId);
       if (act === 'device.scanQRCode') {

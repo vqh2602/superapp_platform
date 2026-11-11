@@ -46,7 +46,7 @@
 
 ## 2. Kiến trúc Tầng Vận chuyển & Giao thức Bridge (Bridge Protocol)
 
-Mini App tương tác với thiết bị phần cứng và các dịch vụ của SuperApp (Thanh toán, Xác thực, Camera, GPS) thông qua **Giao thức Cầu nối 2 chiều (Bidirectional JavaScript Bridge)**.
+Mini App tương tác với thiết bị phần cứng và các dịch vụ của SuperApp (Xác thực, Camera, GPS) thông qua **Giao thức Cầu nối 2 chiều (Bidirectional JavaScript Bridge)**.
 
 ```mermaid
 flowchart TD
@@ -402,7 +402,7 @@ class SuperAppBridgeClient {
 
 ### 3.4. Ví dụ hoàn chỉnh màn hình Flutter Web Mini App
 
-Dưới đây là một Widget Flutter hoàn chỉnh minh họa cách gọi Đăng nhập, Quét QR, Thông tin pin và Thanh toán đơn hàng:
+Dưới đây là một Widget Flutter hoàn chỉnh minh họa cách gọi Đăng nhập, Quét QR, Thông tin pin và thông báo:
 
 ```dart
 // lib/main.dart
@@ -1088,7 +1088,6 @@ Browser Simulator được đóng gói sẵn tĩnh ngay bên trong `@vqh2602/min
 - **DevTools Panel**:
   - Chuyển đổi giữa 4 người dùng mẫu (Khách vãng lai, Khách thường, Khách VIP Diamond, Tài khoản hết số dư).
   - Tùy chỉnh mức pin giả lập, chuyển đổi trạng thái mạng WiFi / 4G / Offline.
-  - Bộ giả lập thanh toán SuperApp Pay BottomSheet.
   - Bộ tiêm độ trễ mạng (Latency Injector: 0ms, 200ms, 1500ms).
 - **Khởi chạy độc lập**: Gõ lệnh `npx miniapp simulator` hoặc `npx @vqh2602/mini-app-sdk simulator` tại bất kỳ đâu.
 
@@ -1154,7 +1153,7 @@ npm run package:miniapp -- ../examples/miniapps/web-demo ../dist/web_demo-1.0.0.
   - Trong Flutter Web, luôn thêm `--base-href="./"`.
 
 ### 2. Lỗi: "Bridge call timed out after 10000ms"
-- **Nguyên nhân**: Action gọi lên Native không nhận được phản hồi, hoặc người dùng mở hộp thoại thanh toán/quét QR nhưng không thao tác khiến quá hạn thời gian chờ.
+- **Nguyên nhân**: Action gọi lên Native không nhận được phản hồi, hoặc người dùng mở hộp thoại quét QR nhưng không thao tác khiến quá hạn thời gian chờ.
 - **Giải pháp**: Kiểm tra xem tên action có chính xác theo bảng [Capabilities Matrix](#7-bảng-tra-cứu-đầy-đủ-danh-mục-api--phân-quyền-capabilities-matrix) hay không. Bạn có thể mở **Device Debug Center** trong SuperApp Flutter để xem log thời gian thực của Bridge.
 
 ### 3. Lỗi: "PERMISSION_DENIED: Capability [xyz] not granted"
@@ -1174,3 +1173,17 @@ và chỉ tiếp tục khi `authenticated === true`. Host tự kiểm tra lại 
 hộp thoại hệ thống; yêu cầu phiên SuperApp đang đăng nhập.
 
 [Hợp đồng API, lỗi và ví dụ đầy đủ](authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
+
+## App ID và hộp thoại cấp quyền native
+
+Từ SDK `2.0.0`, singleton `superApp` và `new SuperAppSDK()` không gửi App ID
+mặc định khi gọi native. Host xác định Mini App đang chạy từ manifest đã xác
+thực, rồi mới kiểm tra capability và hỏi người dùng cấp quyền khi cần. Nếu
+truyền `appId` trong cấu hình SDK, giá trị phải khớp App ID của Mini App đang
+chạy; ID sai bị chặn trước hộp thoại cấp quyền.
+
+Quyền chưa được người dùng đồng ý sẽ hiện bảng cấp quyền nếu capability đã
+được manifest/nền tảng cho phép. Capability không khai báo vẫn bị từ chối;
+`permission.check()` chỉ đọc trạng thái và không tự mở bảng cấp quyền.
+
+SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

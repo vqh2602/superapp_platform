@@ -198,17 +198,6 @@ export const ProductCardComponent: React.FC<ComponentProps> = ({ definition, onA
   const handleBuy = () => {
     if (definition.events?.onClick) {
       onAction(definition.events.onClick);
-    } else {
-      // Default payment checkout action
-      onAction({
-        type: 'native_action',
-        action: 'payment.openCheckout',
-        params: {
-          amount: price,
-          description: `Thanh toán: ${title}`,
-          currency: 'VND',
-        },
-      });
     }
   };
 
@@ -240,7 +229,7 @@ export const ProductCardComponent: React.FC<ComponentProps> = ({ definition, onA
           {Number(price).toLocaleString('vi-VN')} {currency}
         </span>
       </div>
-      <button
+      {definition.events?.onClick && <button
         onClick={handleBuy}
         style={{
           backgroundColor: '#2563EB',
@@ -255,7 +244,7 @@ export const ProductCardComponent: React.FC<ComponentProps> = ({ definition, onA
         }}
       >
         {buttonText}
-      </button>
+      </button>}
     </div>
   );
 };

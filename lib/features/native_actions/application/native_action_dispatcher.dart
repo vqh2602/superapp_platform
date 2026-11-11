@@ -28,7 +28,6 @@ import '../handlers/system_action_handler.dart';
 import '../handlers/ui_action_handler.dart';
 import '../handlers/media_file_action_handler.dart';
 import '../handlers/phone_utility_action_handler.dart';
-import '../handlers/payment_action_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NativeActionDispatcher {
@@ -41,7 +40,6 @@ class NativeActionDispatcher {
   final PermissionService permissionService;
   final DebugLogRepository debugLogRepo;
   final SecureStorageRepositoryImpl secureStorageRepo;
-  final PaymentOrderStore paymentOrderStore;
   final http.Client? httpClient;
   final UserInteractionQueue userInteractionQueue;
 
@@ -57,14 +55,12 @@ class NativeActionDispatcher {
     required this.debugLogRepo,
     PermissionService? permissionService,
     SecureStorageRepositoryImpl? secureStorageRepo,
-    PaymentOrderStore? paymentOrderStore,
     String? miniappUrl,
     String? authUrl,
     this.httpClient,
     Function(String appId)? onSwitchMiniApp,
     UserInteractionQueue? userInteractionQueue,
   })  : userInteractionQueue = userInteractionQueue ?? UserInteractionQueue(),
-        paymentOrderStore = paymentOrderStore ?? PaymentOrderStore(),
         permissionService = permissionService ?? PermissionService(permissionRepo: permissionRepo),
         secureStorageRepo = secureStorageRepo ?? SecureStorageRepositoryImpl() {
     _registerHandlers(onSwitchMiniApp, miniappUrl: miniappUrl, authUrl: authUrl);
@@ -83,14 +79,6 @@ class NativeActionDispatcher {
     String? miniappUrl,
     String? authUrl,
   }) {
-    final createOrderHandler = PaymentCreateOrderHandler(store: paymentOrderStore);
-    final openCheckoutHandler = PaymentOpenCheckoutHandler(store: paymentOrderStore);
-    final checkStatusHandler = PaymentCheckStatusHandler(store: paymentOrderStore);
-    final requestPaymentHandler = PaymentRequestPaymentHandler(
-      createOrderHandler: createOrderHandler,
-      openCheckoutHandler: openCheckoutHandler,
-    );
-
     final biometricService = BiometricService();
     final list = <NativeActionHandler>[
       AuthCheckBiometricsHandler(service: biometricService),
@@ -148,13 +136,6 @@ class NativeActionDispatcher {
       // Debug
       DebugEchoHandler(),
       DebugSimulateFailureHandler(),
-
-      // Payment
-      createOrderHandler,
-      openCheckoutHandler,
-      checkStatusHandler,
-      requestPaymentHandler,
-
 
       // System & Device Info
       GetNetworkInfoHandler(),
@@ -301,8 +282,6 @@ class NativeActionDispatcher {
     _handlers['speechToText'] = SpeechToTextHandler(permissionRepo: permissionRepo);
     _handlers['hideKeyboard'] = HideKeyboardHandler();
 
-    // Payment aliases
-    _handlers['payment.checkTransaction'] = checkStatusHandler;
   }
 
   /// Registers or overrides a handler (useful for testing or extensions)

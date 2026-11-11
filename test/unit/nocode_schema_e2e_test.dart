@@ -92,7 +92,7 @@ void main() {
         'version': '1.0.5',
         'entryUrl': '',
         'isAsset': false,
-        'capabilities': ['payment.createOrder', 'payment.openCheckout', 'device.scanQRCode', 'navigation.close'],
+        'capabilities': ['device.scanQRCode', 'navigation.close'],
         'status': 'PUBLISHED',
         'schemaVersion': 1,
         'schema': {
@@ -108,8 +108,8 @@ void main() {
                   'events': {
                     'onClick': {
                       'type': 'native_action',
-                      'action': 'payment.createOrder',
-                      'params': {'amount': 75000, 'description': 'Combo Cà Phê Sáng'}
+                      'action': 'device.scanQRCode',
+                      'params': {}
                     }
                   }
                 }
@@ -124,7 +124,7 @@ void main() {
       expect(manifest.isSchemaApp, isTrue);
       expect(manifest.isWebApp, isFalse);
       expect(manifest.appRuntimeType, equals('schema'));
-      expect(manifest.capabilities.contains('payment.createOrder'), isTrue);
+      expect(manifest.capabilities.contains('device.scanQRCode'), isTrue);
       expect(manifest.schema, isNotNull);
       expect(manifest.schema!['pages'], hasLength(1));
     });

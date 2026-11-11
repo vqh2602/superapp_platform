@@ -20,5 +20,7 @@ thiết lập và xác thực vân tay / Face ID. Đăng nhập SuperApp, mở P
 kiểm tra trạng thái rồi chạy xác thực. Khi chưa thiết lập, ví dụ hiển thị hướng
 dẫn kiểm tra Cài đặt thiết bị. Xem [API và xử lý lỗi](../docs/authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
 
-Playground dùng SDK đã phát hành trên npm (`@vqh2602/mini-app-sdk@^1.0.8`).
+Playground dùng SDK đã phát hành trên npm (`@vqh2602/mini-app-sdk@^2.0.0`).
 Chạy `npm install` và `npm run build` tại `mini_apps/sdk_playground`.
+
+SDK `2.0.0` sửa định danh native để lời gọi đến được bảng cấp quyền. Playground, Schema Runtime và Sample Store đã gỡ các ví dụ thanh toán.

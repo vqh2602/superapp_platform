@@ -7,7 +7,6 @@ import { NavigationModule } from './modules/navigation.js';
 import { MediaModule } from './modules/media.js';
 import { LifecycleModule } from './modules/lifecycle.js';
 import { UserModule } from './modules/user.js';
-import { PaymentModule } from './modules/payment.js';
 import { PermissionsModule } from './modules/permissions.js';
 import { FileModule } from './modules/file.js';
 import { PhoneModule } from './modules/phone.js';
@@ -29,7 +28,7 @@ import {
 } from './types/index.js';
 
 export class SuperAppSDK {
-  public readonly version = '1.0.8';
+  public readonly version = '2.0.0';
   public readonly transport: ITransport;
 
   // Domain modules
@@ -41,7 +40,6 @@ export class SuperAppSDK {
   public readonly media: MediaModule;
   public readonly lifecycle: LifecycleModule;
   public readonly user: UserModule;
-  public readonly payment: PaymentModule;
   public readonly permission: PermissionsModule;
   public readonly file: FileModule;
   public readonly phone: PhoneModule;
@@ -69,7 +67,6 @@ export class SuperAppSDK {
     this.media = new MediaModule(this.transport);
     this.lifecycle = new LifecycleModule(this.transport);
     this.user = new UserModule(this.transport);
-    this.payment = new PaymentModule(this.transport);
     this.permission = new PermissionsModule(this.transport);
     this.file = new FileModule(this.transport);
     this.phone = new PhoneModule(this.transport);

@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:superapp_platform/features/native_actions/domain/action_definition.dart';
+import 'package:superapp_platform/features/permissions/presentation/permission_prompt_dialog.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:superapp_platform/core/errors/bridge_error.dart';
 import 'package:superapp_platform/core/security/mini_app_security_policy.dart';
@@ -28,6 +31,21 @@ class MockPlatformWebViewController extends PlatformWebViewController {
 
   @override
   Future<void> runJavaScript(String javaScript) async {}
+}
+
+class PermissionProbeHandler implements NativeActionHandler {
+  bool called = false;
+  @override
+  String get actionName => 'test.permissionProbe';
+  @override
+  String? get requiredCapability => 'device.getDeviceInfo';
+  @override
+  bool get requiresAuth => false;
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    called = true;
+    return {'success': true};
+  }
 }
 
 void main() {
@@ -222,6 +240,47 @@ void main() {
         debugLogRepo: debugLogRepo,
       );
     });
+
+    for (final allow in [true, false]) {
+      testWidgets('host identity reaches consent before action (allow=$allow)', (tester) async {
+        late BuildContext hostContext;
+        await tester.pumpWidget(MaterialApp(home: Builder(builder: (context) {
+          hostContext = context;
+          return const Scaffold(body: Text('Host'));
+        })));
+        final probe = PermissionProbeHandler();
+        actionDispatcher.registerHandler(probe);
+        final mockPlatform = MockPlatformWebViewController(
+          const PlatformWebViewControllerCreationParams(),
+        )..mockUrl = manifest.entryUrl;
+        final dispatcher = BridgeDispatcher(
+          actionDispatcher: actionDispatcher,
+          debugLogRepo: debugLogRepo,
+          controller: WebViewController.fromPlatform(mockPlatform),
+          manifest: manifest,
+          backendBaseUrl: 'https://superappplatfrom.alwaysdata.net',
+        );
+        // Same wire format as the SDK singleton: no client-supplied appId.
+        final pending = dispatcher.handleMessage(jsonEncode({
+          'id': 'permission_probe', 'action': probe.actionName, 'payload': {},
+        }), hostContext);
+        await tester.pumpAndSettle();
+        expect(find.byType(PermissionPromptDialog), findsOneWidget);
+        expect(probe.called, isFalse);
+        expect(debugLogRepo.logs, isEmpty);
+        await tester.tap(find.text(allow ? 'Cho phép (Allow)' : 'Từ chối (Deny)'));
+        await tester.pumpAndSettle();
+        await pending;
+        expect(probe.called, allow);
+        expect(debugLogRepo.logs.single.success, allow);
+        expect(permissionRepo.isGranted(manifest.id, 'device.getDeviceInfo'), allow);
+        dispatcher.dispose();
+        actionDispatcher.dispose();
+        permissionRepo.dispose();
+        debugLogRepo.dispose();
+        authRepo.dispose();
+      });
+    }
 
     test('Bridge rejects request when currentUrl has been navigated to untrusted origin', () async {
       final mockPlatform = MockPlatformWebViewController(

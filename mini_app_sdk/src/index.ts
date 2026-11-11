@@ -28,7 +28,6 @@ export {
   MockStateStore,
   MOCK_USER_PRESETS,
   MockUserProfile,
-  MockPaymentOrder,
   MockDeviceState,
   MockNetworkCondition,
   MockLogEntry,

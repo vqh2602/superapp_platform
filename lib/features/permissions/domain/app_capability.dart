@@ -10,10 +10,7 @@ enum AppCapability {
   permissionGetPermissions('permission.getPermissions', 'Lấy danh sách quyền', 'Lấy danh sách quyền đã được cấp cho Mini App'),
   microphone('microphone', 'Truy cập micro ghi âm', 'Cho phép chuyển giọng nói thành văn bản'),
   notification('notification', 'Gửi thông báo', 'Cho phép Mini App gửi thông báo và tin tức quan trọng'),
-  authLogin('auth.login', 'Đăng nhập nhanh', 'Cho phép truy cập thông tin tài khoản đăng nhập SuperApp'),
-  paymentCreateOrder('payment.createOrder', 'Tạo đơn thanh toán', 'Cho phép khởi tạo đơn hàng thanh toán qua cổng SuperApp'),
-  paymentOpenCheckout('payment.openCheckout', 'Mở cổng thanh toán', 'Cho phép mở giao diện thanh toán SuperApp'),
-  paymentRequestPayment('payment.requestPayment', 'Thanh toán trực tiếp', 'Cho phép thực hiện thanh toán trực tiếp qua ví SuperApp');
+  authLogin('auth.login', 'Đăng nhập nhanh', 'Cho phép truy cập thông tin tài khoản đăng nhập SuperApp');
 
   final String key;
   final String title;

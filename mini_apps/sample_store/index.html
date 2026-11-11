@@ -61,7 +61,6 @@
           <p>Size L • Đậm đà truyền thống</p>
         </div>
         <div class="price">45.000 ₫</div>
-        <button class="buy-btn" onclick="checkout(45000, 'Cà phê Phin Sữa Đá Size L')">Đặt mua</button>
       </div>
 
       <div class="product-item">
@@ -70,7 +69,6 @@
           <p>Size M • Hạt sen bùi thơm</p>
         </div>
         <div class="price">55.000 ₫</div>
-        <button class="buy-btn" onclick="checkout(55000, 'Trà Sen Vàng Kem Cheese')">Đặt mua</button>
       </div>
 
       <div class="product-item">
@@ -79,7 +77,6 @@
           <p>Bánh mì giòn rụm nóng hổi</p>
         </div>
         <div class="price">35.000 ₫</div>
-        <button class="buy-btn" onclick="checkout(35000, 'Bánh Mì Chả Lụa Xá Xíu')">Đặt mua</button>
       </div>
     </div>
 
@@ -139,30 +136,6 @@
       .catch(() => {
         document.getElementById('user-greeting').innerText = 'Xin chào quý khách!';
       });
-
-    async function checkout(amount, desc) {
-      const resultBox = document.getElementById('result-box');
-      resultBox.style.display = 'block';
-      resultBox.innerText = 'Đang khởi tạo đơn hàng...';
-
-      try {
-        const order = await invokeBridge('payment.createOrder', {
-          amount: amount,
-          description: desc,
-          currency: 'VND'
-        });
-
-        resultBox.innerText = 'Đơn hàng: ' + order.orderId + '\\nĐang mở cổng thanh toán Native...';
-
-        const checkoutResult = await invokeBridge('payment.openCheckout', {
-          orderId: order.orderId
-        });
-
-        resultBox.innerText = 'Kết quả thanh toán:\\n' + JSON.stringify(checkoutResult, null, 2);
-      } catch (err) {
-        resultBox.innerText = 'Lỗi thanh toán:\\n' + JSON.stringify(err, null, 2);
-      }
-    }
 
     function switchBackToPlayground() {
       invokeBridge('navigation.openMiniApp', { appId: 'sdk_playground' });

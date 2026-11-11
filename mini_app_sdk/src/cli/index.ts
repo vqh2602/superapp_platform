@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('miniapp')
   .description('SuperApp Mini App Developer CLI: Create, Dev, Build, and Upload')
-  .version('1.0.8');
+  .version('2.0.0');
 
 program
   .command('create <project-name>')

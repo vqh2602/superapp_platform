@@ -371,7 +371,7 @@ test('PostMessageTransport security: rejects responses with mismatched action na
           type: 'SUPERAPP_BRIDGE_RESPONSE',
           response: {
             id: request.id,
-            action: 'payment.tamperedAction',
+            action: 'device.tamperedAction',
             success: true,
             sessionNonce: request.sessionNonce,
           },
@@ -660,4 +660,39 @@ test('SuperAppSDK: destroy() clears all pending PKCE verifiers and timers', () =
   sdk.destroy();
 
   assert.equal(pkceStore.size(), 0);
+});
+
+
+test('default SDK uses host app identity so protected calls can reach consent', async () => {
+  win.FlutterBridge = { postMessage(raw) {
+    const request = JSON.parse(raw);
+    requests.push(request);
+    const matchesHost = !request.appId || request.appId === 'sdk_playground';
+    win.SuperAppBridge.dispatchResponse({
+      id: request.id, action: request.action, success: matchesHost,
+      data: { consentReached: true },
+      error: { code: 'PERMISSION_DENIED', message: 'App identity mismatch' },
+    });
+  } };
+  const sdk = new SuperAppSDK();
+  try {
+    assert.deepEqual(await sdk.permission.request('contacts'), { consentReached: true });
+    assert.equal(Object.hasOwn(requests[0], 'appId'), false);
+    assert.deepEqual(requests[0].payload, { capability: 'contacts' });
+  } finally { sdk.destroy(); }
+
+  const wrongApp = new SuperAppSDK({ appId: 'another_app' });
+  try {
+    await assert.rejects(wrongApp.permission.request('contacts'), error => error.code === 'PERMISSION_DENIED');
+    assert.equal(requests[1].appId, 'another_app');
+  } finally { wrongApp.destroy(); }
+});
+
+
+test('payment API is removed from the SDK', () => {
+  const sdk = new SuperAppSDK();
+  try {
+    assert.equal('payment' in sdk, false);
+    assert.equal('onPaymentStatusChanged' in sdk.lifecycle, false);
+  } finally { sdk.destroy(); }
 });

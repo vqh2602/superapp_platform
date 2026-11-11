@@ -18,7 +18,7 @@ export const BridgeInspectorTab: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <input
           type="text"
-          placeholder="Lọc bridge action (vd: auth, payment)..."
+          placeholder="Lọc bridge action (vd: auth, device)..."
           value={filterAction}
           onChange={(e) => setFilterAction(e.target.value)}
           style={{

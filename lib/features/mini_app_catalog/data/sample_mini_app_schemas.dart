@@ -153,7 +153,7 @@ class SampleMiniAppSchemas {
             'id': 'v_desc',
             'type': 'text',
             'props': {
-              'value': 'Mã giảm giá áp dụng tự động khi thanh toán qua SuperApp Native Pay.',
+              'value': 'Khám phá các sản phẩm và ưu đãi trong Mini App.',
               'variant': 'subtitle',
             },
           },

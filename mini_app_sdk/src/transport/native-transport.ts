@@ -16,7 +16,7 @@ export function isNativeBridgeAvailable(): boolean {
 
 export class NativeBridgeTransport implements ITransport {
   private transportId: string;
-  private appId: string;
+  private appId?: string;
   private defaultTimeoutMs?: number;
   private debug: boolean;
   private isDestroyed = false;
@@ -24,7 +24,7 @@ export class NativeBridgeTransport implements ITransport {
 
   constructor(config: TransportConfig = {}) {
     this.transportId = `native_trans_${Date.now()}_${transportSequence++}`;
-    this.appId = config.appId || 'mini_app_default';
+    this.appId = config.appId;
     this.defaultTimeoutMs = config.timeoutMs;
     this.debug = config.debug ?? false;
     this.hub = BridgeHub.getShared();
@@ -54,11 +54,13 @@ export class NativeBridgeTransport implements ITransport {
     const id = `sdk_req_${Date.now()}_${requestSequence++}`;
     const timeout = bridgeTimeoutMs(action, timeoutMs ?? this.defaultTimeoutMs);
 
-    const request: BridgeRequest = {
+    // Native host supplies the verified running app identity when omitted.
+    // Never send a synthetic ID that fails host validation before consent.
+    const request: Omit<BridgeRequest, 'appId'> & { appId?: string } = {
       id,
       action,
       payload,
-      appId: this.appId,
+      ...(this.appId ? { appId: this.appId } : {}),
       origin: typeof window !== 'undefined' ? window.location.origin : 'miniapp://local',
       timestamp: Date.now(),
     };

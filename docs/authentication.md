@@ -6,7 +6,6 @@ Backend đã có tài khoản thật trong PostgreSQL, đăng ký/đăng nhập 
 - Xác thực người dùng (đăng nhập, đăng ký, hồ sơ, refresh token, đăng xuất) qua HTTP API thật với endpoint tùy biến linh hoạt.
 - Mini App Bridge tích hợp luồng xin Auth Code (`/miniapp/auth/code`) và đổi Token PKCE S256 (`/miniapp/auth/token`).
 - Đồng bộ quyền và quyết định của người dùng với Backend User Permission API (`/users/me/apps/:appId/permissions`).
-- Quản lý và lưu trữ đơn hàng thanh toán trên PostgreSQL qua Order API (`/orders`).
 
 Base URL:
 - Local: `http://localhost:3000/api/v1`
@@ -319,7 +318,6 @@ Flutter SuperApp đã tích hợp trực tiếp các API Backend theo hợp đ�
 | `permission.getPermissions` | Host dùng GET user/app permissions; Mini App dùng GET `/miniapp/permissions` | ✅ Đã kết nối (`MockPermissionRepository`) |
 | Host logout | `/auth/logout` hoặc `/auth/logout-all` | ✅ Đã kết nối (`MockAuthRepository`) |
 | Mini App logout | `/auth/logout` bằng token Mini App | ✅ Đã kết nối (`AuthActionHandler`) |
-| Quản lý đơn hàng (Payment) | `/orders`, `/orders/:orderId/status` | ✅ Đã kết nối (`MockOrderRepository`) |
 
 API không thay thế native camera/GPS hay tự hiển thị dialog. Flutter vẫn chịu trách nhiệm hộp thoại consent và thực thi native action. Không đưa token Super App vào JavaScript WebView, URL, manifest hoặc localStorage của Mini App; token Mini App chỉ dùng gọi endpoint cho Mini App.
 

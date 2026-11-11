@@ -1,6 +1,6 @@
 export interface ComponentAction {
   type: 'navigate' | 'native_action' | 'url';
-  action?: string; // e.g. 'payment.openCheckout', 'device.scanQRCode', 'navigation.close', 'user.getBasicInfo'
+  action?: string; // e.g. 'device.scanQRCode', 'navigation.close', 'user.getBasicInfo'
   params?: Record<string, any>;
   targetPageId?: string; // for type: 'navigate'
 }

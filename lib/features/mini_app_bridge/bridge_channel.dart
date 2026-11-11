@@ -183,8 +183,8 @@ class BridgeChannel {
         'chooseImage', 'device.pickImage', 'media.chooseImage', 'media.getPhoto',
         'media.pickImages', 'media.pickVideo', 'pickFile', 'saveFile', 'filePreview',
         'saveImageToGallery', 'saveVideoToGallery', 'speechToText', 'utility.speechToText',
-        'permission.request', 'getContacts', 'device.getContacts', 'payment.openCheckout',
-        'payment.requestPayment', 'requestSendNotification', 'ui.requestSendNotification',
+        'permission.request', 'getContacts', 'device.getContacts',
+        'requestSendNotification', 'ui.requestSendNotification',
         'notification.requestSendNotification', 'ui.showAlert', 'ui.showConfirm',
         'showAlert', 'showConfirm',
       ];

@@ -114,44 +114,6 @@ class BridgeApiContract {
       requiresAuth: true,
     ),
 
-    // --- Payment Module ---
-    BridgeActionSpec(
-      action: 'payment.createOrder',
-      module: 'payment',
-      description: 'Khởi tạo đơn hàng thanh toán trên SuperApp',
-      requiredCapability: 'payment.createOrder',
-      requiresAuth: false,
-    ),
-    BridgeActionSpec(
-      action: 'payment.openCheckout',
-      module: 'payment',
-      description: 'Mở giao diện thanh toán Native SuperApp',
-      requiredCapability: 'payment.openCheckout',
-      requiresAuth: false,
-      isInteractive: true,
-    ),
-    BridgeActionSpec(
-      action: 'payment.checkStatus',
-      module: 'payment',
-      description: 'Kiểm tra trạng thái giao dịch thanh toán',
-      requiresAuth: false,
-      aliases: ['payment.checkTransaction'],
-    ),
-    BridgeActionSpec(
-      action: 'payment.checkTransaction',
-      module: 'payment',
-      description: 'Kiểm tra trạng thái giao dịch thanh toán theo ID',
-      requiresAuth: false,
-    ),
-    BridgeActionSpec(
-      action: 'payment.requestPayment',
-      module: 'payment',
-      description: 'Luồng thanh toán tích hợp (tạo đơn + mở checkout)',
-      requiredCapability: 'payment.openCheckout',
-      requiresAuth: false,
-      isInteractive: true,
-    ),
-
     // --- Navigation Module ---
     BridgeActionSpec(
       action: 'navigation.close',
@@ -588,11 +550,6 @@ class BridgeApiContract {
     'navigation.minimizeApp',
     'navigation.openMiniApp',
     'navigation.openNativePage',
-    'payment.checkStatus',
-    'payment.checkTransaction',
-    'payment.createOrder',
-    'payment.openCheckout',
-    'payment.requestPayment',
     'permission.check',
     'permission.getAll',
     'permission.request',

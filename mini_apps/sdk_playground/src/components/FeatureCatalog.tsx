@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSDK, RunnerConfig } from '../context/SDKContext';
 import { superApp, authBackend } from '@vqh2602/mini-app-sdk';
 import { FeatureItem } from './FeatureItem';
@@ -7,7 +7,6 @@ import {
   User,
   Compass,
   Smartphone,
-  CreditCard,
   ShieldAlert,
   Terminal,
   LogOut,
@@ -50,7 +49,6 @@ import {
 
 export const FeatureCatalog: React.FC = () => {
   const { authCode, setAuthCode, refreshToken, setRefreshToken, setAccessToken } = useSDK();
-  const [createdOrderId, setCreatedOrderId] = useState<string>('');
 
   // ==========================================
   // 2.1 SYSTEM & DEVICE INFO ITEMS
@@ -458,7 +456,7 @@ export const FeatureCatalog: React.FC = () => {
   };
 
   // ==========================================
-  // AUTH & USER & PAYMENT & PERMISSIONS
+  // AUTH & USER & PERMISSIONS
   // ==========================================
   const biometricCheckConfig: RunnerConfig = {
     id: 'auth_biometric_check',
@@ -585,38 +583,6 @@ export const FeatureCatalog: React.FC = () => {
     actionCode: "superApp.navigation.openMiniApp('sample_store')",
     hasParams: false,
     run: async () => superApp.navigation.openMiniApp('sample_store'),
-  };
-
-  const paymentCreateOrderConfig: RunnerConfig = {
-    id: 'pay_create_order',
-    category: 'E. Payment & Business Flows',
-    title: '1. Create Order',
-    description: 'Yêu cầu tạo đơn hàng qua Backend API',
-    actionCode: 'superApp.payment.createOrder(params)',
-    hasParams: true,
-    defaultParams: {
-      amount: 120000,
-      description: 'Thanh toán combo nước giải khát Mini App',
-      currency: 'VND',
-    },
-    run: async (p) => {
-      const res = await superApp.payment.createOrder(p);
-      setCreatedOrderId(res.orderId);
-      return res;
-    },
-  };
-
-  const paymentCheckoutConfig: RunnerConfig = {
-    id: 'pay_checkout',
-    category: 'E. Payment & Business Flows',
-    title: '2. Open Native Checkout',
-    description: 'Mở BottomSheet/Screen Checkout Flutter (chọn Success, Failure, Cancel)',
-    actionCode: 'superApp.payment.openCheckout(orderId)',
-    hasParams: true,
-    defaultParams: {
-      orderId: createdOrderId || 'ORD_DEMO_SAMPLE_001',
-    },
-    run: async (p) => superApp.payment.openCheckout(p.orderId),
   };
 
   const permissionGetPermissionsConfig: RunnerConfig = {
@@ -882,18 +848,6 @@ export const FeatureCatalog: React.FC = () => {
         <div className="feature-grid">
           <FeatureItem icon={<UserCircle size={20} />} config={userGetProfileConfig} statusText="Protected" />
           <FeatureItem icon={<User size={20} />} config={userGetBasicInfoConfig} statusText="Basic Info" />
-        </div>
-      </section>
-
-      {/* CATEGORY E: PAYMENT */}
-      <section className="category-section">
-        <div className="category-header">
-          <CreditCard className="category-icon" size={18} />
-          <h2 className="category-title">E. Payment & Business Flows</h2>
-        </div>
-        <div className="feature-grid">
-          <FeatureItem icon={<CreditCard size={20} />} config={paymentCreateOrderConfig} statusText="Step 1" />
-          <FeatureItem icon={<CreditCard size={20} />} config={paymentCheckoutConfig} statusText="Step 2: Native UI" />
         </div>
       </section>
 
