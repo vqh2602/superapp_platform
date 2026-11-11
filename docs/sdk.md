@@ -1165,6 +1165,23 @@ npm run package:miniapp -- ../examples/miniapps/web-demo ../dist/web_demo-1.0.0.
 - **Bộ nhớ đệm (Cache)**: Tận dụng `superApp.storage` để lưu cache thông tin danh mục hoặc cấu hình thay vì gọi API liên tục mỗi lần mở app.
 - **Kích thước bundle**: Với Flutter Web, hãy ưu tiên cờ `--web-renderer html` để kích thước tải ban đầu dưới 2MB.
 
+## Chia sẻ văn bản và liên kết
+
+SDK `2.1.0` hỗ trợ `superApp.utility.share({ text, url, title, subject })`. Gọi từ nút chia sẻ trong Mini App chạy trên SuperApp Host có hỗ trợ `utility.share`. API không yêu cầu đăng nhập hoặc quyền trong manifest.
+
+```ts
+const result = await superApp.utility.share({
+  text: 'Xem tài liệu Flutter',
+  url: 'https://flutter.dev',
+});
+```
+
+Với JavaScript gọi trực tiếp qua bridge, dùng `window.SuperAppBridge.invoke('utility.share', { url: 'https://flutter.dev' })`.
+
+Payload cần ít nhất một trường `text` hoặc `url`. `url` phải là liên kết HTTP(S) tuyệt đối. `title` và `subject` là tùy chọn. Payload sai trả `INVALID_PARAMS`. Kết quả là `{ status: 'success' | 'dismissed' | 'unavailable' }`. `success` cho biết hệ điều hành đã ghi nhận đích chia sẻ được chọn, `dismissed` là người dùng đóng bảng chia sẻ và `unavailable` là hệ điều hành không cung cấp kết quả.
+
+Chạy thử trong SDK Playground ở mục **Nhập liệu & Tiện ích → share**.
+
 ## Sinh trắc học
 
 Dùng `superApp.auth.checkBiometrics()` để kiểm tra hỗ trợ và thiết lập; nếu

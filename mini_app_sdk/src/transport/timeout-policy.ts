@@ -4,6 +4,7 @@ export const INTERACTIVE_BRIDGE_TIMEOUT_MS = 5 * 60 * 1000;
 export const DEFAULT_BRIDGE_TIMEOUT_MS = 60 * 1000;
 export const INTERACTIVE_BRIDGE_ACTIONS = new Set([
   'auth.authenticateBiometric',
+  'utility.share',
   'scanQr', 'scanQRCode', 'scanBarcode', 'device.scanQr', 'device.scanQRCode',
   'device.scanBarcode', 'media.scanQRCode', 'getPhoto', 'pickImages', 'pickVideo',
   'chooseImage', 'device.pickImage', 'media.chooseImage', 'media.getPhoto',

@@ -468,6 +468,12 @@ class BridgeApiContract {
       aliases: ['hideKeyboard'],
     ),
     BridgeActionSpec(
+      action: 'utility.share',
+      module: 'utility',
+      description: 'Chia sẻ văn bản hoặc liên kết qua bảng chia sẻ hệ thống',
+      isInteractive: true,
+    ),
+    BridgeActionSpec(
       action: 'contact.getContacts',
       module: 'device',
       description: 'Lấy danh bạ người dùng',
@@ -525,6 +531,7 @@ class BridgeApiContract {
 
   /// Set of exact action names invoked directly by the official JS SDK (@vqh2602/mini-app-sdk).
   static const Set<String> requiredSdkActionNames = {
+    'utility.share',
     'auth.checkBiometrics',
     'auth.authenticateBiometric',
     'auth.exchangeCode',

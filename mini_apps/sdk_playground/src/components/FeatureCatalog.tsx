@@ -702,6 +702,17 @@ export const FeatureCatalog: React.FC = () => {
     run: async () => superApp.hideKeyboard(),
   };
 
+  const utilShareConfig: RunnerConfig = {
+    id: 'util_share',
+    category: '2.12. Nhập liệu & Tiện ích',
+    title: 'share',
+    description: 'Mở bảng chia sẻ hệ thống với văn bản hoặc liên kết.',
+    actionCode: "superApp.utility.share({ text: 'Xem tài liệu Flutter', url: 'https://flutter.dev' })",
+    hasParams: true,
+    defaultParams: { text: 'Xem tài liệu Flutter', url: 'https://flutter.dev' },
+    run: async (p) => superApp.utility.share(p),
+  };
+
   return (
     <div className="catalog-wrapper">
       {/* 2.4 CAMERA & MEDIA (QR & BARCODE) */}
@@ -820,6 +831,7 @@ export const FeatureCatalog: React.FC = () => {
         <div className="feature-grid">
           <FeatureItem icon={<Mic size={20} />} config={utilSpeechToTextConfig} statusText="Voice Record" />
           <FeatureItem icon={<Keyboard size={20} />} config={utilHideKeyboardConfig} statusText="Dismiss Focus" />
+          <FeatureItem icon={<Share2 size={20} />} config={utilShareConfig} statusText="Share Sheet" />
         </div>
       </section>
 

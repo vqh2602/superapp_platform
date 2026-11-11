@@ -32,6 +32,7 @@ import '../handlers/system_action_handler.dart';
 import '../handlers/ui_action_handler.dart';
 import '../handlers/media_file_action_handler.dart';
 import '../handlers/phone_utility_action_handler.dart';
+import '../handlers/share_action_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Lớp điều phối thực thi các hành động Native cho Mini App
@@ -188,6 +189,7 @@ class NativeActionDispatcher {
       OpenDeepLinkHandler(),
       SpeechToTextHandler(permissionRepo: permissionRepo),
       HideKeyboardHandler(),
+      ShareActionHandler(),
     ];
 
     for (final h in list) {

@@ -198,6 +198,21 @@ Sau khi sửa SDK trong repository, chạy `npm run build:miniapps` từ thư m�
 
 Native và simulator mặc định chờ tối đa 5 phút cho quét QR/mã vạch, camera, chọn ảnh/video/file, ghi âm, hộp thoại quyền; các action khác chờ tối đa 60 giây. Huỷ thao tác từ giao diện native vẫn trả lỗi `CANCELLED` ngay. `timeoutMs` khi khởi tạo SDK hoặc tham số thứ ba của `transport.invoke` sẽ ghi đè mặc định này. Playground dùng chính sách của SDK, không ép timeout 8 giây.
 
+## Chia sẻ văn bản và liên kết
+
+Từ SDK `2.1.0`, gọi `superApp.utility.share()` khi người dùng bấm nút chia sẻ trong Mini App. API yêu cầu SuperApp Host có action `utility.share` và không cần khai báo quyền trong `app.json`.
+
+```ts
+import { superApp } from '@vqh2602/mini-app-sdk';
+
+const { status } = await superApp.utility.share({
+  text: 'Xem tài liệu Flutter',
+  url: 'https://flutter.dev',
+});
+```
+
+Truyền `text`, `url` (HTTP hoặc HTTPS), hoặc cả hai. `title` và `subject` là tùy chọn và được dùng tùy theo ứng dụng nhận. `status` là `success` khi hệ điều hành báo đã chọn đích chia sẻ, `dismissed` khi người dùng đóng bảng chia sẻ, hoặc `unavailable` khi nền tảng không trả được kết quả. `success` không xác nhận nội dung đã được gửi đến người nhận.
+
 ## Sinh trắc học
 
 Dùng `superApp.auth.checkBiometrics()` để kiểm tra hỗ trợ và thiết lập; nếu
