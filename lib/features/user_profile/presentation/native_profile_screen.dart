@@ -1,8 +1,13 @@
+// Màn hình thông tin tài khoản cá nhân Native (Native Profile Screen).
+//
+// Hiển thị chi tiết hồ sơ tài khoản người dùng đang đăng nhập: họ tên, email,
+// số điện thoại, vai trò và nút đăng xuất khỏi hệ thống.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../../core/config/app_theme.dart';
 
+/// Widget màn hình xem và quản lý hồ sơ cá nhân
 class NativeProfileScreen extends ConsumerWidget {
   const NativeProfileScreen({super.key});
 

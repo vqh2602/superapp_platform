@@ -1,5 +1,7 @@
-/// Sample No-Code Schema definitions for Schema Mini Apps
-/// Rendered natively via schema_runtime universal engine.
+/// Định nghĩa các mẫu Schema No-Code cho Schema Mini Apps (Sample Mini App Schemas).
+///
+/// Chứa dữ liệu JSON schema của các ứng dụng mẫu: Shopee Mall, TikTok Video Player,
+/// Zalo Connect, Banking Techcombank, Grab Delivery và Mini App Playground.
 class SampleMiniAppSchemas {
   static const Map<String, dynamic> shopeeSchema = {
     'schemaVersion': 1,

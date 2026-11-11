@@ -1,3 +1,8 @@
+// Ngữ cảnh thực thi hành động Native (Action Context).
+//
+// Chứa thông tin về môi trường runtime, danh tính Mini App đã xác thực,
+// BuildContext của giao diện, tham chiếu UI Delegate, hàng đợi tương tác người dùng
+// và cơ chế kiểm tra hủy bỏ phiên (Cancellation check).
 import 'package:flutter/widgets.dart';
 import '../../../core/errors/bridge_error.dart';
 import '../../../core/security/runtime_security_context.dart';
@@ -5,16 +10,24 @@ import '../../mini_app_bridge/user_interaction_queue.dart';
 import '../../mini_app_catalog/domain/mini_app_manifest.dart';
 import 'mini_app_ui_delegate.dart';
 
-/// Context provided to every Native Action Handler during execution.
+/// Ngữ cảnh cung cấp cho các Native Action Handler khi thực thi
 class ActionContext {
+  /// BuildContext của widget màn hình (dùng để mở dialog hoặc điều hướng)
   final BuildContext? buildContext;
+  /// Mã định danh Mini App đã được Flutter Host xác thực
   final String appId;
+  /// Origin URL của trang web đang gọi
   final String? origin;
+  /// Thông tin manifest của Mini App
   final MiniAppManifest? manifest;
+  /// Delegate giao diện container của Mini App
   final MiniAppUiDelegate? uiDelegate;
+  /// Ngữ cảnh bảo mật runtime do Host quản lý
   final RuntimeSecurityContext? securityContext;
+  /// Hàm callback kiểm tra phiên làm việc còn hoạt động hay không
   final bool Function()? isSessionActive;
   final String? _explicitSessionId;
+  /// Hàng đợi tuần tự hóa các modal/prompt tương tác người dùng
   final UserInteractionQueue? userInteractionQueue;
 
   const ActionContext({
@@ -29,17 +42,17 @@ class ActionContext {
     this.userInteractionQueue,
   }) : _explicitSessionId = runtimeSessionId;
 
-  /// Indicates whether the session that triggered this action has been cancelled or disposed.
+  /// Cho biết phiên kích hoạt hành động này đã bị hủy bỏ hoặc giải phóng hay chưa
   bool get isCancelled => isSessionActive != null && !isSessionActive!();
 
-  /// Throws [BridgeError.cancelled] if this action context was cancelled due to session switch or disposal.
+  /// Ném ra lỗi [BridgeError.cancelled] nếu phiên làm việc đã bị hủy hoặc chuyển đổi
   void checkCancelled([String? message]) {
     if (isCancelled) {
       throw BridgeError.cancelled(message ?? 'Phiên làm việc đã bị hủy hoặc chuyển đổi');
     }
   }
 
-  /// Runs an interactive task (such as dialog or permission prompt) through the serialized user interaction queue.
+  /// Chạy một tác vụ tương tác người dùng (dialog, modal) thông qua hàng đợi tuần tự
   Future<T> runInteractive<T>(Future<T> Function() task) {
     if (userInteractionQueue != null) {
       return userInteractionQueue!.run<T>(task, isCancelled: () => isCancelled);
@@ -48,17 +61,17 @@ class ActionContext {
     return task();
   }
 
-  /// Host-verified User ID (if authenticated)
+  /// Định danh người dùng đã được Flutter Host xác thực (null nếu chưa đăng nhập)
   String? get userId => securityContext?.userId;
 
-  /// Host-managed Runtime Session ID
+  /// Session ID phiên runtime do Host sinh
   String? get runtimeSessionId =>
       securityContext?.runtimeSessionId ?? _explicitSessionId;
 
-  /// Host-managed approved origin
+  /// Nguồn gốc đã được phê duyệt an toàn
   String get approvedOrigin => securityContext?.approvedOrigin ?? origin ?? '';
 
-  /// Immutable set of allowed capabilities
+  /// Tập hợp các capability bất biến được cấp phép
   Set<String> get allowedCapabilities =>
       securityContext?.allowedCapabilities ??
       (manifest != null ? Set<String>.from(manifest!.capabilities) : const {});

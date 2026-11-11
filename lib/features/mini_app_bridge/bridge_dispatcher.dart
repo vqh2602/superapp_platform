@@ -1,3 +1,8 @@
+// Bộ điều phối yêu cầu Bridge (Bridge Dispatcher).
+//
+// Tiếp nhận chuỗi JSON từ kênh JavaScript Channel, kiểm tra bảo mật (kích thước payload,
+// số lượng RPC đồng thời, rate limit, xác thực origin), nạp ngữ cảnh bảo mật RuntimeSecurityContext,
+// chuyển tiếp tới NativeActionDispatcher và gửi kết quả BridgeResponse ngược vào WebView.
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
@@ -16,6 +21,7 @@ import '../native_actions/domain/action_context.dart';
 import '../native_actions/domain/mini_app_ui_delegate.dart';
 import 'bridge_load_config.dart';
 
+/// Lớp điều phối các yêu cầu Bridge gửi từ Mini App WebView
 class BridgeDispatcher {
   final NativeActionDispatcher actionDispatcher;
   final DebugLogRepository debugLogRepo;
@@ -110,6 +116,16 @@ class BridgeDispatcher {
     }
   }
 
+  /// Xử lý thông điệp chuỗi nhận được từ JavaScript Channel của WebView.
+  ///
+  /// Thực hiện tuần tự các bước:
+  /// 1. Kiểm tra giới hạn kích thước chuỗi JSON đầu vào
+  /// 2. Kiểm tra số lượng request đồng thời trong phiên
+  /// 3. Kiểm tra tần suất gọi (Rate Limiting)
+  /// 4. Xác thực nguồn gốc gọi Bridge (Origin Validation)
+  /// 5. Thiết lập RuntimeSecurityContext và xác thực token/session
+  /// 6. Điều phối hành động qua NativeActionDispatcher
+  /// 7. Ghi log kiểm toán và phản hồi kết quả về WebView
   Future<void> handleMessage(String rawJson, BuildContext? buildContext) async {
     if (_isDisposed) {
       debugPrint('[BridgeDispatcher] Bỏ qua request vì phiên $runtimeSessionId đã bị hủy');
@@ -315,6 +331,7 @@ class BridgeDispatcher {
     }
   }
 
+  /// Gửi kết quả BridgeResponse vào WebView thông qua hàm JavaScript `window.SuperAppBridge.dispatchResponse`.
   Future<void> _sendResponse(BridgeResponse response) async {
     if (_isDisposed) return;
     final jsonStr = jsonEncode(response.toJson());

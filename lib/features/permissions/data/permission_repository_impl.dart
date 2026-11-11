@@ -1,3 +1,7 @@
+// Quản lý dữ liệu phân quyền Mini App (Permission Repository Implementation).
+//
+// Lưu trữ trạng thái cấp/từ chối quyền của người dùng đối với từng Mini App,
+// hỗ trợ đồng bộ nguyên tử (atomic sync) với máy chủ Backend và tự động rollback nếu gặp sự cố.
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -9,6 +13,7 @@ import '../../../../core/network/app_http_client.dart';
 import '../../authentication/data/auth_repository_impl.dart';
 import '../../authentication/presentation/controllers/auth_controller.dart';
 
+/// Lớp lưu trữ và đồng bộ hóa quyền hạn Mini App
 class PermissionRepositoryImpl {
   final http.Client? httpClient;
   final String? usersUrl;

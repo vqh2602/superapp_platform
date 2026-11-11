@@ -1,3 +1,7 @@
+// Tập hợp các bộ xử lý hành động xác thực (Auth Action Handlers).
+//
+// Xử lý các action: `auth.requestCode`, `auth.exchangeCode`, `auth.refreshToken`,
+// `auth.logout`, `auth.login` và `auth.getAccessToken` theo quy chuẩn OAuth2/PKCE.
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/errors/bridge_error.dart';
@@ -7,6 +11,7 @@ import '../../authentication/data/token_service_shim.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Hàm hỗ trợ gửi HTTP POST lên Backend xác thực
 Future<dynamic> _post(http.Client? provided, String url, Map<String, dynamic> body, {String? token}) async {
   final client = provided ?? http.Client();
   try {
@@ -18,6 +23,8 @@ Future<dynamic> _post(http.Client? provided, String url, Map<String, dynamic> bo
     throw BridgeError.invalidParams('Backend authentication failed (${r.statusCode})');
   } finally { if (provided == null) client.close(); }
 }
+
+/// Xử lý action `auth.requestCode`: Xin mã ủy quyền tạm thời (PKCE authCode) từ Backend
 class AuthRequestCodeHandler implements NativeActionHandler {
   final AuthRepositoryImpl authRepo;
   final AuthCodeServiceShim authCodeService;
@@ -37,6 +44,8 @@ class AuthRequestCodeHandler implements NativeActionHandler {
       'codeChallenge': challenge, 'codeChallengeMethod': 'S256', if (payload['scopes'] != null) 'scopes': payload['scopes']}, token: session.accessToken);
   }
 }
+
+/// Xử lý action `auth.exchangeCode`: Đổi authorization code lấy Access Token và Refresh Token
 class AuthExchangeCodeHandler implements NativeActionHandler {
   final TokenServiceShim tokenService; final http.Client? httpClient; final String? miniappUrl;
   AuthExchangeCodeHandler({required this.tokenService, this.httpClient, this.miniappUrl});
@@ -49,6 +58,8 @@ class AuthExchangeCodeHandler implements NativeActionHandler {
     return _post(httpClient, '$miniappUrl/auth/token', {'appId': context.appId, 'authCode': payload['authCode'], 'codeVerifier': payload['codeVerifier']});
   }
 }
+
+/// Xử lý action `auth.refreshToken`: Cấp lại Access Token mới bằng Refresh Token
 class AuthRefreshTokenHandler implements NativeActionHandler {
   final TokenServiceShim tokenService; final http.Client? httpClient; final String? authUrl;
   AuthRefreshTokenHandler({required this.tokenService, this.httpClient, this.authUrl});
@@ -61,6 +72,8 @@ class AuthRefreshTokenHandler implements NativeActionHandler {
     return _post(httpClient, '$authUrl/refresh', {'refreshToken': payload['refreshToken']});
   }
 }
+
+/// Xử lý action `auth.logout`: Đăng xuất tài khoản SuperApp hiện tại
 class AuthLogoutHandler implements NativeActionHandler {
   final AuthRepositoryImpl authRepo;
   AuthLogoutHandler({required this.authRepo});
@@ -72,6 +85,7 @@ class AuthLogoutHandler implements NativeActionHandler {
   }
 }
 
+/// Xử lý action `auth.login`: Xác thực đăng nhập nhanh cho Mini App và trả về thông tin user
 class AuthLoginHandler implements NativeActionHandler {
   final AuthRepositoryImpl authRepo;
 

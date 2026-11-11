@@ -1,9 +1,14 @@
+// Xử lý các hành động quản lý quyền hạn qua Bridge (Permission Action Handlers).
+//
+// Xử lý yêu cầu cấp quyền (`permission.request`), kiểm tra trạng thái quyền (`permission.check`)
+// và lấy toàn bộ quyền đã cấp (`permission.getPermissions`).
 import '../../../../core/errors/bridge_error.dart';
 import '../../permissions/application/permission_service.dart';
 import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `permission.request`: Kích hoạt quy trình xin cấp quyền từ người dùng
 class PermissionRequestHandler implements NativeActionHandler {
   final PermissionService permissionService;
 

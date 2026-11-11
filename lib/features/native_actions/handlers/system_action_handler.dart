@@ -1,3 +1,8 @@
+// Xử lý các hành động truy vấn thông tin hệ thống và thiết bị (System Action Handlers).
+//
+// Cung cấp thông tin mạng (`device.getNetworkInfo`), ngôn ngữ (`device.getDeviceLanguage`),
+// cài đặt SuperApp (`app.getSuperAppSettings`), thông tin hệ điều hành (`device.getSystemInfo`),
+// phiên bản app (`app.getAppInfo`), pin (`device.getBatteryInfo`) và danh bạ (`device.getContacts`).
 import 'dart:io';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -12,6 +17,7 @@ import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `device.getNetworkInfo`: Lấy trạng thái kết nối mạng (wifi, 4g/5g, ip)
 class GetNetworkInfoHandler implements NativeActionHandler {
   final Future<List<ConnectivityResult>> Function() checkConnectivity;
   final Future<String?> Function() wifiName;

@@ -1,9 +1,14 @@
+// Màn hình máy quét mã QR & mã vạch Native (QR & Barcode Scanner Screen).
+//
+// Tích hợp camera thời gian thực với `mobile_scanner`, hỗ trợ bật/tắt đèn flash,
+// lật camera trước/sau, quét từ ảnh có sẵn trong thư viện và hiệu ứng tia quét laser sinh động.
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+/// Widget giao diện quét mã QR/Barcode
 class QrScannerScreen extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -14,6 +19,7 @@ class QrScannerScreen extends StatefulWidget {
     this.subtitle = 'Hướng camera vào mã QR hoặc mã vạch cần quét',
   });
 
+  /// Mở màn hình quét mã dưới dạng Modal Dialog và trả về kết quả quét
   static Future<Map<String, dynamic>?> open(BuildContext context) {
     return Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(

@@ -1,17 +1,25 @@
-/// Shared Bridge API Contract between JS SDK (@vqh2602/mini-app-sdk)
-/// and Flutter Host SuperApp Platform.
+/// Hợp đồng đặc tả API JavaScript Bridge (Bridge API Contract).
 ///
-/// This contract serves as the Single Source of Truth (SSOT) to prevent
-/// ACTION_NOT_FOUND runtime errors and ensure complete compatibility.
+/// Đóng vai trò là Nguồn Chân Lý Duy Nhất (Single Source of Truth - SSOT) giữa
+/// thư viện JS SDK Mini App (`@vqh2602/mini-app-sdk`) và Flutter Host SuperApp Platform.
+/// Định nghĩa danh sách các action được hỗ trợ, module, quyền hạn yêu cầu, tính tương tác và alias.
 library;
 
+/// Đặc tả kỹ thuật cho từng hành động Bridge Action
 class BridgeActionSpec {
+  /// Tên hành động chuẩn (vd: 'device.getLocation')
   final String action;
+  /// Tên nhóm module (vd: 'auth', 'device', 'storage')
   final String module;
+  /// Mô tả chức năng của action
   final String description;
+  /// Quyền hạn capability bắt buộc khai báo trong manifest (nếu có)
   final String? requiredCapability;
+  /// Hành động có bắt buộc người dùng đã đăng nhập hay không
   final bool requiresAuth;
+  /// Hành động có kích hoạt giao diện tương tác người dùng hay không
   final bool isInteractive;
+  /// Danh sách các tên gọi khác (alias) tương thích ngược
   final List<String> aliases;
 
   const BridgeActionSpec({
@@ -24,6 +32,7 @@ class BridgeActionSpec {
     this.aliases = const [],
   });
 
+  /// Chuyển đổi thông tin đặc tả thành Map JSON
   Map<String, dynamic> toJson() => {
         'action': action,
         'module': module,
@@ -35,6 +44,7 @@ class BridgeActionSpec {
       };
 }
 
+/// Lớp cung cấp danh mục hợp đồng API Bridge và các hàm tra cứu
 class BridgeApiContract {
   BridgeApiContract._();
 
@@ -591,7 +601,7 @@ class BridgeApiContract {
     'vibrate',
   };
 
-  /// Returns the complete set of supported action names including all canonical actions and aliases.
+  /// Trả về tập hợp tất cả tên action được hỗ trợ (bao gồm action chuẩn, alias và danh sách SDK yêu cầu).
   static Set<String> get allExpectedActionNames {
     final names = <String>{};
     for (final spec in actions) {
@@ -602,7 +612,7 @@ class BridgeApiContract {
     return names;
   }
 
-  /// Finds the spec for a given action name or alias.
+  /// Tra cứu đặc tả [BridgeActionSpec] theo tên action hoặc alias.
   static BridgeActionSpec? findSpec(String actionName) {
     for (final spec in actions) {
       if (spec.action == actionName || spec.aliases.contains(actionName)) {

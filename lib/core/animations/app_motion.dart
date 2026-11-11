@@ -1,8 +1,12 @@
+// Hiệu ứng chuyển động (Motion & Animation) dùng chung toàn hệ thống SuperApp.
+//
+// Bao gồm các micro-interaction phản hồi xúc giác như [BouncingTap], hoạt ảnh xuất hiện
+// so le [FadeSlideIn], hiệu ứng nhịp thở [PulseEffect], và các chuyển trang mượt mà cho GoRouter.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Reusable micro-interaction: Bouncing tap effect that scales down on press
-/// and springs back with a modern tactile feel.
+/// Hiệu ứng nảy khi chạm (Bouncing Tap Micro-interaction): thu nhỏ nhẹ khi nhấn
+/// và bung trở lại khi thả tay, tạo cảm giác xúc giác chân thực.
 class BouncingTap extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -86,7 +90,8 @@ class _BouncingTapState extends State<BouncingTap> with SingleTickerProviderStat
   }
 }
 
-/// Staggered Fade and Slide entrance animation for lists, cards, and headers.
+/// Hiệu ứng mờ dần và trượt vào (Fade & Slide entrance animation)
+/// thường dùng cho danh sách, thẻ card và tiêu đề.
 class FadeSlideIn extends StatefulWidget {
   final Widget child;
   final Duration delay;
@@ -166,7 +171,8 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
   }
 }
 
-/// Breathing pulse animation (subtle scale and glow oscillation)
+/// Hiệu ứng nhịp thở (Pulse Effect): phóng to/thu nhỏ nhẹ nhàng lặp đi lặp lại
+/// để thu hút sự chú ý vào các nút bấm quan trọng hoặc trạng thái đang hoạt động.
 class PulseEffect extends StatefulWidget {
   final Widget child;
   final double minScale;
@@ -221,7 +227,7 @@ class _PulseEffectState extends State<PulseEffect> with SingleTickerProviderStat
   }
 }
 
-/// Smooth page transition helper for GoRouter with slide-up and fade
+/// Hàm tạo hiệu ứng chuyển trang trượt từ dưới lên (Slide Up & Fade) cho GoRouter.
 CustomTransitionPage<T> buildSlideUpTransitionPage<T>({
   required BuildContext context,
   required GoRouterState state,
@@ -260,7 +266,7 @@ CustomTransitionPage<T> buildSlideUpTransitionPage<T>({
   );
 }
 
-/// Horizontal slide page transition for standard navigation pushes
+/// Hàm tạo hiệu ứng chuyển trang trượt ngang sang phải (Slide Right & Fade) theo phong cách điều hướng chuẩn.
 CustomTransitionPage<T> buildSlideRightTransitionPage<T>({
   required BuildContext context,
   required GoRouterState state,

@@ -1,8 +1,12 @@
+// Xử lý các hành động xác thực sinh trắc học Bridge (Biometric Action Handlers).
+//
+// Bao gồm kiểm tra khả dụng `auth.checkBiometrics` và gọi prompt xác thực `auth.authenticateBiometric`.
 import '../../../../core/errors/bridge_error.dart';
 import '../../authentication/data/biometric_service.dart';
 import '../domain/action_context.dart';
 import '../domain/action_definition.dart';
 
+/// Xử lý action `auth.checkBiometrics`: Kiểm tra cảm biến vân tay/Face ID trên thiết bị
 class AuthCheckBiometricsHandler implements NativeActionHandler {
   final BiometricService service;
   AuthCheckBiometricsHandler({required this.service});
@@ -26,6 +30,7 @@ class AuthCheckBiometricsHandler implements NativeActionHandler {
   }
 }
 
+/// Xử lý action `auth.authenticateBiometric`: Hiển thị prompt xác thực sinh trắc học
 class AuthAuthenticateBiometricHandler implements NativeActionHandler {
   final BiometricService service;
   AuthAuthenticateBiometricHandler({required this.service});

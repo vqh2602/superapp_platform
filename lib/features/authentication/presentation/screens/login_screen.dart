@@ -1,3 +1,7 @@
+// Màn hình đăng nhập tài khoản SuperApp (Login Screen).
+//
+// Hỗ trợ nhập email/mật khẩu, ghi nhớ thông tin đăng nhập vào Secure Storage,
+// chọn nhanh các tài khoản mẫu (Seed Accounts), cấu hình backend endpoint và chuyển sang trang Đăng ký.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,6 +14,7 @@ import '../../../../core/config/endpoint_config.dart';
 import '../../../../features/mini_app_catalog/data/mini_app_repository.dart';
 import '../controllers/auth_controller.dart';
 
+/// Widget giao diện màn hình đăng nhập
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 

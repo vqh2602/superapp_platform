@@ -1,3 +1,8 @@
+// Bottom sheet menu hành động của Mini App (Mini App Action Bottom Sheet).
+//
+// Tương tự menu dấu ba chấm (...) trên các nền tảng SuperApp: cho phép người dùng
+// tải lại trang (Reload), thu nhỏ ứng dụng (Minimize), đánh dấu yêu thích, chia sẻ link,
+// xem và quản lý quyền đã cấp, cũng như mở công cụ Web Inspector Debug.
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +13,7 @@ import '../../../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../../../mini_app_catalog/presentation/controllers/favorite_apps_provider.dart';
 import '../../../permissions/data/permission_repository_impl.dart';
 
+/// Widget menu hành động mở rộng của Mini App
 class MiniAppActionBottomSheet extends ConsumerWidget {
   final MiniAppManifest? manifest;
   final String appId;

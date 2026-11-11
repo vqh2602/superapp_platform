@@ -1,3 +1,7 @@
+// Tab Danh mục Ứng dụng (Apps Tab).
+//
+// Phân loại các Mini App theo thể loại nghiệp vụ: Tiện ích, Tài chính, Mua sắm, v.v.,
+// hỗ trợ lọc theo danh mục và xem chi tiết danh sách ứng dụng.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +11,7 @@ import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
 import '../widgets/category_catalog_grid.dart';
 
+/// Widget giao diện Tab Ứng dụng
 class AppsTab extends ConsumerStatefulWidget {
   final VoidCallback? onNavigateToSearch;
 

@@ -1,10 +1,18 @@
+// Hộp thoại xác nhận cấp quyền (Permission Prompt Dialog).
+//
+// Hiển thị tên Mini App xin quyền, loại quyền hạn yêu cầu và giải thích mục đích sử dụng.
+// Sử dụng `PointerInterceptor` để đảm bảo dialog hiển thị nổi bật và tương tác được trên WebView.
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/config/app_theme.dart';
 import '../domain/app_capability.dart';
 
+/// Widget hộp thoại xin cấp quyền hệ thống
 class PermissionPromptDialog extends StatelessWidget {
+  /// Tên Mini App đang yêu cầu quyền
   final String appName;
+
+  /// Khóa định danh capability (vd: 'device.getLocation')
   final String capabilityKey;
 
   const PermissionPromptDialog({
@@ -13,6 +21,7 @@ class PermissionPromptDialog extends StatelessWidget {
     required this.capabilityKey,
   });
 
+  /// Hiển thị hộp thoại xin cấp quyền và trả về true nếu người dùng đồng ý, false nếu từ chối
   static Future<bool> show(
     BuildContext context, {
     required String appName,

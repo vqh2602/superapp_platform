@@ -1,10 +1,18 @@
+// Dịch vụ xác thực sinh trắc học cục bộ trên thiết bị (Biometric Service).
+//
+// Sử dụng thư viện `local_auth` để kiểm tra cảm biến sinh trắc học (vân tay, Face ID)
+// và thực hiện prompt xác thực an toàn cục bộ theo yêu cầu của Mini App.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../core/errors/bridge_error.dart';
 
+/// Đại diện trạng thái hỗ trợ và sẵn sàng của sinh trắc học trên thiết bị
 class BiometricStatus {
+  /// Phần cứng thiết bị có hỗ trợ cảm biến sinh trắc học hay không
   final bool supported;
+
+  /// Danh sách các loại sinh trắc học khả dụng (vd: 'fingerprint', 'face')
   final List<String> availableBiometrics;
 
   const BiometricStatus({
@@ -12,9 +20,13 @@ class BiometricStatus {
     this.availableBiometrics = const [],
   });
 
+  /// Đã cài đặt ít nhất một phương thức sinh trắc học trong hệ điều hành
   bool get enrolled => availableBiometrics.isNotEmpty;
+
+  /// Có thể tiến hành xác thực ngay lập tức
   bool get canAuthenticate => supported && enrolled;
 
+  /// Chuyển đổi dữ liệu trạng thái sang Map JSON
   Map<String, dynamic> toJson() => {
     'supported': supported,
     'enrolled': enrolled,
@@ -23,7 +35,7 @@ class BiometricStatus {
   };
 }
 
-/// Local device verification only; does not create or refresh a backend session.
+/// Dịch vụ quản lý xác thực sinh trắc học (vân tay / khuôn mặt)
 class BiometricService {
   final LocalAuthentication _auth;
 
@@ -38,6 +50,7 @@ class BiometricService {
         TargetPlatform.macOS,
       ].contains(defaultTargetPlatform);
 
+  /// Kiểm tra tính khả dụng của cảm biến sinh trắc học trên thiết bị
   Future<BiometricStatus> checkAvailability() async {
     if (!_platformSupported) return const BiometricStatus(supported: false);
     try {
@@ -67,6 +80,7 @@ class BiometricService {
     }
   }
 
+  /// Kích hoạt hộp thoại xác thực sinh trắc học hệ thống với lý do [reason]
   Future<bool> authenticate(
     String reason, {
     void Function()? checkCancelled,
@@ -94,6 +108,7 @@ class BiometricService {
     }
   }
 
+  /// Chuyển đổi mã lỗi hệ thống LocalAuth sang đối tượng [BridgeError] chuẩn
   BridgeError _bridgeError(LocalAuthException error) {
     switch (error.code) {
       case LocalAuthExceptionCode.userCanceled:

@@ -1,3 +1,7 @@
+// Quản lý cấu hình tải trọng và bộ giới hạn tần suất (Rate Limiter) cho Bridge.
+//
+// Bảo vệ UI Isolate của Flutter không bị quá tải khi Mini App gửi lượng lớn dữ liệu
+// hoặc gọi RPC với tần suất quá cao (Sliding Window Rate Limiter).
 import 'dart:collection';
 
 /// Bộ kiểm soát tần suất gọi Bridge (Rate Limiter) dựa trên thuật toán sliding window.

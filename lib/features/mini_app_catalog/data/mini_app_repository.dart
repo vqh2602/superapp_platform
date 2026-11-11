@@ -1,3 +1,7 @@
+// Kho lưu trữ danh mục Mini App và cấp phép thực thi (Mini App Repository).
+//
+// Quản lý việc truy vấn danh sách ứng dụng đã phát hành từ API `/api/v1/catalog`,
+// bộ nhớ đệm hiển thị UI và xác thực quyền chạy app (Execution Authorization) với Backend.
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

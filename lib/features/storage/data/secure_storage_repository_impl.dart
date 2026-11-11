@@ -1,7 +1,21 @@
+// Triển khai kho lưu trữ bảo mật phần cứng (Secure Storage Repository Implementation).
+//
+// Quản lý việc lưu, đọc, xóa dữ liệu nhạy cảm và thông tin xác thực (Credentials)
+// trong Keychain (iOS/macOS) và EncryptedSharedPreferences (Android) với cấu trúc namespace v2.
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+/// Chính sách xử lý dữ liệu legacy khi không xác định được chủ sở hữu (Unverified Legacy Data Policy).
+enum LegacyUnverifiedDataPolicy {
+  /// Cách ly dữ liệu cũ vào namespace riêng biệt (`superapp:quarantine:legacy:...`)
+  /// Ngăn chặn rò rỉ nhưng vẫn bảo lưu dữ liệu phục vụ đối soát, kiểm toán an ninh.
+  quarantine,
+
+  /// Xóa vĩnh viễn dữ liệu cũ không xác định được chủ sở hữu khỏi thiết bị.
+  delete,
+}
 
 /// Quản lý lưu trữ bảo mật cục bộ (Keychain trên iOS / Keystore EncryptedSharedPreferences trên Android).
 ///
@@ -13,11 +27,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// 2. Băm SHA-256 từng thành phần loại bỏ hoàn toàn rủi ro va chạm khóa (Key Collision) khi nối chuỗi.
 /// 3. Phân định rõ ràng chính sách vòng đời: `clearUserData` khi logout và `clearAppData` khi gỡ app.
 /// 4. Hạn chế API `getAll` tránh rò rỉ hàng loạt dữ liệu bí mật / credentials.
+/// 5. Chống rò rỉ dữ liệu khi nâng cấp từ v1 (P0): Chỉ migrate dữ liệu legacy khi xác minh đúng chủ sở hữu,
+///    tuyệt đối không chuyển giao dữ liệu không rõ chủ sở hữu sang tài khoản đang đăng nhập.
 class SecureStorageRepositoryImpl {
   final FlutterSecureStorage _secureStorage;
+  final LegacyUnverifiedDataPolicy legacyPolicy;
 
-  SecureStorageRepositoryImpl({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ??
+  SecureStorageRepositoryImpl({
+    FlutterSecureStorage? secureStorage,
+    this.legacyPolicy = LegacyUnverifiedDataPolicy.quarantine,
+  })  : _secureStorage = secureStorage ??
             const FlutterSecureStorage(
               aOptions: AndroidOptions(),
               iOptions: IOSOptions(
@@ -26,6 +45,7 @@ class SecureStorageRepositoryImpl {
             );
 
   static const String prefixV2 = 'superapp:v2';
+  static const String prefixQuarantine = 'superapp:quarantine:legacy';
   static const int defaultMaxBulkLimit = 50;
 
   /// Băm SHA-256 rút gọn 32 ký tự hex (128-bit entropy) chống va chạm khóa
@@ -70,6 +90,60 @@ class SecureStorageRepositoryImpl {
 
   String _legacyCred(String appId, String domain) => 'cred_${appId}_$domain';
 
+  /// Trích xuất định danh chủ sở hữu (userId) từ chuỗi dữ liệu legacy (nếu có)
+  static String? _extractLegacyOwner(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final owner = decoded['u'] ??
+            decoded['userId'] ??
+            decoded['owner'] ??
+            decoded['user_id'];
+        if (owner != null) {
+          final s = owner.toString().trim();
+          if (s.isNotEmpty) return s;
+        }
+      }
+    } catch (_) {
+      // Dữ liệu là chuỗi thô, không phải JSON -> Không xác định được chủ sở hữu
+    }
+    return null;
+  }
+
+  /// Trích xuất giá trị thực từ envelope hoặc trả về chuỗi thô
+  static String _extractPayloadValue(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic> && decoded.containsKey('v')) {
+        return decoded['v']?.toString() ?? raw;
+      }
+    } catch (_) {}
+    return raw;
+  }
+
+  /// Xử lý dữ liệu legacy không xác định được chủ sở hữu theo chính sách bảo mật
+  Future<void> _handleUnverifiedLegacyData({
+    required String legacyKey,
+    required String rawContent,
+    required String appId,
+    required String domain,
+  }) async {
+    if (legacyPolicy == LegacyUnverifiedDataPolicy.quarantine) {
+      final quarantineKey = '$prefixQuarantine:$legacyKey';
+      final quarantineEntry = jsonEncode({
+        'originalKey': legacyKey,
+        'appId': appId,
+        'domain': domain,
+        'quarantinedAt': DateTime.now().toIso8601String(),
+        'reason': 'unverified_legacy_owner',
+        'raw': rawContent,
+      });
+      await _secureStorage.write(key: quarantineKey, value: quarantineEntry);
+    }
+    // Luôn xóa khóa legacy không an toàn khỏi không gian hoạt động
+    await _secureStorage.delete(key: legacyKey);
+  }
+
   /// Lưu một mục bảo mật với namespace cách ly theo user và app
   Future<Map<String, dynamic>> setItem({
     required String appId,
@@ -105,7 +179,10 @@ class SecureStorageRepositoryImpl {
     };
   }
 
-  /// Đọc một mục bảo mật theo đúng user và app namespace
+  /// Đọc một mục bảo mật theo đúng user và app namespace.
+  ///
+  /// Bảo mật P0: Chỉ migrate khi xác minh được tài khoản sở hữu dữ liệu cũ.
+  /// Tuyệt đối không gán dữ liệu không rõ chủ sở hữu sang tài khoản đang đăng nhập.
   Future<Map<String, dynamic>> getItem({
     required String appId,
     required String key,
@@ -115,35 +192,52 @@ class SecureStorageRepositoryImpl {
     final v2Key = _v2Key(userId: userId, appId: appId, domain: domain, key: key);
     var raw = await _secureStorage.read(key: v2Key);
 
-    // Fallback migration từ legacy v1 (nếu có)
+    // Xử lý migration an toàn từ legacy v1 (nếu v2 chưa có)
     if (raw == null) {
       final legacyKey = _legacyKey(appId, domain, key);
       final legacyVal = await _secureStorage.read(key: legacyKey);
       if (legacyVal != null) {
-        await setItem(
-          appId: appId,
-          key: key,
-          value: legacyVal,
-          domain: domain,
-          userId: userId,
-        );
-        await _secureStorage.delete(key: legacyKey);
-        raw = await _secureStorage.read(key: v2Key);
+        final legacyOwner = _extractLegacyOwner(legacyVal);
+        final valToMigrate = _extractPayloadValue(legacyVal);
+
+        if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+          // Xác minh đúng chủ sở hữu: Cho phép migrate sang v2 cho user này
+          await setItem(
+            appId: appId,
+            key: key,
+            value: valToMigrate,
+            domain: domain,
+            userId: userId,
+          );
+          await _secureStorage.delete(key: legacyKey);
+          raw = await _secureStorage.read(key: v2Key);
+        } else if (legacyOwner != null && legacyOwner.isNotEmpty) {
+          // Thuộc người dùng khác: Chuyển về namespace của người đó, không gán cho user hiện tại
+          await setItem(
+            appId: appId,
+            key: key,
+            value: valToMigrate,
+            domain: domain,
+            userId: legacyOwner,
+          );
+          await _secureStorage.delete(key: legacyKey);
+          raw = null;
+        } else {
+          // Không xác định được chủ sở hữu: Cách ly hoặc xóa, tuyệt đối không gán cho user hiện tại
+          await _handleUnverifiedLegacyData(
+            legacyKey: legacyKey,
+            rawContent: legacyVal,
+            appId: appId,
+            domain: domain,
+          );
+          raw = null;
+        }
       }
     }
 
     String? extractedValue;
     if (raw != null) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('v')) {
-          extractedValue = decoded['v']?.toString();
-        } else {
-          extractedValue = raw;
-        }
-      } catch (_) {
-        extractedValue = raw;
-      }
+      extractedValue = _extractPayloadValue(raw);
     }
 
     return {
@@ -169,15 +263,31 @@ class SecureStorageRepositoryImpl {
     await _secureStorage.delete(key: v2Key);
 
     final legacyKey = _legacyKey(appId, domain, key);
-    final existsLegacy = await _secureStorage.containsKey(key: legacyKey);
-    await _secureStorage.delete(key: legacyKey);
+    var removedLegacy = false;
+    final legacyVal = await _secureStorage.read(key: legacyKey);
+    if (legacyVal != null) {
+      final legacyOwner = _extractLegacyOwner(legacyVal);
+      if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+        await _secureStorage.delete(key: legacyKey);
+        removedLegacy = true;
+      } else if (legacyOwner == null) {
+        await _handleUnverifiedLegacyData(
+          legacyKey: legacyKey,
+          rawContent: legacyVal,
+          appId: appId,
+          domain: domain,
+        );
+        removedLegacy = true;
+      }
+      // Dữ liệu thuộc user khác -> Không xóa dữ liệu của họ
+    }
 
     return {
       'key': key,
       'domain': domain,
       'appId': appId,
       'userId': userId,
-      'removed': existsV2 || existsLegacy,
+      'removed': existsV2 || removedLegacy,
     };
   }
 
@@ -199,20 +309,38 @@ class SecureStorageRepositoryImpl {
       await _secureStorage.delete(key: k);
     }
 
-    // Dọn dẹp cả legacy v1
+    // Dọn dẹp an toàn legacy v1: Chỉ xóa khóa thuộc về user này hoặc không rõ chủ sở hữu
     final legacyPrefix =
         domain == null ? 'sec_${appId}_' : 'sec_${appId}_${domain}_';
     final legacyKeys =
         all.keys.where((k) => k.startsWith(legacyPrefix)).toList();
+    var clearedLegacyCount = 0;
     for (final k in legacyKeys) {
-      await _secureStorage.delete(key: k);
+      final raw = all[k];
+      if (raw != null) {
+        final legacyOwner = _extractLegacyOwner(raw);
+        if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+          await _secureStorage.delete(key: k);
+          clearedLegacyCount++;
+        } else if (legacyOwner == null) {
+          await _handleUnverifiedLegacyData(
+            legacyKey: k,
+            rawContent: raw,
+            appId: appId,
+            domain: domain ?? 'default',
+          );
+          clearedLegacyCount++;
+        }
+      }
     }
 
-    return {'cleared': true, 'count': keys.length + legacyKeys.length};
+    return {'cleared': true, 'count': keys.length + clearedLegacyCount};
   }
 
-  /// Lấy danh sách key-value (Có giới hạn maxLimit để tránh dump dữ liệu hàng loạt)
+  /// Lấy danh sách key-value (Có giới hạn maxLimit để tránh dump dữ liệu hàng loạt).
   /// Credentials (__cred__) tuyệt đối không trả về qua hàm này.
+  ///
+  /// Bảo mật P0: Không tự động chuyển giao dữ liệu legacy không rõ chủ sở hữu sang tài khoản hiện tại.
   Future<Map<String, String>> getAll({
     required String appId,
     String domain = 'default',
@@ -248,15 +376,49 @@ class SecureStorageRepositoryImpl {
       }
     }
 
-    // Fallback legacy v1 nếu v2 chưa có
-    if (result.isEmpty) {
-      final legacyPrefix = 'sec_${appId}_${domain}_';
-      for (final e in all.entries) {
-        if (result.length >= maxLimit) break;
-        if (e.key.startsWith(legacyPrefix)) {
-          final k = e.key.substring(legacyPrefix.length);
-          result[k] = e.value;
+    // Xử lý migration an toàn từ legacy v1 (nếu có)
+    final legacyPrefix = 'sec_${appId}_${domain}_';
+    final legacyEntries =
+        all.entries.where((e) => e.key.startsWith(legacyPrefix)).toList();
+
+    for (final e in legacyEntries) {
+      final legacyOwner = _extractLegacyOwner(e.value);
+      final rawKey = e.key.substring(legacyPrefix.length);
+      final itemVal = _extractPayloadValue(e.value);
+
+      if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+        // Xác minh đúng chủ sở hữu: Migrate sang v2 cho user này
+        await setItem(
+          appId: appId,
+          key: rawKey,
+          value: itemVal,
+          domain: domain,
+          userId: userId,
+        );
+        await _secureStorage.delete(key: e.key);
+        if (result.length < maxLimit && !result.containsKey(rawKey)) {
+          result[rawKey] = itemVal;
         }
+      } else if (legacyOwner != null && legacyOwner.isNotEmpty) {
+        // Thuộc người dùng khác: Chuyển về namespace của người đó
+        await setItem(
+          appId: appId,
+          key: rawKey,
+          value: itemVal,
+          domain: domain,
+          userId: legacyOwner,
+        );
+        await _secureStorage.delete(key: e.key);
+        // Tuyệt đối không đưa vào result của user hiện tại
+      } else {
+        // Không xác định được chủ sở hữu: Cách ly hoặc xóa theo chính sách
+        await _handleUnverifiedLegacyData(
+          legacyKey: e.key,
+          rawContent: e.value,
+          appId: appId,
+          domain: domain,
+        );
+        // Tuyệt đối không đưa vào result của user hiện tại
       }
     }
 
@@ -310,7 +472,10 @@ class SecureStorageRepositoryImpl {
     };
   }
 
-  /// Lấy Credentials cho một domain cụ thể
+  /// Lấy Credentials cho một domain cụ thể.
+  ///
+  /// Bảo mật P0: Chỉ migrate credentials khi xác minh đúng chủ sở hữu.
+  /// Tuyệt đối không trả về credentials của tài khoản khác hoặc không rõ chủ sở hữu.
   Future<Map<String, dynamic>> getCredentials({
     required String appId,
     required String domain,
@@ -319,13 +484,34 @@ class SecureStorageRepositoryImpl {
     final v2Key = _v2Cred(userId: userId, appId: appId, domain: domain);
     var raw = await _secureStorage.read(key: v2Key);
 
+    // Xử lý migration an toàn từ legacy v1 (nếu v2 chưa có)
     if (raw == null) {
       final legacyKey = _legacyCred(appId, domain);
       final legacyRaw = await _secureStorage.read(key: legacyKey);
       if (legacyRaw != null) {
-        await _secureStorage.write(key: v2Key, value: legacyRaw);
-        await _secureStorage.delete(key: legacyKey);
-        raw = legacyRaw;
+        final legacyOwner = _extractLegacyOwner(legacyRaw);
+
+        if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+          // Xác minh đúng chủ sở hữu: Migrate sang v2 cho user này
+          await _secureStorage.write(key: v2Key, value: legacyRaw);
+          await _secureStorage.delete(key: legacyKey);
+          raw = legacyRaw;
+        } else if (legacyOwner != null && legacyOwner.isNotEmpty) {
+          // Thuộc người dùng khác: Di chuyển sang v2 key của người đó
+          final ownerV2Key = _v2Cred(userId: legacyOwner, appId: appId, domain: domain);
+          await _secureStorage.write(key: ownerV2Key, value: legacyRaw);
+          await _secureStorage.delete(key: legacyKey);
+          raw = null;
+        } else {
+          // Không xác định được chủ sở hữu: Cách ly hoặc xóa, không chuyển cho user đang đăng nhập
+          await _handleUnverifiedLegacyData(
+            legacyKey: legacyKey,
+            rawContent: legacyRaw,
+            appId: appId,
+            domain: domain,
+          );
+          raw = null;
+        }
       }
     }
 
@@ -350,10 +536,57 @@ class SecureStorageRepositoryImpl {
     await _secureStorage.delete(key: v2Key);
 
     final legacyKey = _legacyCred(appId, domain);
-    final existsLegacy = await _secureStorage.containsKey(key: legacyKey);
-    await _secureStorage.delete(key: legacyKey);
+    var removedLegacy = false;
+    final legacyRaw = await _secureStorage.read(key: legacyKey);
+    if (legacyRaw != null) {
+      final legacyOwner = _extractLegacyOwner(legacyRaw);
+      if (userId != null && userId.isNotEmpty && legacyOwner == userId) {
+        await _secureStorage.delete(key: legacyKey);
+        removedLegacy = true;
+      } else if (legacyOwner == null) {
+        await _handleUnverifiedLegacyData(
+          legacyKey: legacyKey,
+          rawContent: legacyRaw,
+          appId: appId,
+          domain: domain,
+        );
+        removedLegacy = true;
+      }
+      // Dữ liệu thuộc user khác -> Không xóa credentials của họ
+    }
 
-    return {'domain': domain, 'deleted': existsV2 || existsLegacy};
+    return {'domain': domain, 'deleted': existsV2 || removedLegacy};
+  }
+
+  /// Lấy danh sách các khóa legacy đã bị cách ly do không xác định được chủ sở hữu
+  Future<List<String>> getQuarantinedKeys({String? appId}) async {
+    final all = await _secureStorage.readAll();
+    final prefix = '$prefixQuarantine:';
+    final keys = all.keys.where((k) => k.startsWith(prefix)).toList();
+    if (appId == null) return keys;
+
+    final filtered = <String>[];
+    for (final k in keys) {
+      final raw = all[k];
+      if (raw != null) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic> && decoded['appId'] == appId) {
+            filtered.add(k);
+          }
+        } catch (_) {}
+      }
+    }
+    return filtered;
+  }
+
+  /// Xóa sạch các mục dữ liệu đã bị cách ly
+  Future<int> purgeQuarantine({String? appId}) async {
+    final keys = await getQuarantinedKeys(appId: appId);
+    for (final k in keys) {
+      await _secureStorage.delete(key: k);
+    }
+    return keys.length;
   }
 
   /// Chính sách xóa sạch dữ liệu của người dùng khi đăng xuất (Logout Lifecycle Policy)
@@ -402,6 +635,9 @@ class SecureStorageRepositoryImpl {
     for (final k in legacyKeys) {
       await _secureStorage.delete(key: k);
     }
+
+    // Xóa cả quarantined entries của app này (nếu có)
+    await purgeQuarantine(appId: appId);
 
     return {
       'cleared': true,

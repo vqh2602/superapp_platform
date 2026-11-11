@@ -1,15 +1,29 @@
+// Cấu hình chủ đề giao diện (Theme) toàn hệ thống SuperApp.
+//
+// Định nghĩa bảng màu thiết kế theo chuẩn Material 3, typography, kiểu dáng nút bấm,
+// thẻ card và thanh điều hướng phù hợp với cả Native Shell và Mini Apps.
 import 'package:flutter/material.dart';
 
+/// Định nghĩa bảng màu và theme tổng thể cho SuperApp
 class AppTheme {
+  /// Màu chủ đạo: Royal Blue hiện đại
   static const Color primary = Color(0xFF2563EB); // Royal Blue
+  /// Màu chủ đạo đậm hơn dùng cho trạng thái active/hover
   static const Color primaryDark = Color(0xFF1D4ED8);
+  /// Màu phụ: Slate Dark dùng cho text chính và icon tối
   static const Color secondary = Color(0xFF0F172A); // Slate Dark
+  /// Màu nền bề mặt ứng dụng (Scaffold background)
   static const Color surface = Color(0xFFF8FAFC);
+  /// Màu nền thẻ Card
   static const Color cardBg = Colors.white;
+  /// Màu điểm nhấn: Emerald Green biểu thị thành công hoặc tính năng nổi bật
   static const Color accent = Color(0xFF10B981); // Emerald
+  /// Màu báo lỗi / cảnh báo nguy hiểm
   static const Color danger = Color(0xFFEF4444);
+  /// Màu cảnh báo thận trọng
   static const Color warning = Color(0xFFF59E0B);
 
+  /// Cấu hình ThemeData Material 3 chế độ sáng (Light Theme) của ứng dụng
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

@@ -1,3 +1,7 @@
+// Bộ điều khiển trạng thái xác thực người dùng (Auth Controller & State).
+//
+// Quản lý trạng thái phiên đăng nhập của người dùng toàn ứng dụng thông qua Riverpod Notifier,
+// cung cấp các hàm login, register, logout và cơ chế tự động xử lý khi token hết hạn (401).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/router/app_router.dart';
@@ -10,7 +14,7 @@ import '../../data/auth_code_service_shim.dart';
 import '../../data/token_service_shim.dart';
 import '../../../storage/data/secure_storage_repository_impl.dart';
 
-/// Core provider for AuthRepositoryImpl connected to backend endpoint
+/// Provider cung cấp kho dữ liệu AuthRepositoryImpl kết nối với backend
 final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
   final endpoint = ref.watch(backendEndpointProvider);
   final httpClient = ref.watch(appHttpClientProvider);
@@ -22,21 +26,24 @@ final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
   return repo;
 });
 
-/// Core provider for AuthCodeServiceShim
+/// Provider cung cấp AuthCodeServiceShim
 final authCodeServiceProvider = Provider<AuthCodeServiceShim>((ref) {
   return AuthCodeServiceShim();
 });
 
-/// Core provider for TokenServiceShim
+/// Provider cung cấp TokenServiceShim
 final tokenServiceProvider = Provider<TokenServiceShim>((ref) {
   final authCodeService = ref.watch(authCodeServiceProvider);
   return TokenServiceShim(authCodeService: authCodeService);
 });
 
-/// Auth state holder
+/// Trạng thái xác thực (Auth State) lưu trữ thông tin phiên, loading và lỗi
 class AuthState {
+  /// Phiên làm việc hiện tại
   final AuthSession? session;
+  /// Trạng thái đang xử lý API
   final bool isLoading;
+  /// Thông báo lỗi nếu có
   final String? errorMessage;
 
   const AuthState({
@@ -45,7 +52,10 @@ class AuthState {
     this.errorMessage,
   });
 
+  /// Kiểm tra người dùng đã đăng nhập và phiên còn hạn
   bool get isAuthenticated => session != null && !session!.isExpired;
+
+  /// Lấy thông tin tài khoản người dùng hiện tại
   PlatformUser? get currentUser => session?.user;
 
   AuthState copyWith({
@@ -63,6 +73,7 @@ class AuthState {
   }
 }
 
+/// Notifier quản lý và cập nhật trạng thái xác thực người dùng
 class AuthNotifier extends Notifier<AuthState> {
   AuthRepositoryImpl get _repository => ref.read(authRepositoryProvider);
   bool _isHandlingTokenExpired = false;
@@ -77,7 +88,7 @@ class AuthNotifier extends Notifier<AuthState> {
     return const AuthState();
   }
 
-  /// Login with email and password to backend
+  /// Đăng nhập tài khoản bằng email/userId và mật khẩu vào backend
   Future<bool> login(String emailOrUserId, [String? password]) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -91,7 +102,7 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Register new user account to backend
+  /// Đăng ký tài khoản người dùng mới trên hệ thống backend
   Future<bool> register({
     required String email,
     required String password,
@@ -113,6 +124,7 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Đăng xuất khỏi hệ thống và tùy chọn xóa dữ liệu người dùng trong Secure Storage
   Future<void> logout({bool purgeUserData = true}) async {
     final currentUserId = state.currentUser?.id;
     state = state.copyWith(isLoading: true);
@@ -125,8 +137,8 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthState();
   }
 
-  /// Handles 401 Unauthorized or expired token by resetting the auth session,
-  /// redirecting to the login screen, and displaying a notification.
+  /// Xử lý khi nhận mã lỗi 401 Unauthorized hoặc token hết hạn:
+  /// Xóa phiên, điều hướng về màn hình đăng nhập và hiển thị thông báo.
   void handleTokenExpired([String? reason]) {
     if (_isHandlingTokenExpired) return;
     _isHandlingTokenExpired = true;

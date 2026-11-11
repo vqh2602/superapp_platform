@@ -1,9 +1,13 @@
+// Tab Trò chơi giải trí (Games Tab).
+//
+// Lọc và hiển thị danh mục các Mini Game, hỗ trợ tìm kiếm và mở trực tiếp các trò chơi nhẹ.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/animations/app_motion.dart';
 import '../../data/mini_app_repository.dart';
 import '../widgets/app_list_item.dart';
 
+/// Widget giao diện Tab Trò chơi
 class GamesTab extends ConsumerWidget {
   final VoidCallback? onNavigateToSearch;
 

@@ -1,11 +1,18 @@
+// Quản lý kênh giao tiếp JavaScript Channel giữa WebView và Flutter Native.
+//
+// Chịu trách nhiệm đăng ký kênh `FlutterBridge`, kênh gỡ lỗi web `__SuperAppWebDebug__`,
+// và cung cấp các đoạn mã polyfill tự động tiêm (inject) vào WebView trước khi Mini App chạy.
 import 'package:flutter/widgets.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../../core/config/app_config.dart';
 import 'bridge_dispatcher.dart';
 
+/// Lớp tiện ích cấu hình và liên kết JavaScript Channels cho WebView
 class BridgeChannel {
+  /// Tên kênh JavaScript Channel dành riêng cho việc truyền log/lỗi từ web sang Native
   static const String webDebugChannelName = '__SuperAppWebDebug__';
 
+  /// Đăng ký các kênh JavaScript Channel chính và kênh gỡ lỗi vào WebView Controller
   static Future<void> register({
     required WebViewController controller,
     required BridgeDispatcher dispatcher,
@@ -29,7 +36,8 @@ class BridgeChannel {
     }
   }
 
-  /// Injected script to intercept console logs, unhandled errors and rejections
+  /// Đoạn mã JavaScript Polyfill tiêm vào trang để bắt toàn bộ console.log, unhandled exceptions,
+  /// promise rejections và gửi về Native Shell qua kênh webDebugChannelName.
   static const String webDebugPolyfillScript = '''
     (function() {
       if (window.__SUPERAPP_DEBUG_INJECTED__) return;

@@ -1,3 +1,7 @@
+// Bộ điều phối hành động Native tập trung (Native Action Dispatcher).
+//
+// Quản lý đăng ký tất cả các Handler hành động (Auth, Device, Storage, UI, Navigation, v.v.),
+// kiểm tra tính hợp lệ của phiên, quyền hạn manifest và trạng thái đăng nhập trước khi thực thi.
 import 'package:http/http.dart' as http;
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/errors/bridge_error.dart';
@@ -30,6 +34,7 @@ import '../handlers/media_file_action_handler.dart';
 import '../handlers/phone_utility_action_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Lớp điều phối thực thi các hành động Native cho Mini App
 class NativeActionDispatcher {
   final AuthRepositoryImpl authRepo;
   final AuthCodeServiceShim authCodeService;

@@ -1,3 +1,8 @@
+// Bảng điều khiển gỡ lỗi Web trong WebView (WebView Debug Bottom Sheet).
+//
+// Hoạt động như DevTools thu nhỏ trên thiết bị di động: hiển thị console log,
+// thông báo lỗi runtime, cho phép thực thi mã JavaScript trực tiếp (REPL console)
+// và kiểm tra thông tin phiên WebView.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +11,7 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:webview_all/webview_all.dart';
 import '../../domain/web_log_entry.dart';
 
+/// Widget bảng điều khiển Web Inspector gỡ lỗi cho WebView
 class WebViewDebugBottomSheet extends StatefulWidget {
   final WebViewController? controller;
   final List<WebLogEntry> logs;

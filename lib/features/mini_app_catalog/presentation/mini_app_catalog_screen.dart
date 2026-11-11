@@ -1,3 +1,7 @@
+// Màn hình chính danh mục Mini App (Mini App Catalog Screen).
+//
+// Quản lý thanh điều hướng đáy (BottomNavigationBar) với 5 tab chức năng:
+// Trang chủ (Home), Ứng dụng (Apps), Trò chơi (Games), Tìm kiếm (Search) và Tài khoản (Profile).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/home_tab.dart';
@@ -6,7 +10,9 @@ import 'screens/games_tab.dart';
 import 'screens/search_screen.dart';
 import 'screens/profile_tab.dart';
 
+/// Widget quản lý toàn bộ trải nghiệm khám phá và chạy Mini App
 class MiniAppCatalogScreen extends ConsumerStatefulWidget {
+  /// Chỉ số tab hiển thị ban đầu
   final int initialTabIndex;
 
   const MiniAppCatalogScreen({

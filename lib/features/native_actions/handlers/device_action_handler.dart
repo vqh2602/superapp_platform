@@ -1,8 +1,13 @@
+// Xử lý các hành động phần cứng thiết bị (Device Action Handlers).
+//
+// Bao gồm quét mã QR (`device.scanQRCode`), lấy tọa độ GPS (`device.getLocation`)
+// và chọn ảnh từ thư viện (`device.pickImage`).
 import 'media_file_action_handler.dart';
 import '../../device/domain/device_adapter.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `device.scanQRCode`: Mở camera quét mã QR
 class DeviceScanQrHandler implements NativeActionHandler {
   final DeviceAdapter deviceAdapter;
 
@@ -23,6 +28,7 @@ class DeviceScanQrHandler implements NativeActionHandler {
   }
 }
 
+/// Xử lý action `device.getLocation`: Lấy tọa độ GPS thiết bị
 class DeviceGetLocationHandler implements NativeActionHandler {
   final DeviceAdapter deviceAdapter;
 
@@ -43,6 +49,7 @@ class DeviceGetLocationHandler implements NativeActionHandler {
   }
 }
 
+/// Xử lý action `device.pickImage`: Chọn ảnh từ thư viện thiết bị
 class DevicePickImageHandler implements NativeActionHandler {
   final DeviceAdapter deviceAdapter;
 

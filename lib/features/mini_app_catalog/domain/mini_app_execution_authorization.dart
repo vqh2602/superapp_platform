@@ -1,3 +1,7 @@
+// Mô hình giấy phép cấp quyền thực thi Mini App (Execution Authorization).
+//
+// Quản lý thời hạn hiệu lực (TTL) và xác thực tính hợp pháp từ máy chủ Backend
+// trước khi một Mini App được phép mở trong môi trường WebView.
 import 'package:flutter/foundation.dart';
 import 'mini_app_manifest.dart';
 

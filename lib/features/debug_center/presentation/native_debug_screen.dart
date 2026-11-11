@@ -1,3 +1,7 @@
+// Màn hình Trung tâm gỡ lỗi Bridge (Bridge Debug Center).
+//
+// Hiển thị danh sách các RPC Bridge call đã thực thi trong phiên, thời gian xử lý,
+// thông số payload, trạng thái kết quả và hỗ trợ kích hoạt trực tiếp bảng điều khiển SERP Debug Overlay.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +10,7 @@ import 'package:serp_debug_overlay/flutter_debug_overlay.dart';
 import '../data/debug_log_repository.dart';
 import '../domain/bridge_log_entry.dart';
 
+/// Widget giao diện màn hình gỡ lỗi Bridge
 class NativeDebugScreen extends ConsumerStatefulWidget {
   const NativeDebugScreen({super.key});
 

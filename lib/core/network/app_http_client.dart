@@ -1,3 +1,7 @@
+// Quản lý HTTP Client của ứng dụng và cơ chế đánh chặn (Interceptor).
+//
+// Hỗ trợ tự động bắt lỗi 401 Unauthorized khi token hết hạn để kích hoạt điều hướng
+// về màn hình đăng nhập, đồng thời tích hợp logging mạng tự động với SERP Debug Overlay.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -5,8 +9,8 @@ import 'package:serp_debug_overlay/flutter_debug_overlay.dart';
 import '../config/debug_mode_provider.dart';
 import '../../features/authentication/presentation/controllers/auth_controller.dart';
 
-/// HTTP Client Interceptor that detects 401 Unauthorized errors (expired token)
-/// and triggers the redirection callback to the login screen.
+/// Interceptor phát hiện mã lỗi 401 Unauthorized (token hết hạn)
+/// và kích hoạt callback điều hướng người dùng về màn hình đăng nhập.
 class AuthExpiredInterceptorClient extends http.BaseClient {
   final http.Client _inner;
   final VoidCallback onTokenExpired;
@@ -20,10 +24,10 @@ class AuthExpiredInterceptorClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final response = await _inner.send(request);
 
-    // If 401 Unauthorized received
+    // Kiểm tra nếu nhận mã phản hồi 401 Unauthorized
     if (response.statusCode == 401) {
       final path = request.url.path.toLowerCase();
-      // Only trigger if this is NOT a direct login/register attempt
+      // Chỉ kích hoạt callback nếu request này KHÔNG PHẢI là thao tác login hoặc register trực tiếp
       final isAuthAttempt =
           path.endsWith('/login') || path.endsWith('/register');
 
@@ -42,22 +46,25 @@ class AuthExpiredInterceptorClient extends http.BaseClient {
   void close() => _inner.close();
 }
 
-/// Helper function to create the composite app HTTP client
+/// Hàm tạo đối tượng HTTP Client tổng hợp cho SuperApp
+///
+/// Kết hợp HttpLogClient để ghi log request/response vào SERP Debug Overlay
+/// và AuthExpiredInterceptorClient để tự động xử lý token hết hạn.
 http.Client createAppHttpClient({
   required VoidCallback onTokenExpired,
   http.Client? baseClient,
 }) {
   final raw = baseClient ?? http.Client();
-  // 1. Wrap with serp_debug_overlay HttpLogClient to capture HTTP traffic
+  // 1. Wrap với HttpLogClient của serp_debug_overlay để hiển thị trên overlay gỡ lỗi
   final loggingClient = HttpLogClient(globalHttpBucket, raw);
-  // 2. Wrap with AuthExpiredInterceptorClient to handle 401 token expiration
+  // 2. Wrap với AuthExpiredInterceptorClient để xử lý lỗi 401
   return AuthExpiredInterceptorClient(
     loggingClient,
     onTokenExpired: onTokenExpired,
   );
 }
 
-/// Global Riverpod Provider for the application HTTP client
+/// Provider toàn cục cung cấp đối tượng http.Client dùng xuyên suốt ứng dụng
 final appHttpClientProvider = Provider<http.Client>((ref) {
   final client = createAppHttpClient(
     onTokenExpired: () {

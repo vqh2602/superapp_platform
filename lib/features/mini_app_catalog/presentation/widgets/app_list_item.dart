@@ -1,10 +1,17 @@
+// Widget thẻ danh sách Mini App (App List Item).
+//
+// Hiển thị icon Mini App, tên ứng dụng, đoạn mô tả ngắn, nhãn runtime (Web/Schema)
+// và nút "MỞ" kích hoạt điều hướng vào `/miniapp/:appId` với hiệu ứng xúc giác BouncingTap.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/animations/app_motion.dart';
 import '../../domain/mini_app_manifest.dart';
 
+/// Widget hiển thị một mục Mini App trong danh sách
 class AppListItem extends StatelessWidget {
+  /// Thông tin manifest của Mini App
   final MiniAppManifest app;
+  /// Callback tùy chọn khi nhấn nút Mở (nếu null sẽ mặc định điều hướng tới router)
   final VoidCallback? onOpen;
 
   const AppListItem({

@@ -1,3 +1,7 @@
+// Tab Trang chủ của SuperApp (Home Tab).
+//
+// Hiển thị thanh tiêu đề người dùng, banner nổi bật, các danh mục ứng dụng thịnh hành,
+// danh sách ứng dụng mới nhất và lối tắt tìm kiếm nhanh.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +14,7 @@ import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
 
+/// Widget giao diện Tab Trang chủ
 class HomeTab extends ConsumerWidget {
   final VoidCallback? onNavigateToSearch;
 

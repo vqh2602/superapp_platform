@@ -1,3 +1,7 @@
+// Màn hình đăng ký tài khoản người dùng mới (Register Screen).
+//
+// Hỗ trợ nhập họ tên hiển thị, địa chỉ email, mật khẩu xác nhận,
+// kiểm tra tính hợp lệ của dữ liệu đầu vào và gửi yêu cầu tạo tài khoản lên Backend.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +11,7 @@ import '../../../../core/config/endpoint_config.dart';
 import '../../../../features/mini_app_catalog/data/mini_app_repository.dart';
 import '../controllers/auth_controller.dart';
 
+/// Widget giao diện màn hình đăng ký tài khoản
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 

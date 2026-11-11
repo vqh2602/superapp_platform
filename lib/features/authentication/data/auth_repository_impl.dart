@@ -1,3 +1,7 @@
+// Triển khai kho dữ liệu xác thực thực tế (Auth Repository Implementation).
+//
+// Gửi request đăng nhập, đăng ký và đăng xuất lên máy chủ Backend,
+// đồng thời phát sự kiện thay đổi phiên thông qua [sessionStream].
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -6,6 +10,7 @@ import '../domain/models/auth_session.dart';
 import '../domain/models/platform_user.dart';
 import '../domain/repositories/auth_repository.dart';
 
+/// Lớp thực thi giao diện [AuthRepository] kết nối với máy chủ Backend
 class AuthRepositoryImpl implements AuthRepository {
   final http.Client? httpClient;
   final String _authUrl;

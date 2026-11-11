@@ -1,3 +1,7 @@
+// Dịch vụ nghiệp vụ phân quyền người dùng và Mini App (Permission Application Service).
+//
+// Quản lý vòng đời cấp quyền, kiểm tra manifest, khử trùng lặp hộp thoại (deduplication)
+// và tuần tự hóa hiển thị prompt qua hàng đợi UserInteractionQueue.
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/bridge_error.dart';

@@ -1,20 +1,22 @@
+// Giao diện ủy quyền điều khiển giao diện khung chứa Mini App (Mini App UI Delegate).
+//
+// Cho phép các Native Action Handler thay đổi động giao diện Shell:
+// đổi tiêu đề, màu header, màu status bar, ẩn/hiện thanh công cụ và giữ sáng màn hình.
 import 'package:flutter/material.dart';
 
-/// Delegate allowing Native Action Handlers to dynamically modify the
-/// SuperApp Mini App container UI (Title, Header Color, Status Bar, Fullscreen, Minimize, etc.)
+/// Hợp đồng Delegate cho phép điều khiển giao diện vỏ bọc của Mini App
 abstract class MiniAppUiDelegate {
-  /// Update the current navigation bar title in the top bar.
+  /// Cập nhật tiêu đề trên thanh điều hướng đầu trang (Navigation Bar Title)
   void setTitle(String title, {String? align});
 
-  /// Set navigation bar background color, text color ('white' | 'black'), and optional status bar color.
+  /// Cấu hình màu nền navigation bar, màu chữ ('white' | 'black') và màu status bar
   void setNavigationBarColor({
     required Color color,
     String? textColor,
     Color? statusBarColor,
   });
 
-  /// Configure overall app view layout, visibility, and color styling across
-  /// status bar, action bar, and bottom navigation / safe area inset.
+  /// Cấu hình toàn diện khung nhìn ứng dụng: layout, màu sắc, ẩn thanh điều hướng, v.v.
   void configAppView({
     Color? headerColor,
     String? headerTitle,
@@ -30,9 +32,9 @@ abstract class MiniAppUiDelegate {
     String? titleAlign,
   });
 
-  /// Keep the screen on / awake (or allow it to sleep).
+  /// Bật/tắt giữ sáng màn hình thiết bị (Wakelock)
   void keepScreen({required bool keepScreenOn});
 
-  /// Minimize the current Mini App into a floating state / background dock.
+  /// Thu nhỏ Mini App hiện tại xuống dạng cửa sổ nổi hoặc đóng app
   void minimizeApp();
 }

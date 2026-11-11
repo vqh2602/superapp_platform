@@ -1,3 +1,7 @@
+// Tab Tài khoản cá nhân và cài đặt (Profile Tab).
+//
+// Hiển thị tóm tắt thông tin tài khoản, cấu hình Backend Endpoint, bật/tắt Debug Mode,
+// danh sách quyền truy cập đã cấp cho Mini App và nút Đăng xuất.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +13,7 @@ import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/widgets/backend_endpoint_selector_sheet.dart';
 import '../../../permissions/data/permission_repository_impl.dart';
 
+/// Widget giao diện Tab Tài khoản cá nhân
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key});
 

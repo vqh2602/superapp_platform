@@ -1,8 +1,13 @@
+// Xử lý các hành động lưu trữ bảo mật qua Bridge (Storage Action Handlers).
+//
+// Quản lý việc lưu/đọc/xóa mục an toàn (`storage.setSecureItem`, `storage.getSecureItem`, `storage.removeItem`),
+// xóa tất cả (`storage.clear`), lấy danh sách (`storage.getAll`), và thông tin xác thực (`credentials`).
 import '../../../../core/errors/bridge_error.dart';
 import '../../storage/data/secure_storage_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `storage.setSecureItem`: Lưu một cặp khóa - giá trị bảo mật vào Keychain/Keystore
 class StorageSetSecureItemHandler implements NativeActionHandler {
   final SecureStorageRepositoryImpl secureStorageRepo;
 

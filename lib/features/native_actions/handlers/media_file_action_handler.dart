@@ -1,3 +1,8 @@
+// Xử lý các hành động đa phương tiện và tệp tin (Media & File Action Handlers).
+//
+// Quản lý việc quét QR từ camera (`device.scanQr`), chọn ảnh/video (`pickImages`, `pickVideo`),
+// lưu tệp vào thư viện (`saveImageToGallery`, `saveVideoToGallery`), lưu tệp (`saveFile`)
+// và xem trước tài liệu (`filePreview`).
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -11,12 +16,14 @@ import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 import '../presentation/qr_scanner_screen.dart';
 
+/// Kiểm tra tính sẵn sàng của giao diện Native
 void requireNativeUI(ActionContext context) {
   if (context.buildContext == null) {
     throw BridgeError.unsupported('Native UI is unavailable');
   }
 }
 
+/// Đọc metadata hình ảnh (kích thước, định dạng mime, dung lượng) từ tệp [XFile]
 Future<Map<String, dynamic>> imageMetadata(XFile file) async {
   final bytes = await file.readAsBytes();
   final codec = await ui.instantiateImageCodec(bytes);

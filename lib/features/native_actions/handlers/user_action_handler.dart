@@ -1,7 +1,11 @@
+// Xử lý các hành động truy xuất thông tin người dùng qua Bridge (User Action Handlers).
+//
+// Bao gồm lấy thông tin chi tiết (`user.getProfile`) và thông tin cơ bản (`user.getBasicInfo`).
 import '../../user_profile/data/user_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `user.getProfile`: Lấy thông tin tài khoản người dùng đầy đủ (yêu cầu capability `user.getProfile`)
 class UserGetProfileHandler implements NativeActionHandler {
   final UserRepositoryImpl userRepo;
 
@@ -23,6 +27,7 @@ class UserGetProfileHandler implements NativeActionHandler {
   }
 }
 
+/// Xử lý action `user.getBasicInfo`: Lấy thông tin người dùng cơ bản công khai (tên, avatar)
 class UserGetBasicInfoHandler implements NativeActionHandler {
   final UserRepositoryImpl userRepo;
 

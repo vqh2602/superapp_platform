@@ -1,6 +1,11 @@
+// Lưới danh mục thể loại ứng dụng (Category Catalog Grid).
+//
+// Hiển thị danh sách các nhóm thể loại (Utilities, Shopping, Finance, Games, ...)
+// dưới dạng lưới thẻ trực quan kèm icon và màu sắc đặc trưng.
 import 'package:flutter/material.dart';
 import '../../../../core/animations/app_motion.dart';
 
+/// Đại diện một thể loại ứng dụng trong danh mục
 class CategoryItem {
   final String id;
   final String label;
@@ -15,6 +20,7 @@ class CategoryItem {
   });
 }
 
+/// Danh sách tất cả các thể loại Mini App được phân loại trong SuperApp
 const List<CategoryItem> kAllCategories = [
   CategoryItem(id: 'photo_video', label: 'Photo & Video', icon: Icons.videocam_rounded, color: Color(0xFFEF4444)),
   CategoryItem(id: 'utilities', label: 'Utilities', icon: Icons.build_rounded, color: Color(0xFF0EA5E9)),

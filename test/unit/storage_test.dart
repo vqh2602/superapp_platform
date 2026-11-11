@@ -488,5 +488,209 @@ void main() {
       expect(aliceRes['exists'], true);
       expect(aliceRes['value'], '9988');
     });
+
+    group('P0 Legacy Migration & Cross-User Data Leak Prevention Tests', () {
+      const mockStorage = FlutterSecureStorage();
+
+      setUp(() async {
+        FlutterSecureStorage.setMockInitialValues({});
+      });
+
+      test('P0: getItem prevents unverified legacy data from leaking to new user (User B)', () async {
+        // 1. Dữ liệu legacy v1 của User A không chứa userId trong key hoặc payload
+        await mockStorage.write(
+          key: 'sec_bank_app_default_user_secret',
+          value: 'user_A_private_seed_phrase',
+        );
+
+        // 2. User A đăng xuất, User B đăng nhập và truy cập Mini App
+        final repo = SecureStorageRepositoryImpl();
+        final userBResult = await repo.getItem(
+          appId: 'bank_app',
+          key: 'user_secret',
+          userId: 'user_B',
+        );
+
+        // 3. User B tuyệt đối không nhận được dữ liệu của User A
+        expect(userBResult['exists'], false);
+        expect(userBResult['value'], isNull);
+
+        // 4. Khóa legacy không còn trong active keys (đã bị gỡ bỏ khỏi namespace hoạt động)
+        final legacyCheck = await mockStorage.read(key: 'sec_bank_app_default_user_secret');
+        expect(legacyCheck, isNull);
+
+        // 5. Dữ liệu đã được cách ly an toàn vào quarantine để phục vụ kiểm toán
+        final quarantinedKeys = await repo.getQuarantinedKeys(appId: 'bank_app');
+        expect(quarantinedKeys.length, 1);
+        expect(
+          quarantinedKeys.first,
+          'superapp:quarantine:legacy:sec_bank_app_default_user_secret',
+        );
+
+        // 6. Namespace v2 của User B hoàn toàn sạch, không bị gán dữ liệu trái phép
+        final userBSubsequentRead = await repo.getItem(
+          appId: 'bank_app',
+          key: 'user_secret',
+          userId: 'user_B',
+        );
+        expect(userBSubsequentRead['exists'], false);
+        expect(userBSubsequentRead['value'], isNull);
+      });
+
+      test('P0: getAll prevents unverified legacy data from bulk dumping to new user (User B)', () async {
+        // 1. Tạo nhiều khóa legacy v1 không xác định chủ sở hữu
+        await mockStorage.write(
+          key: 'sec_wallet_default_token1',
+          value: 'token_val_1',
+        );
+        await mockStorage.write(
+          key: 'sec_wallet_default_token2',
+          value: 'token_val_2',
+        );
+
+        final repo = SecureStorageRepositoryImpl();
+
+        // 2. User B gọi getAll
+        final userBAll = await repo.getAll(
+          appId: 'wallet',
+          userId: 'user_B',
+        );
+
+        // 3. Không có bất kỳ dữ liệu nào bị rò rỉ sang User B
+        expect(userBAll, isEmpty);
+
+        // 4. Các khóa legacy đều đã được cách ly an toàn
+        final quarantined = await repo.getQuarantinedKeys();
+        expect(quarantined.length, 2);
+      });
+
+      test('P0: getCredentials prevents unverified legacy credentials from leaking to new user (User B)', () async {
+        // 1. Credential cũ của User A lưu trong v1 không có userId
+        await mockStorage.write(
+          key: 'cred_fintech_auth.domain',
+          value: '{"username":"alice_admin","password":"alice_password_123"}',
+        );
+
+        final repo = SecureStorageRepositoryImpl();
+
+        // 2. User B cố gắng đọc credentials cho domain đó
+        final userBCreds = await repo.getCredentials(
+          appId: 'fintech',
+          domain: 'auth.domain',
+          userId: 'user_B',
+        );
+
+        // 3. User B không thể đọc credential của Alice
+        expect(userBCreds['exists'], false);
+        expect(userBCreds['username'], isNull);
+        expect(userBCreds['password'], isNull);
+
+        // 4. Credential legacy đã được gỡ bỏ khỏi active key và cách ly
+        final legacyCheck = await mockStorage.read(key: 'cred_fintech_auth.domain');
+        expect(legacyCheck, isNull);
+
+        final quarantined = await repo.getQuarantinedKeys(appId: 'fintech');
+        expect(quarantined.length, 1);
+        expect(quarantined.first, 'superapp:quarantine:legacy:cred_fintech_auth.domain');
+      });
+
+      test('Verified owner migration: Migrates data when owner explicitly matches active user', () async {
+        // 1. Khóa legacy có gắn tag chủ sở hữu rõ ràng là "alice"
+        await mockStorage.write(
+          key: 'sec_my_app_default_auth_token',
+          value: '{"k":"auth_token","v":"token_verified_for_alice","u":"alice"}',
+        );
+        await mockStorage.write(
+          key: 'cred_my_app_default',
+          value: '{"username":"alice_boss","password":"pass_alice","userId":"alice"}',
+        );
+
+        final repo = SecureStorageRepositoryImpl();
+
+        // 2. Bob truy cập -> Bob bị chặn và không thấy gì
+        final bobItem = await repo.getItem(
+          appId: 'my_app',
+          key: 'auth_token',
+          userId: 'bob',
+        );
+        expect(bobItem['exists'], false);
+        expect(bobItem['value'], isNull);
+
+        final bobCreds = await repo.getCredentials(
+          appId: 'my_app',
+          domain: 'default',
+          userId: 'bob',
+        );
+        expect(bobCreds['exists'], false);
+
+        // 3. Alice đăng nhập và truy cập -> Alice nhận được đầy đủ dữ liệu đã migrate an toàn
+        final aliceItem = await repo.getItem(
+          appId: 'my_app',
+          key: 'auth_token',
+          userId: 'alice',
+        );
+        expect(aliceItem['exists'], true);
+        expect(aliceItem['value'], 'token_verified_for_alice');
+
+        final aliceCreds = await repo.getCredentials(
+          appId: 'my_app',
+          domain: 'default',
+          userId: 'alice',
+        );
+        expect(aliceCreds['exists'], true);
+        expect(aliceCreds['username'], 'alice_boss');
+        expect(aliceCreds['password'], 'pass_alice');
+
+        // 4. Khóa legacy đã được dọn sạch hoàn toàn
+        expect(await mockStorage.read(key: 'sec_my_app_default_auth_token'), isNull);
+        expect(await mockStorage.read(key: 'cred_my_app_default'), isNull);
+      });
+
+      test('LegacyUnverifiedDataPolicy.delete permanently removes unverified legacy keys without quarantine', () async {
+        await mockStorage.write(
+          key: 'sec_delete_app_default_temp',
+          value: 'unverified_raw_value',
+        );
+
+        // Cấu hình repository với chính sách delete
+        final repo = SecureStorageRepositoryImpl(
+          legacyPolicy: LegacyUnverifiedDataPolicy.delete,
+        );
+
+        final getRes = await repo.getItem(
+          appId: 'delete_app',
+          key: 'temp',
+          userId: 'user_X',
+        );
+        expect(getRes['exists'], false);
+
+        // Khóa legacy đã bị xóa vĩnh viễn và không lưu vào quarantine
+        expect(await mockStorage.read(key: 'sec_delete_app_default_temp'), isNull);
+        expect(await repo.getQuarantinedKeys(), isEmpty);
+      });
+
+      test('Quarantine lifecycle: purgeQuarantine clears isolated data', () async {
+        await mockStorage.write(
+          key: 'sec_quar_app_default_k1',
+          value: 'val_1',
+        );
+        await mockStorage.write(
+          key: 'sec_quar_app_default_k2',
+          value: 'val_2',
+        );
+
+        final repo = SecureStorageRepositoryImpl();
+        await repo.getItem(appId: 'quar_app', key: 'k1', userId: 'user_Y');
+        await repo.getItem(appId: 'quar_app', key: 'k2', userId: 'user_Y');
+
+        final quarantined = await repo.getQuarantinedKeys(appId: 'quar_app');
+        expect(quarantined.length, 2);
+
+        // Purge quarantine
+        final purgedCount = await repo.purgeQuarantine(appId: 'quar_app');
+        expect(purgedCount, 2);
+        expect(await repo.getQuarantinedKeys(appId: 'quar_app'), isEmpty);
+      });
+    });
   });
 }

@@ -1,3 +1,7 @@
+// Hàng đợi tương tác người dùng (User Interaction Queue).
+//
+// Đảm bảo các hội thoại tương tác (Permission Prompt, Confirm Dialog, Alert)
+// được hiển thị tuần tự, không bị đè chồng chéo lên nhau khi Mini App gọi liên tiếp.
 import 'dart:async';
 import '../../../core/errors/bridge_error.dart';
 

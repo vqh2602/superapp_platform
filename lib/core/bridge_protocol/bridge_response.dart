@@ -1,12 +1,27 @@
+// Gói tin kết quả phản hồi (Response) từ Flutter gửi ngược lại Mini App JS SDK.
+//
+// Chứa mã id trùng khớp với request tương ứng, trạng thái thành công hoặc thất bại,
+// dữ liệu trả về hoặc đối tượng lỗi [BridgeError], và thời gian thực thi.
 import '../errors/bridge_error.dart';
 
-/// Representation of an outgoing response from Flutter to the Mini App JS SDK.
+/// Đại diện phản hồi trả về qua JavaScript Bridge
 class BridgeResponse {
+  /// Mã định danh đối soát tương ứng với `BridgeRequest.id`
   final String id;
+
+  /// Tên action đã thực thi
   final String action;
+
+  /// Trạng thái kết quả thành công hay thất bại
   final bool success;
+
+  /// Dữ liệu kết quả trả về cho Mini App (khi `success == true`)
   final dynamic data;
+
+  /// Thông tin lỗi chi tiết (khi `success == false`)
   final BridgeError? error;
+
+  /// Thời gian xử lý hành động tính bằng mili-giây
   final int executionTimeMs;
 
   const BridgeResponse({
@@ -18,6 +33,7 @@ class BridgeResponse {
     this.executionTimeMs = 0,
   });
 
+  /// Tạo phản hồi thành công chứa dữ liệu
   factory BridgeResponse.ok(String id, dynamic data, [int executionTimeMs = 0, String action = '']) {
     return BridgeResponse(
       id: id,
@@ -28,6 +44,7 @@ class BridgeResponse {
     );
   }
 
+  /// Tạo phản hồi thất bại mang thông tin lỗi [BridgeError]
   factory BridgeResponse.failure(String id, BridgeError error, [int executionTimeMs = 0, String action = '']) {
     return BridgeResponse(
       id: id,
@@ -38,6 +55,7 @@ class BridgeResponse {
     );
   }
 
+  /// Chuyển đổi phản hồi sang cấu trúc JSON gửi vào WebView
   Map<String, dynamic> toJson() => {
     'id': id,
     'action': action,
@@ -48,6 +66,7 @@ class BridgeResponse {
     'timestamp': DateTime.now().millisecondsSinceEpoch,
   };
 
+  /// Khởi tạo [BridgeResponse] từ JSON Map
   factory BridgeResponse.fromJson(Map<String, dynamic> json) => BridgeResponse(
     id: json['id'] as String? ?? '',
     action: json['action'] as String? ?? '',

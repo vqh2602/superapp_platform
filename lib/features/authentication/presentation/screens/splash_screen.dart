@@ -1,9 +1,14 @@
+// Màn hình khởi động ứng dụng (Splash Screen).
+//
+// Hiển thị logo ứng dụng với hiệu ứng chuyển động mượt mà, đồng thời kiểm tra
+// trạng thái đăng nhập để điều hướng người dùng tới `/home` hoặc `/login`.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../controllers/auth_controller.dart';
 import '../../../../core/config/app_theme.dart';
 
+/// Widget màn hình khởi động Splash
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 

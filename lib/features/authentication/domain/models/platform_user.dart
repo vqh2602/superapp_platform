@@ -1,10 +1,25 @@
-/// Backend user representation for the Super App platform.
+/// Mô hình người dùng nền tảng SuperApp (Platform User).
+///
+/// Chứa thông tin hồ sơ tài khoản (id, họ tên, số điện thoại, vai trò, email và avatar),
+/// cung cấp các phương thức trích xuất dữ liệu cơ bản (Basic Info) hoặc đầy đủ (Full Profile)
+/// để trả về cho Mini App tùy theo quyền hạn được cấp.
 class PlatformUser {
+  /// Mã định danh duy nhất của người dùng
   final String id;
+
+  /// Họ tên hiển thị của người dùng
   final String name;
+
+  /// Số điện thoại đã xác minh
   final String phone;
+
+  /// Vai trò tài khoản (vd: 'admin', 'developer', 'customer')
   final String role;
+
+  /// Địa chỉ email
   final String email;
+
+  /// Đường dẫn ảnh đại diện (avatar)
   final String? avatarUrl;
 
   const PlatformUser({
@@ -16,6 +31,7 @@ class PlatformUser {
     this.avatarUrl,
   });
 
+  /// Khởi tạo [PlatformUser] từ dữ liệu JSON của máy chủ Backend
   factory PlatformUser.fromBackendJson(Map<String, dynamic> json) {
     return PlatformUser(
       id: json['id'] as String? ?? '',
@@ -29,12 +45,14 @@ class PlatformUser {
     );
   }
 
+  /// Trích xuất thông tin cơ bản công khai (dành cho action `user.getBasicInfo`)
   Map<String, dynamic> toBasicInfoJson() => {
     'id': id,
     'name': name,
     'avatarUrl': avatarUrl,
   };
 
+  /// Trích xuất toàn bộ hồ sơ chi tiết (dành cho action `user.getProfile`)
   Map<String, dynamic> toFullProfileJson() => {
     'id': id,
     'name': name,

@@ -1,3 +1,7 @@
+/// Định nghĩa danh mục các quyền hạn và năng lực hệ thống (App Capabilities).
+///
+/// Mỗi capability được gán một định danh chuỗi, tiêu đề và mô tả giải thích
+/// để hiển thị cho người dùng khi Mini App yêu cầu cấp quyền.
 enum AppCapability {
   authRequestCode('auth.requestCode', 'Yêu cầu mã xác thực đăng nhập', 'Cho phép Mini App nhận authCode để đăng nhập'),
   userGetProfile('user.getProfile', 'Truy cập thông tin cá nhân', 'Cho phép xem họ tên, số điện thoại, email'),
@@ -12,12 +16,16 @@ enum AppCapability {
   notification('notification', 'Gửi thông báo', 'Cho phép Mini App gửi thông báo và tin tức quan trọng'),
   authLogin('auth.login', 'Đăng nhập nhanh', 'Cho phép truy cập thông tin tài khoản đăng nhập SuperApp');
 
+  /// Khóa định danh của quyền hạn
   final String key;
+  /// Tiêu đề hiển thị thân thiện trên hộp thoại xin quyền
   final String title;
+  /// Mô tả chi tiết mục đích sử dụng quyền
   final String description;
 
   const AppCapability(this.key, this.title, this.description);
 
+  /// Tra cứu [AppCapability] theo chuỗi key (trả về null nếu không khớp)
   static AppCapability? fromKey(String key) {
     try {
       return AppCapability.values.firstWhere((c) => c.key == key);

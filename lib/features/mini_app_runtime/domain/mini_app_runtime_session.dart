@@ -1,3 +1,7 @@
+// Quản lý phiên thực thi WebView runtime cô lập (Mini App Runtime Session).
+//
+// Chịu trách nhiệm lưu trữ và dọn dẹp các tài nguyên thuộc về phiên thực thi WebView:
+// controller, dispatcher, event emitter, các bộ đếm timer theo dõi tiến trình tải và kiểm tra màn hình trắng.
 import 'dart:async';
 import 'package:webview_all/webview_all.dart';
 import '../../mini_app_bridge/bridge_dispatcher.dart';

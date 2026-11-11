@@ -1,3 +1,8 @@
+// Xử lý các hành động tiện ích điện thoại và viễn thông (Phone & Utility Handlers).
+//
+// Hỗ trợ quay số điện thoại (`openPhone`), gửi tin nhắn SMS (`openSMS`),
+// mở trình duyệt ngoài (`openExternalBrowser`), deep link (`openDeepLink`),
+// nhận diện giọng nói (`speechToText`) và ẩn bàn phím (`hideKeyboard`).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -7,6 +12,7 @@ import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `phone.openPhone`: Mở ứng dụng gọi điện thoại hệ thống
 class OpenPhoneHandler implements NativeActionHandler {
   @override
   String get actionName => 'phone.openPhone';

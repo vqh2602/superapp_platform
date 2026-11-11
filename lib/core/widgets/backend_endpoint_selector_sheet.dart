@@ -1,10 +1,13 @@
+// Bottom sheet cho phép người dùng thay đổi nhanh cấu hình máy chủ Backend Endpoint.
+//
+// Hỗ trợ chọn nhanh giữa Localhost, Alwaysdata Cloud hoặc nhập URL tùy ý,
+// đồng thời làm mới Catalog cache ngay sau khi áp dụng cấu hình mới.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/endpoint_config.dart';
 import '../../features/mini_app_catalog/data/mini_app_repository.dart';
 
-/// Shows a bottom sheet allowing users to quickly pick between Localhost,
-/// Alwaysdata Cloud, or type a custom Backend Endpoint URL.
+/// Hiển thị Modal Bottom Sheet cho phép người dùng cấu hình địa chỉ máy chủ Backend.
 Future<void> showBackendEndpointSelectorSheet(
   BuildContext context,
   WidgetRef ref,

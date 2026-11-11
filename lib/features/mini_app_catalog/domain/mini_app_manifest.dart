@@ -1,19 +1,36 @@
-/// Manifest descriptor for Mini Apps registered in the Super App.
-/// Supports both Type A (existing Web Mini Apps) and Type B (No-Code Schema Mini Apps).
+/// Mô tả Manifest của Mini App (Mini App Manifest Descriptor).
+///
+/// Định nghĩa toàn bộ thông tin siêu dữ liệu (metadata) của Mini App: mã ứng dụng id,
+/// tên, mô tả, phiên bản, URL khởi chạy (entryUrl), danh sách quyền hạn (capabilities),
+/// loại runtime (web hoặc no-code schema) và danh mục phân loại.
 class MiniAppManifest {
+  /// Mã định danh duy nhất của Mini App (vd: 'sample_store', 'sdk_playground')
   final String id;
+  /// Tên hiển thị của ứng dụng
   final String name;
+  /// Đoạn mô tả tóm tắt chức năng ứng dụng
   final String description;
+  /// Phiên bản ứng dụng (SemVer, vd: '1.0.0')
   final String version;
+  /// Đường dẫn icon hoặc URL ảnh đại diện
   final String icon;
+  /// URL trang web điểm vào của Mini App
   final String entryUrl;
+  /// Nguồn chạy là asset nội bộ hay tải qua mạng
   final bool isAsset;
+  /// Danh sách các quyền capability được phép sử dụng
   final List<String> capabilities;
-  final String appRuntimeType; // 'web' | 'schema'
+  /// Kiểu môi trường thực thi: 'web' (Web Mini App) hoặc 'schema' (No-Code Schema)
+  final String appRuntimeType;
+  /// Danh mục phân loại (vd: 'Tiện ích', 'Mua sắm', 'Trò chơi')
   final String category;
-  final String status; // 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PUBLISHED' | 'UNPUBLISHED' | 'SUSPENDED'
+  /// Trạng thái phát hành của ứng dụng trên hệ thống Backend
+  final String status;
+  /// Phiên bản của schema No-Code (nếu là schema app)
   final int schemaVersion;
+  /// Dữ liệu cấu trúc No-Code JSON schema (nếu có)
   final Map<String, dynamic>? schema;
+  /// Thời điểm cập nhật phiên bản gần nhất
   final DateTime? updatedAt;
 
   const MiniAppManifest({
@@ -33,9 +50,13 @@ class MiniAppManifest {
     this.updatedAt,
   });
 
+  /// Kiểm tra xem ứng dụng có chạy bằng cơ chế No-Code Schema Runtime hay không
   bool get isSchemaApp => appRuntimeType == 'schema';
+
+  /// Kiểm tra xem ứng dụng có chạy bằng cơ chế Web HTML5 thông thường hay không
   bool get isWebApp => appRuntimeType == 'web';
 
+  /// Khởi tạo [MiniAppManifest] từ Map JSON trả về bởi API Backend
   factory MiniAppManifest.fromJson(Map<String, dynamic> json) {
     return MiniAppManifest(
       id: json['id'] as String? ?? '',

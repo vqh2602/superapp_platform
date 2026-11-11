@@ -1,3 +1,7 @@
+// Màn hình tìm kiếm Mini App (Search Screen).
+//
+// Hỗ trợ tìm kiếm ứng dụng theo tên và mô tả theo thời gian thực, gợi ý từ khóa phổ biến,
+// hiển thị danh mục khám phá nhanh và lọc kết quả tìm kiếm.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +10,7 @@ import '../../data/mini_app_repository.dart';
 import '../../domain/mini_app_manifest.dart';
 import '../widgets/app_list_item.dart';
 
+/// Widget giao diện màn hình tìm kiếm Mini App
 class SearchScreen extends ConsumerStatefulWidget {
   final bool showBackButton;
   final VoidCallback? onBack;

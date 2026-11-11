@@ -1,3 +1,8 @@
+// Màn hình môi trường thực thi Mini App (Mini App Runtime Host Screen).
+//
+// Chịu trách nhiệm khởi tạo WebView, xác thực giấy phép thực thi với Backend,
+// thiết lập bảo mật cô lập RuntimeSecurityContext, đăng ký kênh Bridge Channel,
+// quản lý thanh trạng thái/tiêu đề động (Dynamic UI Container) và giao tiếp hai chiều với Mini App.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -32,7 +37,9 @@ import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/security/mini_app_security_policy.dart';
 import '../../../../core/security/runtime_security_context.dart';
 
+/// Widget màn hình chứa môi trường thực thi WebView của Mini App
 class MiniAppRuntimeScreen extends ConsumerStatefulWidget {
+  /// Mã định danh Mini App cần khởi chạy
   final String appId;
 
   const MiniAppRuntimeScreen({super.key, required this.appId});

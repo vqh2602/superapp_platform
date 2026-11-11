@@ -1,5 +1,10 @@
+// Màn hình biểu mẫu Native (Native Form Screen Demo).
+//
+// Minh họa tính năng điều hướng từ Mini App sang một màn hình Form Native của Flutter
+// thông qua action `navigation.openNativePage` và truyền nhận dữ liệu kết quả phản hồi.
 import 'package:flutter/material.dart';
 
+/// Widget biểu mẫu nhập liệu Native
 class NativeFormScreen extends StatefulWidget {
   final Map<String, dynamic>? initialData;
 

@@ -1,3 +1,7 @@
+// Kho dữ liệu thông tin hồ sơ người dùng (User Repository Implementation).
+//
+// Trích xuất thông tin người dùng từ phiên đăng nhập hiện tại và đồng bộ
+// cập nhật hồ sơ với máy chủ Backend qua các API `/api/v1/auth/me`.
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +13,7 @@ import '../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../domain/user_profile_model.dart';
 
+/// Lớp triển khai quản lý hồ sơ người dùng
 class UserRepositoryImpl {
   final AuthRepositoryImpl authRepository;
   final http.Client? httpClient;
@@ -20,6 +25,7 @@ class UserRepositoryImpl {
     this.authUrl,
   });
 
+  /// Lấy toàn bộ thông tin hồ sơ người dùng từ phiên đăng nhập hiện tại
   UserProfileModel getProfile() {
     final user = authRepository.currentUser;
     if (user == null || !authRepository.isAuthenticated) {

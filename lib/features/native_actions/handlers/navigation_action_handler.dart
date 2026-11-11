@@ -1,3 +1,7 @@
+// Xử lý các hành động điều hướng (Navigation Action Handlers).
+//
+// Hỗ trợ mở trang Native Flutter (`navigation.openNativePage`), đóng Mini App (`navigation.close`),
+// và chuyển đổi sang Mini App khác (`navigation.openMiniApp`).
 import 'package:flutter/material.dart';
 import '../../../../core/errors/bridge_error.dart';
 import '../../debug_center/presentation/native_form_screen.dart';
@@ -5,6 +9,7 @@ import '../../user_profile/presentation/native_profile_screen.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Xử lý action `navigation.openNativePage`: Mở một màn hình Native Flutter (profile, form)
 class NavigationOpenNativePageHandler implements NativeActionHandler {
   static const Set<String> allowedPages = {'profile', 'form'};
 

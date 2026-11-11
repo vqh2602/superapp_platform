@@ -1,3 +1,9 @@
+// Xử lý các hành động giao diện người dùng và phản hồi xúc giác (UI Action Handlers).
+//
+// Quản lý thông báo toast (`showToast`), hộp thoại alert (`showAlert`), hộp thoại confirm (`showConfirm`),
+// đổi tiêu đề (`setNavigationBarTitle`), rung máy (`vibrate`), sao chép clipboard (`copyToClipboard`),
+// độ sáng màn hình (`setBrightness`), style status bar, giữ màn hình bật (`keepScreen`),
+// cấu hình toàn diện app view (`configAppView`), và thu nhỏ/đóng ứng dụng (`minimizeApp`, `closeApp`).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -7,6 +13,7 @@ import '../../permissions/data/permission_repository_impl.dart';
 import '../domain/action_definition.dart';
 import '../domain/action_context.dart';
 
+/// Chuyển đổi mã màu hex hoặc chuỗi rgb(a) sang đối tượng [Color]
 Color? _tryParseHex(String? hexString) {
   if (hexString == null || hexString.isEmpty) return null;
   final str = hexString.trim();

@@ -1,9 +1,19 @@
+/// Bản ghi nhật ký Web WebView (Web Log Entry).
+///
+/// Bắt các log từ JavaScript console (log, info, warn, error, debug), các ngoại lệ
+/// chưa bắt (uncaught error) và unhandled promise rejections bên trong Mini App.
 class WebLogEntry {
+  /// Mã ID định danh bản ghi log
   final String id;
-  final String type; // 'console', 'error', 'unhandledrejection', 'eval'
-  final String level; // 'log', 'info', 'warn', 'error', 'debug'
+  /// Loại log ('console', 'error', 'unhandledrejection', 'eval')
+  final String type;
+  /// Cấp độ log ('log', 'info', 'warn', 'error', 'debug')
+  final String level;
+  /// Nội dung thông báo log
   final String message;
+  /// Stack trace nếu là lỗi
   final String? stack;
+  /// Dấu thời gian ghi nhận
   final DateTime timestamp;
 
   WebLogEntry({
@@ -15,9 +25,13 @@ class WebLogEntry {
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
+  /// Kiểm tra xem bản ghi có phải là lỗi hay không
   bool get isError => level == 'error' || type == 'error' || type == 'unhandledrejection';
+
+  /// Kiểm tra xem bản ghi có phải là cảnh báo hay không
   bool get isWarning => level == 'warn' || level == 'warning';
 
+  /// Khởi tạo [WebLogEntry] từ JSON Map gửi từ JavaScript Bridge Polyfill
   factory WebLogEntry.fromJson(Map<String, dynamic> json) {
     return WebLogEntry(
       id: json['id'] as String? ?? DateTime.now().microsecondsSinceEpoch.toString(),

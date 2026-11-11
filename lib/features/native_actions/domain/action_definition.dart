@@ -1,15 +1,20 @@
+// Định nghĩa trừu tượng cho bộ xử lý hành động Native (Native Action Handler).
+//
+// Mỗi hành động cụ thể (vd: Auth, Storage, Device, Media) sẽ kế thừa lớp này
+// để xác định tên action, capability yêu cầu, điều kiện xác thực và logic thực thi.
 import 'action_context.dart';
 
+/// Hợp đồng cơ sở cho mọi Native Action Handler
 abstract class NativeActionHandler {
-  /// The action identifier, e.g. 'auth.requestCode'
+  /// Tên định danh của hành động (vd: 'device.getLocation', 'auth.requestCode')
   String get actionName;
 
-  /// Required capability key in manifest/permission, or null if open
+  /// Khóa capability bắt buộc khai báo trong manifest, hoặc null nếu không yêu cầu quyền đặc biệt
   String? get requiredCapability;
 
-  /// Whether Master App authentication is strictly required
+  /// Hành động có bắt buộc người dùng đã đăng nhập tài khoản SuperApp hay không
   bool get requiresAuth => true;
 
-  /// Executes the action and returns serializable data or throws BridgeError
+  /// Thực thi hành động với tham số [payload] và ngữ cảnh [context], trả về dữ liệu hoặc ném BridgeError
   Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context);
 }
