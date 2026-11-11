@@ -121,57 +121,32 @@ class PermissionRepositoryImpl {
     }
   }
 
+  /// ĐÃ LỖI THỜI: Vui lòng sử dụng [updatePermission] hoặc thông qua [PermissionService].
+  ///
+  /// Phương thức này được định tuyến trực tiếp vào [updatePermission] để đảm bảo mọi cập nhật quyền
+  /// đều tuân thủ cơ chế đồng bộ nguyên tử (atomic sync) và rollback trạng thái bộ nhớ nếu backend thất bại,
+  /// chấm dứt hoàn toàn nguy cơ trạng thái client khác backend do đồng bộ fire-and-forget cũ.
+  @Deprecated('Sử dụng PermissionService.updatePermission() hoặc updatePermission()')
   void setPermission(String appId, String capability, bool granted) {
-    _checkUser();
-    _revisions[appId] = (_revisions[appId] ?? 0) + 1;
-    _storage.putIfAbsent(appId, () => {})[capability] = granted;
-
-    // Asynchronously sync decision to Backend PostgreSQL if authenticated
-    final session = authRepo?.currentSession;
-    if (usersUrl != null &&
-        session != null &&
-        session.accessToken.isNotEmpty) {
-      _syncDecisionToBackend(appId, capability, granted, session.accessToken);
-    }
+    unawaited(updatePermission(appId, capability, granted).catchError((e) {
+      debugPrint('[PermissionRepositoryImpl] Deprecated setPermission sync error (rolled back): $e');
+    }));
   }
 
-  Future<void> _syncDecisionToBackend(
-    String appId,
-    String capability,
-    bool granted,
-    String accessToken,
-  ) async {
-    try {
-      final client = httpClient ?? http.Client();
-      final url = Uri.parse('$usersUrl/me/apps/$appId/permissions');
-      await client
-          .put(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $accessToken',
-            },
-            body: jsonEncode({
-              'permissions': [capability],
-              'granted': granted,
-            }),
-          )
-          .timeout(const Duration(seconds: 2));
-    } catch (e) {
-      debugPrint(
-        '[PermissionRepositoryImpl] Sync permission to BE skipped/offline: $e',
-      );
-    }
-  }
-
-  void grantAll(String appId, List<String> capabilities) {
+  /// Cấp quyền hàng loạt và đồng bộ lên Backend
+  Future<void> grantAll(String appId, List<String> capabilities) async {
     for (final cap in capabilities) {
-      setPermission(appId, cap, true);
+      await updatePermission(appId, cap, true);
     }
   }
 
-  void revokeAll(String appId) {
+  /// Thu hồi toàn bộ quyền của Mini App và đồng bộ nguyên tử lên Backend.
+  /// Nếu đồng bộ máy chủ thất bại, tự động rollback khôi phục lại các quyền trước đó.
+  Future<void> revokeAll(String appId) async {
     _checkUser();
+    final previous = _storage[appId] != null
+        ? Map<String, bool>.from(_storage[appId]!)
+        : null;
     _revisions[appId] = (_revisions[appId] ?? 0) + 1;
     _storage.remove(appId);
 
@@ -179,21 +154,30 @@ class PermissionRepositoryImpl {
     if (usersUrl != null &&
         session != null &&
         session.accessToken.isNotEmpty) {
-      _revokeAllOnBackend(appId, session.accessToken);
-    }
-  }
+      try {
+        final client = httpClient ?? http.Client();
+        final url = Uri.parse('$usersUrl/me/apps/$appId/permissions');
+        final response = await client
+            .delete(url, headers: {'Authorization': 'Bearer ${session.accessToken}'})
+            .timeout(const Duration(seconds: 4));
 
-  Future<void> _revokeAllOnBackend(String appId, String accessToken) async {
-    try {
-      final client = httpClient ?? http.Client();
-      final url = Uri.parse('$usersUrl/me/apps/$appId/permissions');
-      await client
-          .delete(url, headers: {'Authorization': 'Bearer $accessToken'})
-          .timeout(const Duration(seconds: 2));
-    } catch (e) {
-      debugPrint(
-        '[PermissionRepositoryImpl] Revoke permissions on BE skipped/offline: $e',
-      );
+        if (response.statusCode != 200 && response.statusCode != 204) {
+          if (previous != null) {
+            _storage[appId] = previous;
+          }
+          throw BridgeError.internal(
+            'Thu hồi quyền trên máy chủ thất bại (HTTP ${response.statusCode})',
+          );
+        }
+      } catch (e) {
+        if (previous != null) {
+          _storage[appId] = previous;
+        }
+        if (e is BridgeError) rethrow;
+        throw BridgeError.internal(
+          'Không thể kết nối đến máy chủ để thu hồi quyền: $e',
+        );
+      }
     }
   }
 

@@ -207,7 +207,7 @@ void main() {
 
     test('Atomic Sync: Rollback to previous state when revoking fails on backend', () async {
       // Pre-grant permission
-      permissionRepo.setPermission(manifest.id, 'device.getLocation', true);
+      await permissionRepo.updatePermission(manifest.id, 'device.getLocation', true);
       expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isTrue);
 
       backendHandler = (req) async => http.Response('Service Unavailable', 503);
@@ -278,6 +278,73 @@ void main() {
         }, cancelledContext),
         throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.cancelled)),
       );
+    });
+
+    test('PermissionService.updatePermission performs atomic sync and rolls back on failure', () async {
+      int putCalls = 0;
+      backendHandler = (req) async {
+        if (req.method == 'PUT') {
+          putCalls++;
+          return http.Response('Internal Server Error', 500);
+        }
+        return http.Response('{}', 200);
+      };
+
+      // Gọi updatePermission qua PermissionService
+      await expectLater(
+        () => permissionService.updatePermission(manifest.id, 'device.getLocation', true),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.internalError)),
+      );
+
+      expect(putCalls, 1);
+      // Trạng thái bộ nhớ phải được rollback về false (chưa cấp)
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isFalse);
+      expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isFalse);
+    });
+
+    test('PermissionService.revokeAll performs atomic sync and rolls back on failure', () async {
+      // Thiết lập quyền ban đầu
+      backendHandler = (req) async => http.Response('{}', 200);
+      await permissionService.updatePermission(manifest.id, 'device.getLocation', true);
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isTrue);
+
+      // Backend lỗi khi DELETE
+      backendHandler = (req) async {
+        if (req.method == 'DELETE') {
+          return http.Response('Service Unavailable', 503);
+        }
+        return http.Response('{}', 200);
+      };
+
+      await expectLater(
+        () => permissionService.revokeAll(manifest.id),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.internalError)),
+      );
+
+      // Toàn bộ quyền đã cấp trước đó phải được phục hồi (rollback)
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isTrue);
+      expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isTrue);
+    });
+
+    test('Deprecated setPermission routes through updatePermission and rolls back on failure', () async {
+      backendHandler = (req) async {
+        if (req.method == 'PUT') {
+          return http.Response('Bad Gateway', 502);
+        }
+        return http.Response('{}', 200);
+      };
+
+      // setPermission cũ gọi updatePermission ngầm định
+      // ignore: deprecated_member_use_from_same_package
+      permissionRepo.setPermission(manifest.id, 'device.getLocation', true);
+
+      // Chờ một chút để unawaited future hoàn thành
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Không còn hiện tượng fire-and-forget nuốt lỗi và giữ nguyên memory:
+      // Memory đã được rollback an toàn về false!
+      expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isFalse);
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isFalse);
     });
   });
 }

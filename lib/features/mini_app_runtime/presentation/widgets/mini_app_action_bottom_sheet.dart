@@ -11,7 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../mini_app_catalog/domain/mini_app_manifest.dart';
 import '../../../mini_app_catalog/presentation/controllers/favorite_apps_provider.dart';
-import '../../../permissions/data/permission_repository_impl.dart';
+import '../../../permissions/application/permission_service.dart';
 
 /// Widget menu hành động mở rộng của Mini App
 class MiniAppActionBottomSheet extends ConsumerWidget {
@@ -752,7 +752,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            final repo = ref.read(permissionRepositoryProvider);
+            final permService = ref.read(permissionServiceProvider);
             final capabilities =
                 manifest?.capabilities ??
                 ['user.getBasicInfo', 'navigation.close', 'device.scanQRCode'];
@@ -820,7 +820,7 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final cap = capabilities[index];
-                        final isGranted = repo.isGranted(appId, cap);
+                        final isGranted = permService.isGranted(appId, cap);
 
                         return SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
@@ -843,9 +843,21 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                           ),
                           value: isGranted,
                           activeTrackColor: const Color(0xFF10B981),
-                          onChanged: (val) {
-                            repo.setPermission(appId, cap, val);
-                            setSheetState(() {});
+                          onChanged: (val) async {
+                            try {
+                              await permService.updatePermission(appId, cap, val);
+                              setSheetState(() {});
+                            } catch (e) {
+                              setSheetState(() {});
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Không thể cập nhật quyền: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                         );
                       },
@@ -856,16 +868,30 @@ class MiniAppActionBottomSheet extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {
-                            repo.revokeAll(appId);
-                            setSheetState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Đã thu hồi toàn bộ quyền của $appId',
-                                ),
-                              ),
-                            );
+                          onPressed: () async {
+                            try {
+                              await permService.revokeAll(appId);
+                              setSheetState(() {});
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Đã thu hồi toàn bộ quyền của $appId',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setSheetState(() {});
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Không thể thu hồi quyền: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,

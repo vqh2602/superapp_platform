@@ -7,7 +7,11 @@ import {
   resolveCredentials,
   buildRequestHeaders,
 } from '../dist/cli/utils/auth.js';
-import { uploadProject } from '../dist/cli/commands/upload.js';
+import {
+  uploadProject,
+  validateRegistryUrl,
+  isLoopbackHostname,
+} from '../dist/cli/commands/upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sampleStoreDir = path.resolve(__dirname, '../../mini_apps/sample_store');
@@ -111,5 +115,90 @@ test('uploadProject rejects remote registry upload when no authentication creden
       cwd: sampleStoreDir,
     }),
     err => err.message.includes('xác thực') || err.message.includes('Authentication required')
+  );
+});
+
+test('isLoopbackHostname only allows exact loopback hostnames and blocks deceptive domains', () => {
+  // Loopback hợp lệ
+  assert.equal(isLoopbackHostname('localhost'), true);
+  assert.equal(isLoopbackHostname('127.0.0.1'), true);
+  assert.equal(isLoopbackHostname('[::1]'), true);
+  assert.equal(isLoopbackHostname('::1'), true);
+  assert.equal(isLoopbackHostname('LOCALHOST'), true);
+
+  // Hostname giả mạo / lừa đảo (deceptive hostnames)
+  assert.equal(isLoopbackHostname('localhost.evil.example'), false);
+  assert.equal(isLoopbackHostname('localhost-evil.com'), false);
+  assert.equal(isLoopbackHostname('127.0.0.1.attacker.com'), false);
+  assert.equal(isLoopbackHostname('evil.com'), false);
+  assert.equal(isLoopbackHostname('sub.localhost'), false);
+});
+
+test('validateRegistryUrl enforces HTTPS for remote registries and allows HTTP only for loopback', () => {
+  // 1. Cho phép loopback HTTP
+  const local1 = validateRegistryUrl('http://localhost:3000');
+  assert.equal(local1.isLocal, true);
+  assert.equal(local1.url.origin, 'http://localhost:3000');
+
+  const local2 = validateRegistryUrl('http://127.0.0.1:8080/api');
+  assert.equal(local2.isLocal, true);
+
+  const local3 = validateRegistryUrl('http://[::1]:3000');
+  assert.equal(local3.isLocal, true);
+
+  // 2. Cho phép HTTPS cho cả remote và local
+  const remoteHttps = validateRegistryUrl('https://registry.superapp.vn');
+  assert.equal(remoteHttps.isLocal, false);
+  assert.equal(remoteHttps.url.origin, 'https://registry.superapp.vn');
+
+  // 3. Chặn đứng HTTP đối với remote registry (chống lộ token qua plaintext HTTP)
+  assert.throws(
+    () => validateRegistryUrl('http://remote-registry.example.com'),
+    err => err.message.includes('bắt buộc phải sử dụng giao thức HTTPS')
+  );
+
+  // 4. Chặn đứng hostname giả mạo localhost chạy HTTP
+  assert.throws(
+    () => validateRegistryUrl('http://localhost.evil.example:3000'),
+    err => err.message.includes('bắt buộc phải sử dụng giao thức HTTPS')
+  );
+
+  assert.throws(
+    () => validateRegistryUrl('http://127.0.0.1.attacker.com:3000'),
+    err => err.message.includes('bắt buộc phải sử dụng giao thức HTTPS')
+  );
+
+  // 5. Chặn giao thức không an toàn khác (ftp, javascript, etc.)
+  assert.throws(
+    () => validateRegistryUrl('ftp://localhost:21'),
+    err => err.message.includes('không được hỗ trợ')
+  );
+
+  // 6. Chặn URL malformed
+  assert.throws(
+    () => validateRegistryUrl('invalid://url::bad'),
+    err => err.message.includes('không hợp lệ')
+  );
+});
+
+test('uploadProject refuses to send developer token over unencrypted HTTP to remote or deceptive hostnames', async () => {
+  // Dù có cung cấp token, CLI vẫn từ chối gửi token qua HTTP không mã hóa đến remote host
+  await assert.rejects(
+    uploadProject({
+      registry: 'http://remote-registry.example.com',
+      token: 'dev_secret_jwt_token',
+      cwd: sampleStoreDir,
+    }),
+    err => err.message.includes('bắt buộc phải sử dụng giao thức HTTPS')
+  );
+
+  // Chặn gửi token tới hostname lừa đảo localhost.evil.example
+  await assert.rejects(
+    uploadProject({
+      registry: 'http://localhost.evil.example',
+      token: 'dev_secret_jwt_token',
+      cwd: sampleStoreDir,
+    }),
+    err => err.message.includes('bắt buộc phải sử dụng giao thức HTTPS')
   );
 });

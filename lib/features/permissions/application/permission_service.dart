@@ -60,9 +60,20 @@ class PermissionService {
     return permissionRepo.getPermissionsForApp(appId);
   }
 
-  /// Thu hồi tất cả quyền của một Mini App
-  void revokeAll(String appId) {
-    permissionRepo.revokeAll(appId);
+  /// Cập nhật quyền của Mini App và đồng bộ nguyên tử lên Backend.
+  /// Nếu đồng bộ thất bại, tự động rollback trạng thái bộ nhớ và ném lỗi BridgeError.
+  Future<void> updatePermission(String appId, String capability, bool granted) async {
+    await permissionRepo.updatePermission(appId, capability, granted);
+  }
+
+  /// Thu hồi toàn bộ quyền của một Mini App và đồng bộ nguyên tử lên Backend (tự động rollback nếu thất bại).
+  Future<void> revokeAll(String appId) async {
+    await permissionRepo.revokeAll(appId);
+  }
+
+  /// Lấy danh sách các Mini App người dùng đã cấp quyền hoặc tương tác từ Backend.
+  Future<List<Map<String, dynamic>>> fetchUserAppsFromBackend() {
+    return permissionRepo.fetchUserAppsFromBackend();
   }
 
   /// Yêu cầu cấp quyền cho Mini App qua quy trình thống nhất:

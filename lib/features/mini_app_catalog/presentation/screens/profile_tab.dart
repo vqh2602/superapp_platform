@@ -11,7 +11,7 @@ import '../../../../core/config/app_theme.dart';
 import '../../../../core/config/debug_mode_provider.dart';
 import '../../../../core/config/endpoint_config.dart';
 import '../../../../core/widgets/backend_endpoint_selector_sheet.dart';
-import '../../../permissions/data/permission_repository_impl.dart';
+import '../../../permissions/application/permission_service.dart';
 
 /// Widget giao diện Tab Tài khoản cá nhân
 class ProfileTab extends ConsumerWidget {
@@ -272,7 +272,7 @@ class ProfileTab extends ConsumerWidget {
       ),
       builder: (ctx) {
         return FutureBuilder(
-          future: ref.read(permissionRepositoryProvider).fetchUserAppsFromBackend(),
+          future: ref.read(permissionServiceProvider).fetchUserAppsFromBackend(),
           builder: (context, snapshot) {
             final apps = snapshot.data ?? [];
             return Container(
@@ -335,11 +335,21 @@ class ProfileTab extends ConsumerWidget {
                             trailing: TextButton(
                               style: TextButton.styleFrom(foregroundColor: Colors.red),
                               onPressed: () async {
-                                ref.read(permissionRepositoryProvider).revokeAll(appId);
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Đã thu hồi toàn bộ quyền của $appId')),
-                                );
+                                try {
+                                  await ref.read(permissionServiceProvider).revokeAll(appId);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Đã thu hồi toàn bộ quyền của $appId')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Không thể thu hồi quyền: $e'), backgroundColor: Colors.red),
+                                    );
+                                  }
+                                }
                               },
                               child: const Text('Thu hồi'),
                             ),

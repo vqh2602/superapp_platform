@@ -15,19 +15,67 @@ export interface UploadCommandOptions {
   cwd?: string;
 }
 
+/**
+ * Kiểm tra xem hostname có phải là địa chỉ loopback cục bộ an toàn hay không.
+ * Chỉ cho phép HTTP với hostname loopback chính xác: localhost, 127.0.0.1, [::1], ::1.
+ * Ngăn chặn triệt để các hostname gây nhầm lẫn như "localhost.evil.example" hoặc "127.0.0.1.attacker.com".
+ */
+export function isLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().trim();
+  return (
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === '[::1]' ||
+    normalized === '::1'
+  );
+}
+
+/**
+ * Xác thực và kiểm tra an toàn URL của Registry backend:
+ * - Phải là URL hợp lệ (parse bằng new URL()).
+ * - Chỉ chấp nhận giao thức http: hoặc https:.
+ * - Giao thức http: CHỈ được phép đối với loopback cục bộ (localhost, 127.0.0.1, ::1).
+ * - Tất cả các registry từ xa (remote registry) BẮT BUỘC phải dùng HTTPS để ngăn chặn
+ *   rò rỉ Developer Access Token (Bearer) và chữ ký số HMAC-SHA256 qua mạng không mã hóa.
+ */
+export function validateRegistryUrl(rawUrl: string): { url: URL; isLocal: boolean } {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    const errorMsg = `Lỗi cấu hình Registry URL không hợp lệ: "${rawUrl}". Vui lòng cung cấp URL đầy đủ (ví dụ: https://registry.example.com hoặc http://localhost:3000).`;
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    const errorMsg = `Lỗi bảo mật: Giao thức "${parsed.protocol}" không được hỗ trợ. Chỉ chấp nhận HTTPS (hoặc HTTP đối với localhost/loopback).`;
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  const isLocal = isLoopbackHostname(parsed.hostname);
+
+  if (parsed.protocol === 'http:' && !isLocal) {
+    const errorMsg = `Lỗi bảo mật: Registry từ xa ("${parsed.origin}") bắt buộc phải sử dụng giao thức HTTPS để bảo vệ developer token và dữ liệu truyền tải. Giao thức HTTP chỉ được phép sử dụng với loopback cục bộ (localhost, 127.0.0.1, ::1).`;
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  return { url: parsed, isLocal };
+}
+
 export async function uploadProject(options: UploadCommandOptions = {}): Promise<void> {
   const cwd = options.cwd || process.cwd();
   const manifest = loadManifest(cwd);
-  const registryUrl = options.registry || process.env.SUPERAPP_REGISTRY_URL || 'http://localhost:3000';
+  const rawRegistryUrl = options.registry || process.env.SUPERAPP_REGISTRY_URL || 'http://localhost:3000';
   const credentials = resolveCredentials(options);
 
   logger.title(`Tải lên SuperApp Dynamic Registry: ${manifest.name}`);
 
-  // Validate authentication requirement
-  const isLocalRegistry =
-    registryUrl.startsWith('http://localhost') ||
-    registryUrl.startsWith('http://127.0.0.1') ||
-    registryUrl.startsWith('http://[::1]');
+  // Validate authentication requirement & remote HTTPS enforcement
+  const { url: validatedUrl, isLocal: isLocalRegistry } = validateRegistryUrl(rawRegistryUrl);
+  const registryUrl = `${validatedUrl.origin}${validatedUrl.pathname === '/' ? '' : validatedUrl.pathname.replace(/\/+$/, '')}`;
 
   if (!credentials.token && !credentials.secret) {
     if (!isLocalRegistry) {
