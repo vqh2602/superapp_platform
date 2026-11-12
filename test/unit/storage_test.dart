@@ -266,7 +266,7 @@ void main() {
 
     test('Dispatches permission.getPermissions returning granted list', () async {
       final context = ActionContext(appId: 'sdk_playground', manifest: testManifest);
-      permissionRepo.setPermission('sdk_playground', 'device.getLocation', true);
+      await permissionRepo.updatePermission('sdk_playground', 'device.getLocation', true);
 
       final res = await dispatcher.dispatch('permission.getPermissions', {}, context);
       expect(res['appId'], 'sdk_playground');

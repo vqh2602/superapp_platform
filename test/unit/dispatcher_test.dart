@@ -67,7 +67,7 @@ void main() {
     });
 
     test('Requires login for protected action', () async {
-      permissionRepo.setPermission('sdk_playground', 'user.getProfile', true);
+      await permissionRepo.updatePermission('sdk_playground', 'user.getProfile', true);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 
       expect(
@@ -89,7 +89,7 @@ void main() {
 
     test('Succeeds when authenticated and permission granted', () async {
       await authRepo.login(TestUsers.userA.id);
-      permissionRepo.setPermission('sdk_playground', 'user.getProfile', true);
+      await permissionRepo.updatePermission('sdk_playground', 'user.getProfile', true);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 
       final result = await dispatcher.dispatch('user.getProfile', {}, context);
@@ -99,7 +99,7 @@ void main() {
     });
 
     test('Real device mode returns UNSUPPORTED when no real hardware attached', () async {
-      permissionRepo.setPermission('sdk_playground', 'device.scanQRCode', true);
+      await permissionRepo.updatePermission('sdk_playground', 'device.scanQRCode', true);
       final context = ActionContext(appId: 'sdk_playground', manifest: manifest);
 
       expect(

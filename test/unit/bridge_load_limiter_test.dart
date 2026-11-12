@@ -401,5 +401,98 @@ void main() {
       // Permission repository should now have granted status
       expect(permissionRepo.isGranted('test_app', 'test.permCapability'), isTrue);
     });
+
+    test('Duplicate in-flight request ID is rejected immediately with INVALID_PARAMS without breaking original RPC', () async {
+      final blockingHandler = BlockingAsyncHandler();
+      actionDispatcher.registerHandler(blockingHandler);
+
+      final dispatcher = BridgeDispatcher(
+        actionDispatcher: actionDispatcher,
+        debugLogRepo: debugLogRepo,
+        controller: controller,
+        manifest: manifest,
+        backendBaseUrl: 'https://superappplatfrom.alwaysdata.net',
+        loadConfig: const BridgeLoadConfig(
+          maxConcurrentRequests: 5,
+        ),
+      );
+
+      final duplicateReqJson = jsonEncode({
+        'id': 'req_duplicate_id_1',
+        'action': 'test.blocking',
+        'payload': {},
+        'appId': 'test_app',
+      });
+
+      // Start original request with id 'req_duplicate_id_1'
+      final f1 = dispatcher.handleMessage(duplicateReqJson, null);
+
+      expect(dispatcher.inFlightRequestIds, contains('req_duplicate_id_1'));
+      expect(dispatcher.activeCallCount, 1);
+
+      // Send a duplicate request with the exact same ID while original is in-flight
+      await dispatcher.handleMessage(duplicateReqJson, null);
+
+      // Duplicate request must be rejected with INVALID_PARAMS
+      expect(mockPlatform.executedScripts.any((s) =>
+        s.contains('req_duplicate_id_1') && s.contains('INVALID_PARAMS')
+      ), isTrue);
+
+      // The original request must STILL be in-flight
+      expect(dispatcher.inFlightRequestIds, contains('req_duplicate_id_1'));
+      expect(dispatcher.activeCallCount, 1);
+
+      // Unblock original request
+      blockingHandler.completer.complete();
+      await f1;
+
+      // Both in-flight and active calls should return to 0
+      expect(dispatcher.inFlightRequestIds, isEmpty);
+      expect(dispatcher.activeCallCount, 0);
+    });
+
+    test('currentUserIdGetter mismatch rejects RPC with AUTH_REQUIRED and disposes dispatcher', () async {
+      String? activeUserId = 'user_initial_123';
+
+      final dispatcher = BridgeDispatcher(
+        actionDispatcher: actionDispatcher,
+        debugLogRepo: debugLogRepo,
+        controller: controller,
+        manifest: manifest,
+        backendBaseUrl: 'https://superappplatfrom.alwaysdata.net',
+        userId: 'user_initial_123',
+        currentUserIdGetter: () => activeUserId,
+      );
+
+      // First call with matching user ID succeeds
+      await dispatcher.handleMessage(jsonEncode({
+        'id': 'req_user_ok',
+        'action': 'debug.echo',
+        'payload': {'msg': 'hello'},
+        'appId': 'test_app',
+      }), null);
+
+      expect(debugLogRepo.logs.first.id, 'req_user_ok');
+      expect(debugLogRepo.logs.first.success, isTrue);
+
+      // User logs out or switches account
+      activeUserId = 'user_switched_456';
+
+      // Second call has mismatched user identity
+      await dispatcher.handleMessage(jsonEncode({
+        'id': 'req_user_mismatch',
+        'action': 'debug.echo',
+        'payload': {'msg': 'secret'},
+        'appId': 'test_app',
+      }), null);
+
+      // Dispatcher should be disposed
+      expect(dispatcher.isDisposed, isTrue);
+
+      // Should return AUTH_REQUIRED failure to WebView
+      expect(mockPlatform.executedScripts.any((s) =>
+        s.contains('req_user_mismatch') && s.contains('AUTH_REQUIRED')
+      ), isTrue);
+    });
   });
 }

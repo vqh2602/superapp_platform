@@ -326,24 +326,76 @@ void main() {
       expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isTrue);
     });
 
-    test('Deprecated setPermission routes through updatePermission and rolls back on failure', () async {
+    test('Race Condition Protection: Serializes concurrent updates on the same capability', () async {
+      final executionOrder = <String>[];
+
       backendHandler = (req) async {
         if (req.method == 'PUT') {
-          return http.Response('Bad Gateway', 502);
+          final body = jsonDecode(req.body);
+          final granted = body['granted'] as bool;
+          if (granted == true) {
+            executionOrder.add('start_true');
+            await Future<void>.delayed(const Duration(milliseconds: 40));
+            executionOrder.add('end_true');
+            return http.Response('{}', 200);
+          } else {
+            executionOrder.add('start_false');
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            executionOrder.add('end_false');
+            return http.Response('{}', 200);
+          }
         }
         return http.Response('{}', 200);
       };
 
-      // setPermission cũ gọi updatePermission ngầm định
-      // ignore: deprecated_member_use_from_same_package
-      permissionRepo.setPermission(manifest.id, 'device.getLocation', true);
+      // Kích hoạt đồng thời 2 thao tác trên cùng một capability
+      final f1 = permissionService.updatePermission(manifest.id, 'device.getLocation', true);
+      final f2 = permissionService.updatePermission(manifest.id, 'device.getLocation', false);
 
-      // Chờ một chút để unawaited future hoàn thành
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future.wait([f1, f2]);
 
-      // Không còn hiện tượng fire-and-forget nuốt lỗi và giữ nguyên memory:
-      // Memory đã được rollback an toàn về false!
-      expect(permissionRepo.isGranted(manifest.id, 'device.getLocation'), isFalse);
+      // Thao tác được tuần tự hóa nghiêm ngặt: f1 hoàn thành rồi mới đến f2
+      expect(executionOrder, ['start_true', 'end_true', 'start_false', 'end_false']);
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isFalse);
+    });
+
+    test('Race Condition Protection: Skips obsolete rollback when a newer operation has intervened', () async {
+      // Kiểm tra trực tiếp cơ chế _rollbackPermissionIfLatest:
+      // Giả sử có một request cũ (req 1) bị trễ và thất bại sau khi request mới (req 2) đã can thiệp
+      backendHandler = (req) async {
+        if (req.method == 'PUT') {
+          final body = jsonDecode(req.body);
+          final granted = body['granted'] as bool;
+          if (granted == true) {
+            // Req 1 thất bại với 500
+            await Future<void>.delayed(const Duration(milliseconds: 30));
+            return http.Response('Internal Server Error', 500);
+          } else {
+            // Req 2 thành công với 200
+            return http.Response('{}', 200);
+          }
+        }
+        return http.Response('{}', 200);
+      };
+
+      // Ban đầu quyền = false
+      expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isFalse);
+
+      // f1 cố gắng cấp quyền true (nhưng backend sẽ trả 500)
+      final f1 = permissionService.updatePermission(manifest.id, 'device.getLocation', true);
+      // f2 ngay lập tức đặt quyền về false (hoặc bất kỳ trạng thái mới nào)
+      final f2 = permissionService.updatePermission(manifest.id, 'device.getLocation', false);
+
+      // f1 sẽ ném BridgeError do backend trả 500
+      await expectLater(
+        f1,
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.internalError)),
+      );
+
+      // f2 hoàn thành thành công
+      await f2;
+
+      // Trạng thái cuối cùng phải là false theo f2, rollback của f1 không được phép phá hỏng trạng thái
       expect(permissionService.isGranted(manifest.id, 'device.getLocation'), isFalse);
     });
   });

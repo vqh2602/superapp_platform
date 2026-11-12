@@ -188,7 +188,7 @@ void main() {
 
     test('Schema calls requiring native UI fail rather than fabricating success', () async {
       final context = ActionContext(appId: 'coffee_shop', manifest: coffeeShopManifest);
-      permissionRepo.setPermission('coffee_shop', 'device.scanQRCode', true);
+      await permissionRepo.updatePermission('coffee_shop', 'device.scanQRCode', true);
       for (final action in ['ui.showToast', 'device.scanQRCode']) {
         await expectLater(dispatcher.dispatch(action, {'message': 'Test'}, context),
           throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.unsupported)));
@@ -236,27 +236,27 @@ void main() {
       final context = ActionContext(appId: 'sdk_playground', manifest: playgroundManifest);
 
       // Flow A: Request Auth Code
-      permissionRepo.setPermission('sdk_playground', 'auth.requestCode', true);
+      await permissionRepo.updatePermission('sdk_playground', 'auth.requestCode', true);
       await expectLater(dispatcher.dispatch('auth.requestCode', {}, context),
         throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.invalidParams)));
 
       // Flow B: User Profile
-      permissionRepo.setPermission('sdk_playground', 'user.getProfile', true);
+      await permissionRepo.updatePermission('sdk_playground', 'user.getProfile', true);
       final profileRes = await dispatcher.dispatch('user.getProfile', {}, context);
       expect(profileRes['id'], equals('user_001'));
       expect(profileRes['name'], equals('Nguyễn Văn A'));
 
       // Flow C: Basic Info
-      permissionRepo.setPermission('sdk_playground', 'user.getBasicInfo', true);
+      await permissionRepo.updatePermission('sdk_playground', 'user.getBasicInfo', true);
       final basicRes = await dispatcher.dispatch('user.getBasicInfo', {}, context);
       expect(basicRes['name'], equals('Nguyễn Văn A'));
 
       // Flow D: Device Location
-      permissionRepo.setPermission('sdk_playground', 'device.getLocation', true);
+      await permissionRepo.updatePermission('sdk_playground', 'device.getLocation', true);
       await expectLater(dispatcher.dispatch('device.getLocation', {}, context), throwsA(anything));
 
       // Flow E: Native Navigation allowlist requires BuildContext
-      permissionRepo.setPermission('sdk_playground', 'navigation.openNativePage', true);
+      await permissionRepo.updatePermission('sdk_playground', 'navigation.openNativePage', true);
       expect(
         () => dispatcher.dispatch(
           'navigation.openNativePage',
@@ -267,7 +267,7 @@ void main() {
       );
 
       // Flow F: Native Close
-      permissionRepo.setPermission('sdk_playground', 'navigation.close', true);
+      await permissionRepo.updatePermission('sdk_playground', 'navigation.close', true);
       final closeRes = await dispatcher.dispatch('navigation.close', {}, context);
       expect(closeRes.containsKey('closed'), isTrue);
     });

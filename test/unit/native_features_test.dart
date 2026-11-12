@@ -34,7 +34,8 @@ void main() {
     await expectLater(handler.handle({}, context), throwsA(isA<MissingPluginException>()));
   });
   test('contacts return actual fields and all phone numbers from the device adapter', () async {
-    final permissions = PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true);
+    final permissions = PermissionRepositoryImpl();
+    await permissions.updatePermission(context.appId, 'contacts', true);
     final c = Contact(id: 'native-id', displayName: 'Device Contact', phones: [Phone(number: '+84111'), Phone(number: '+84222')], emails: [Email(address: 'contact@example.test')]);
     final handler = GetContactsHandler(permissionRepo: permissions, requestAccess: () async => true, readContacts: () async => [c]);
     final result = await handler.handle({}, context);
@@ -44,13 +45,17 @@ void main() {
     expect((await handler.handle({'query': 'missing'}, context))['contacts'], isEmpty);
   });
   test('empty device address book stays empty', () async {
-    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
+    final permissions = PermissionRepositoryImpl();
+    await permissions.updatePermission(context.appId, 'contacts', true);
+    final handler = GetContactsHandler(permissionRepo: permissions,
       requestAccess: () async => true, readContacts: () async => []);
     expect(await handler.handle({}, context), {'contacts': [], 'total': 0});
   });
   test('OS permission denial does not return sample contacts or read the address book', () async {
     var reads = 0;
-    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
+    final permissions = PermissionRepositoryImpl();
+    await permissions.updatePermission(context.appId, 'contacts', true);
+    final handler = GetContactsHandler(permissionRepo: permissions,
       requestAccess: () async => false, readContacts: () async { reads++; return []; });
     await expectLater(handler.handle({}, context), throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.permissionDenied)));
     expect(reads, 0);
@@ -62,7 +67,9 @@ void main() {
     await expectLater(handler.handle({}, context), throwsA(isA<BridgeError>())); expect(prompts, 0);
   });
   test('contacts plugin errors are not replaced by fixtures', () async {
-    final handler = GetContactsHandler(permissionRepo: PermissionRepositoryImpl()..setPermission(context.appId, 'contacts', true),
+    final permissions = PermissionRepositoryImpl();
+    await permissions.updatePermission(context.appId, 'contacts', true);
+    final handler = GetContactsHandler(permissionRepo: permissions,
       requestAccess: () async => true, readContacts: () async => throw PlatformException(code: 'native_failure'));
     await expectLater(handler.handle({}, context), throwsA(isA<PlatformException>()));
   });

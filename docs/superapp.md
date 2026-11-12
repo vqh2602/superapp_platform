@@ -156,8 +156,8 @@ Action xác thực yêu cầu phiên SuperApp đang đăng nhập. Đây là xá
 
 ### 3.3. Quản lý Quyền riêng tư & Thu hồi Consent (Backend Permissions)
 - **Kiểm soát quyền 3 lớp**: Quyền hiệu lực của Mini App được xác thực qua Manifest ∩ Quyền nền tảng Registry ∩ Đồng ý của người dùng (User Consent).
-- **Đồng bộ quyết định lên Backend**: Khi người dùng đồng ý cấp quyền, quyết định được lưu trên Backend qua `PUT /api/v1/users/me/apps/:appId/permissions`.
-- **Trung tâm Quyền riêng tư**: Trong Profile Tab, người dùng có thể xem danh sách các Mini App đã từng cấp quyền và dễ dàng thu hồi quyền (DELETE / PUT) trực tiếp về Backend.
+- **Đồng bộ nguyên tử & Chống Race Condition**: Khi người dùng cấp hoặc thu hồi quyền, quyết định được lưu trên Backend qua `PUT /api/v1/users/me/apps/:appId/permissions`. Quá trình cập nhật được tuần tự hóa (serialize) theo `userId + appId + capability` và theo dõi phiên bản revision; nếu backend thất bại, hệ thống tự động rollback trạng thái bộ nhớ nhưng bỏ qua các rollback lỗi thời nếu có thao tác mới hơn can thiệp.
+- **Trung tâm Quyền riêng tư**: Trong Profile Tab và Action Bottom Sheet, người dùng có thể xem danh sách các Mini App đã từng cấp quyền và dễ dàng bật/tắt hoặc thu hồi quyền (DELETE / PUT) trực tiếp về Backend thông qua `PermissionService`.
 
 ### 3.4. WeChat/Zalo-Style Capsule Bar & Action Bottom Sheet
 - Tích hợp thanh điều khiển chuẩn hiện đại ở góc trên bên phải gồm 2 nút:
@@ -233,7 +233,14 @@ Kênh giao tiếp giữa Web Mini App và Flutter Master Shell sử dụng cơ c
 }
 ```
 
-### 4.4. Danh mục Hàm & Đặc tả Kiểu Dữ Liệu Chi Tiết (API Specifications & Type Definitions)
+### 4.4. Kiểm soát Tải & Xác thực Danh tính RPC (Concurrency, Duplicate ID & Auth Check)
+
+Để bảo vệ tài nguyên ứng dụng và ngăn chặn rò rỉ dữ liệu hoặc vượt giới hạn:
+- **Giới hạn RPC đồng thời (Concurrency Limit)**: `BridgeDispatcher` theo dõi số lượng RPC đang chạy bằng bộ đếm active calls độc lập `_activeCallCount` (tối đa theo cấu hình `maxConcurrentRequests`, mặc định 5 RPC/phiên). Nếu vượt quá ngưỡng, RPC bị từ chối ngay lập tức với mã lỗi `RATE_LIMIT_EXCEEDED`.
+- **Chặn trùng lặp Request ID (Duplicate In-Flight IDs)**: Khi nhận được RPC có `id` trùng với một RPC đang thực thi trong phiên (`_inFlightRequestIds`), hệ thống từ chối ngay với mã lỗi `INVALID_PARAMS`. Request ban đầu vẫn tiếp tục thực thi bình thường mà không bị ảnh hưởng hay xóa nhầm định danh.
+- **Xác thực danh tính tài khoản theo từng RPC (Auth Identity Check)**: Mỗi RPC được đối chiếu danh tính người dùng hiện hành (`currentUserIdGetter`) với `userId` được cấp phát lúc khởi tạo phiên làm việc. Nếu phát hiện thay đổi tài khoản hoặc đăng xuất, RPC bị chặn ngay lập tức với mã lỗi `AUTH_REQUIRED` và toàn bộ phiên Bridge Dispatcher bị hủy (`dispose()`).
+
+### 4.5. Danh mục Hàm & Đặc tả Kiểu Dữ Liệu Chi Tiết (API Specifications & Type Definitions)
 
 Mọi yêu cầu gọi từ Mini App thông qua SDK hoặc qua `window.FlutterBridge.postMessage` đều tuân theo hợp đồng dữ liệu rõ ràng. Dưới đây là định nghĩa kiểu (TypeScript Types) và định dạng dữ liệu (JSON Format) chuẩn mực cho từng hàm được SuperApp hỗ trợ:
 
@@ -931,6 +938,14 @@ Khi người dùng mở một Mini App từ Catalog, luồng điều hướng ho
 3. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
 4. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
 5. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
+
+### 6.1. Quản lý Vòng đời Phiên Runtime & Cô lập Danh tính (`MiniAppRuntimeSession`)
+
+Mỗi lần khởi chạy Mini App, một phiên thực thi `MiniAppRuntimeSession` riêng biệt được tạo với `sessionId` (UUID v4) độc lập:
+1. **Cô lập tài nguyên**: WebViewController, BridgeDispatcher, BridgeEventEmitter và toàn bộ timers tiến trình thuộc về phiên riêng. Khi chuyển app hoặc hủy phiên, phiên cũ được gọi `dispose()` (nạp `about:blank`, hủy toàn bộ timer và ngắt tiếp nhận RPC).
+2. **Xử lý thay đổi trạng thái đăng nhập (`authStateProvider`)**:
+   - **Đăng xuất (`logged_out`)**: Khi người dùng đăng xuất, Runtime phát sự kiện `logged_out` vào WebView, chủ động hủy phiên (`session.dispose()`), giải phóng WebViewController và đóng màn hình Mini App (`Navigator.maybePop()`), ngăn chặn triệt để nguy cơ truy cập dữ liệu (Secure Storage) của tài khoản cũ.
+   - **Đổi tài khoản (`account_switched`)**: Khi phát hiện tài khoản đăng nhập khác (`prevUserId != nextUserId`), Runtime phát sự kiện `account_switched`, hủy phiên cũ và tự động khởi tạo lại phiên mới (`_startNewSession`) cô lập hoàn toàn cho tài khoản mới.
 
 ---
 

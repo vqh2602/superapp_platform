@@ -30,11 +30,13 @@ class BridgeDispatcher {
   final MiniAppUiDelegate? uiDelegate;
   final String backendBaseUrl;
   final String? userId;
+  final String? Function()? currentUserIdGetter;
   final String runtimeSessionId;
   final BridgeLoadConfig loadConfig;
   final BridgeRateLimiter _rateLimiter;
   RuntimeSecurityContext? securityContext;
   bool _isDisposed = false;
+  int _activeCallCount = 0;
   final Set<String> _inFlightRequestIds = {};
 
   static final RegExp _idRegex = RegExp(r'"id"\s*:\s*"([^"]+)"');
@@ -47,6 +49,7 @@ class BridgeDispatcher {
     this.uiDelegate,
     String? backendBaseUrl,
     this.userId,
+    this.currentUserIdGetter,
     String? runtimeSessionId,
     this.securityContext,
     BridgeLoadConfig? loadConfig,
@@ -65,6 +68,9 @@ class BridgeDispatcher {
   /// Cho biết Dispatcher của phiên làm việc này đã bị hủy hay chưa.
   bool get isDisposed => _isDisposed;
 
+  /// Số lượng RPC đang thực thi đồng thời trong phiên này.
+  int get activeCallCount => _activeCallCount;
+
   /// Danh sách các RPC request ID đang được thực thi trong phiên này.
   Set<String> get inFlightRequestIds => Set.unmodifiable(_inFlightRequestIds);
 
@@ -75,6 +81,7 @@ class BridgeDispatcher {
   void dispose() {
     _isDisposed = true;
     _inFlightRequestIds.clear();
+    _activeCallCount = 0;
     _rateLimiter.reset();
   }
 
@@ -145,13 +152,13 @@ class BridgeDispatcher {
       return;
     }
 
-    // 2. Concurrency Limit check (theo Mini App session)
-    if (_inFlightRequestIds.length >= loadConfig.maxConcurrentRequests) {
+    // 2. Concurrency Limit check (theo Mini App session sử dụng bộ đếm active calls độc lập)
+    if (_activeCallCount >= loadConfig.maxConcurrentRequests) {
       final reqId = _extractRequestId(rawJson) ?? 'unknown';
       final err = BridgeError.rateLimitExceeded(
         'Số lượng RPC đang thực thi vượt quá giới hạn (tối đa ${loadConfig.maxConcurrentRequests} RPC đồng thời)',
       );
-      debugPrint('[BridgeDispatcher] Từ chối request vì vượt giới hạn RPC đồng thời (${_inFlightRequestIds.length}/${loadConfig.maxConcurrentRequests})');
+      debugPrint('[BridgeDispatcher] Từ chối request vì vượt giới hạn RPC đồng thời ($_activeCallCount/${loadConfig.maxConcurrentRequests})');
       await _rejectFast(reqId, 'unknown', err, stopwatch);
       return;
     }
@@ -167,9 +174,11 @@ class BridgeDispatcher {
       return;
     }
 
+    _activeCallCount++;
     String requestId = 'unknown';
     String actionName = 'unknown';
     Map<String, dynamic> payload = {};
+    bool addedToInFlight = false;
 
     try {
       final parsed = jsonDecode(rawJson) as Map<String, dynamic>;
@@ -183,7 +192,32 @@ class BridgeDispatcher {
         return;
       }
 
+      // Kiểm tra trùng lặp request ID đang thực thi (Duplicate In-Flight Request ID)
+      if (_inFlightRequestIds.contains(requestId)) {
+        final err = BridgeError.invalidParams(
+          'Request ID "$requestId" đang được thực thi. Không được phép gửi các RPC trùng lặp ID đồng thời.',
+        );
+        debugPrint('[BridgeDispatcher] Từ chối request vì trùng lặp request ID đang chạy: $requestId');
+        await _rejectFast(requestId, actionName, err, stopwatch);
+        return;
+      }
+
+      // Xác nhận phiên hiện tại vẫn thuộc đúng userId đã dùng để tạo ngữ cảnh
+      if (currentUserIdGetter != null) {
+        final currentActiveUserId = currentUserIdGetter!();
+        if (currentActiveUserId != userId) {
+          debugPrint('[BridgeDispatcher] Hủy phiên $runtimeSessionId vì userId thay đổi: phiên=$userId, hiện tại=$currentActiveUserId');
+          final err = BridgeError.authRequired(
+            'Phiên làm việc Mini App đã hết hạn hoặc tài khoản người dùng đã thay đổi.',
+          );
+          await _rejectFast(requestId, actionName, err, stopwatch);
+          dispose();
+          return;
+        }
+      }
+
       _inFlightRequestIds.add(requestId);
+      addedToInFlight = true;
 
       // 4. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
       // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
@@ -327,7 +361,10 @@ class BridgeDispatcher {
 
       await _sendResponse(response);
     } finally {
-      _inFlightRequestIds.remove(requestId);
+      if (addedToInFlight) {
+        _inFlightRequestIds.remove(requestId);
+      }
+      _activeCallCount = (_activeCallCount > 0) ? _activeCallCount - 1 : 0;
     }
   }
 

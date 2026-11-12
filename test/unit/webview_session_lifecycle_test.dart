@@ -24,6 +24,38 @@ import 'package:superapp_platform/features/authentication/data/token_service_shi
 import 'package:superapp_platform/features/user_profile/data/user_repository_impl.dart';
 import 'package:superapp_platform/features/device/data/device_adapter_impl.dart';
 import 'package:superapp_platform/features/permissions/data/permission_repository_impl.dart';
+import 'package:superapp_platform/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:superapp_platform/features/authentication/domain/models/auth_session.dart';
+import 'package:superapp_platform/features/authentication/domain/models/platform_user.dart';
+
+class FakeAuthNotifier extends AuthNotifier {
+  final AuthState initial;
+  FakeAuthNotifier([this.initial = const AuthState()]);
+
+  @override
+  AuthState build() => initial;
+
+  void setAuthenticatedUser(String userId, String username) {
+    state = AuthState(
+      session: AuthSession(
+        accessToken: 'token_$userId',
+        refreshToken: 'refresh_$userId',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+        user: PlatformUser(
+          id: userId,
+          name: username,
+          phone: '0901234567',
+          role: 'customer',
+          email: '$username@example.com',
+        ),
+      ),
+    );
+  }
+
+  void logoutUser() {
+    state = const AuthState();
+  }
+}
 
 class MockPlatformWebViewController extends PlatformWebViewController {
   MockPlatformWebViewController(super.params) : super.implementation();
@@ -433,6 +465,85 @@ void main() {
       expect(sessionId2, isNot(equals(sessionId1)));
       expect(session2.appId, 'app_2');
       expect(session2.isActive, isTrue);
+    });
+
+    testWidgets('MiniAppRuntimeScreen terminates session when user logs out and reinitializes on account switch', (tester) async {
+      final fakePlatform = FakeWebViewPlatform();
+      WebViewPlatform.instance = fakePlatform;
+
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          '{"id":"app_1","name":"App One","version":"1.0.0","runtimeType":"schema","category":"Utilities","entryUrl":"https://example.com/app1","permissions":[],"schema":{}}',
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final testRepo = MiniAppRepository(
+        httpClient: mockClient,
+        catalogUrl: 'https://example.com/api/v1/catalog',
+      );
+
+      final fakeAuthNotifier = FakeAuthNotifier(
+        AuthState(
+          session: AuthSession(
+            accessToken: 'token_u1',
+            refreshToken: 'refresh_u1',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            user: const PlatformUser(
+              id: 'user_1',
+              name: 'user1',
+              phone: '0901234567',
+              role: 'customer',
+              email: 'user1@example.com',
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            miniAppRepositoryProvider.overrideWithValue(testRepo),
+            backendEndpointProvider.overrideWith(() => BackendEndpointNotifier()),
+            authStateProvider.overrideWith(() => fakeAuthNotifier),
+          ],
+          child: const MaterialApp(
+            home: MiniAppRuntimeScreen(appId: 'app_1'),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final state = tester.state(find.byType(MiniAppRuntimeScreen)) as dynamic;
+      final session1 = state.currentSession as MiniAppRuntimeSession;
+      expect(session1.isActive, isTrue);
+      expect(session1.dispatcher?.userId, 'user_1');
+
+      // 1. Account switch from user_1 to user_2
+      fakeAuthNotifier.setAuthenticatedUser('user_2', 'user2');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Old session must be disposed
+      expect(session1.isDisposed, isTrue);
+
+      // New session must be active with user_2
+      final session2 = state.currentSession as MiniAppRuntimeSession;
+      expect(session2, isNot(equals(session1)));
+      expect(session2.isActive, isTrue);
+      expect(session2.dispatcher?.userId, 'user_2');
+
+      // 2. User logs out
+      fakeAuthNotifier.logoutUser();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Session 2 must be disposed and currentSession cleared
+      expect(session2.isDisposed, isTrue);
+      expect(state.currentSession, isNull);
     });
   });
 }

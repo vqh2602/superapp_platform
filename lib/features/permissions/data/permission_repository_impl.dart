@@ -25,6 +25,8 @@ class PermissionRepositoryImpl {
   final Set<String> _loadedApps = {};
   final Map<String, Future<Map<String, bool>>> _loadingApps = {};
   final Map<String, int> _revisions = {};
+  final Map<String, int> _capRevisions = {};
+  final Map<String, Future<void>> _syncQueues = {};
   StreamSubscription<dynamic>? _sessionSubscription;
   String? _userId;
   int _generation = 0;
@@ -68,12 +70,58 @@ class PermissionRepositoryImpl {
     return granted == false;
   }
 
+  /// Tuần tự hóa các thao tác cập nhật trên cùng một khóa (userId:appId:capability)
+  /// nhằm triệt tiêu hoàn toàn race condition khi có nhiều request đồng thời.
+  Future<void> _serialize(String queueKey, Future<void> Function() action) async {
+    final previous = _syncQueues[queueKey] ?? Future<void>.value();
+    final completer = Completer<void>();
+    _syncQueues[queueKey] = completer.future;
+
+    try {
+      await previous.catchError((_) {});
+      await action();
+      completer.complete();
+    } catch (e, st) {
+      completer.complete();
+      Error.throwWithStackTrace(e, st);
+    } finally {
+      if (_syncQueues[queueKey] == completer.future) {
+        _syncQueues.remove(queueKey);
+      }
+    }
+  }
+
   /// Cập nhật quyền và đồng bộ nguyên tử (atomic) lên Backend nếu người dùng đã đăng nhập.
-  /// Nếu đồng bộ thất bại, tự động rollback lại trạng thái trước đó và ném lỗi.
-  Future<void> updatePermission(String appId, String capability, bool granted) async {
+  ///
+  /// Cơ chế chống Race Condition & Rollback an toàn:
+  /// 1. Tuần tự hóa theo `userId + appId + capability` qua hàng đợi queue.
+  /// 2. Theo dõi phiên bản `_capRevisions` cho từng capability: nếu một request cũ thất bại
+  ///    sau khi một request mới đã can thiệp, rollback lỗi thời sẽ bị bỏ qua (Skip Obsolete Rollback)
+  ///    để không ghi đè trạng thái mới nhất.
+  /// 3. Nếu đồng bộ thất bại ở phiên bản hiện hành, tự động rollback lại trạng thái trước đó và ném lỗi.
+  Future<void> updatePermission(String appId, String capability, bool granted) {
     _checkUser();
+    final queueKey = '${_userId ?? "__guest__"}:$appId:$capability';
+    return _serialize(
+      queueKey,
+      () => _executeUpdatePermission(appId, capability, granted, queueKey),
+    );
+  }
+
+  Future<void> _executeUpdatePermission(
+    String appId,
+    String capability,
+    bool granted,
+    String capKey,
+  ) async {
+    _checkUser();
+    final generation = _generation;
     final previous = _storage[appId]?[capability];
+    final targetRev = (_capRevisions[capKey] ?? 0) + 1;
+    _capRevisions[capKey] = targetRev;
     _revisions[appId] = (_revisions[appId] ?? 0) + 1;
+
+    // Cập nhật bộ nhớ cục bộ
     _storage.putIfAbsent(appId, () => {})[capability] = granted;
 
     final session = authRepo?.currentSession;
@@ -97,14 +145,35 @@ class PermissionRepositoryImpl {
             )
             .timeout(const Duration(seconds: 4));
 
+        _checkUser();
+        if (_generation != generation) {
+          // Người dùng đã đăng xuất hoặc đổi tài khoản -> Bỏ qua
+          return;
+        }
+
         if (response.statusCode != 200 && response.statusCode != 204) {
-          _rollbackPermission(appId, capability, previous);
+          _rollbackPermissionIfLatest(
+            appId,
+            capability,
+            previous,
+            capKey,
+            targetRev,
+            generation,
+          );
           throw BridgeError.internal(
             'Đồng bộ quyền lên máy chủ thất bại (HTTP ${response.statusCode})',
           );
         }
       } catch (e) {
-        _rollbackPermission(appId, capability, previous);
+        _checkUser();
+        _rollbackPermissionIfLatest(
+          appId,
+          capability,
+          previous,
+          capKey,
+          targetRev,
+          generation,
+        );
         if (e is BridgeError) rethrow;
         throw BridgeError.internal(
           'Không thể kết nối đến máy chủ để lưu quyền: $e',
@@ -113,24 +182,29 @@ class PermissionRepositoryImpl {
     }
   }
 
-  void _rollbackPermission(String appId, String capability, bool? previous) {
+  /// Khôi phục trạng thái bộ nhớ chỉ khi thao tác thất bại này là phiên bản mới nhất của capability.
+  /// Nếu đã có một thao tác mới hơn can thiệp, bỏ qua rollback để tránh ghi đè dữ liệu mới.
+  void _rollbackPermissionIfLatest(
+    String appId,
+    String capability,
+    bool? previous,
+    String capKey,
+    int targetRev,
+    int generation,
+  ) {
+    if (_generation != generation) return;
+    if ((_capRevisions[capKey] ?? 0) != targetRev) {
+      debugPrint(
+        '[PermissionRepositoryImpl] Bỏ qua rollback lỗi thời cho $capKey (rev yêu cầu: $targetRev, rev hiện hành: ${_capRevisions[capKey]})',
+      );
+      return;
+    }
+
     if (previous == null) {
       _storage[appId]?.remove(capability);
     } else {
       _storage.putIfAbsent(appId, () => {})[capability] = previous;
     }
-  }
-
-  /// ĐÃ LỖI THỜI: Vui lòng sử dụng [updatePermission] hoặc thông qua [PermissionService].
-  ///
-  /// Phương thức này được định tuyến trực tiếp vào [updatePermission] để đảm bảo mọi cập nhật quyền
-  /// đều tuân thủ cơ chế đồng bộ nguyên tử (atomic sync) và rollback trạng thái bộ nhớ nếu backend thất bại,
-  /// chấm dứt hoàn toàn nguy cơ trạng thái client khác backend do đồng bộ fire-and-forget cũ.
-  @Deprecated('Sử dụng PermissionService.updatePermission() hoặc updatePermission()')
-  void setPermission(String appId, String capability, bool granted) {
-    unawaited(updatePermission(appId, capability, granted).catchError((e) {
-      debugPrint('[PermissionRepositoryImpl] Deprecated setPermission sync error (rolled back): $e');
-    }));
   }
 
   /// Cấp quyền hàng loạt và đồng bộ lên Backend
@@ -144,10 +218,12 @@ class PermissionRepositoryImpl {
   /// Nếu đồng bộ máy chủ thất bại, tự động rollback khôi phục lại các quyền trước đó.
   Future<void> revokeAll(String appId) async {
     _checkUser();
+    final generation = _generation;
     final previous = _storage[appId] != null
         ? Map<String, bool>.from(_storage[appId]!)
         : null;
-    _revisions[appId] = (_revisions[appId] ?? 0) + 1;
+    final targetAppRev = (_revisions[appId] ?? 0) + 1;
+    _revisions[appId] = targetAppRev;
     _storage.remove(appId);
 
     final session = authRepo?.currentSession;
@@ -161,8 +237,11 @@ class PermissionRepositoryImpl {
             .delete(url, headers: {'Authorization': 'Bearer ${session.accessToken}'})
             .timeout(const Duration(seconds: 4));
 
+        _checkUser();
+        if (_generation != generation) return;
+
         if (response.statusCode != 200 && response.statusCode != 204) {
-          if (previous != null) {
+          if (previous != null && (_revisions[appId] ?? 0) == targetAppRev) {
             _storage[appId] = previous;
           }
           throw BridgeError.internal(
@@ -170,7 +249,10 @@ class PermissionRepositoryImpl {
           );
         }
       } catch (e) {
-        if (previous != null) {
+        _checkUser();
+        if (_generation == generation &&
+            previous != null &&
+            (_revisions[appId] ?? 0) == targetAppRev) {
           _storage[appId] = previous;
         }
         if (e is BridgeError) rethrow;
@@ -274,6 +356,8 @@ class PermissionRepositoryImpl {
     _loadedApps.clear();
     _loadingApps.clear();
     _revisions.clear();
+    _capRevisions.clear();
+    _syncQueues.clear();
   }
 
   Map<String, bool> getPermissionsForApp(String appId) {

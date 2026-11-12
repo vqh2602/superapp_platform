@@ -656,6 +656,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       uiDelegate: this,
       backendBaseUrl: endpoint.baseUrl,
       userId: currentUserId,
+      currentUserIdGetter: () => ref.read(authStateProvider).currentUser?.id,
       runtimeSessionId: session.sessionId,
       securityContext: secContext,
     );
@@ -1055,8 +1056,33 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     }
 
     ref.listen(authStateProvider, (prev, next) {
-      if (!next.isAuthenticated && _eventEmitter != null) {
-        _eventEmitter!.emitSessionChanged(state: 'logged_out');
+      final prevUserId = prev?.currentUser?.id;
+      final nextUserId = next.currentUser?.id;
+      if (prev != null && prevUserId != nextUserId) {
+        if (_eventEmitter != null) {
+          _eventEmitter!.emitSessionChanged(
+            state: next.isAuthenticated ? 'account_switched' : 'logged_out',
+          );
+        }
+        // Hủy ngay phiên làm việc của tài khoản trước để bảo vệ dữ liệu và ngăn rò rỉ namespace
+        _currentSession?.dispose();
+        _currentSession = null;
+        if (mounted) {
+          if (next.isAuthenticated) {
+            // Tái khởi tạo runtime mới cô lập cho tài khoản vừa đăng nhập/chuyển đổi
+            _startNewSession(_currentAppId);
+          } else {
+            // Đã đăng xuất: hủy WebView và thoát khỏi màn hình Mini App runtime
+            setState(() {
+              _webViewController = null;
+              _eventEmitter = null;
+              _isLoading = false;
+              _showLoadingOverlay = false;
+              _loadError = 'Phiên làm việc đã kết thúc do tài khoản đã đăng xuất.';
+            });
+            Navigator.of(context).maybePop();
+          }
+        }
       }
     });
 
