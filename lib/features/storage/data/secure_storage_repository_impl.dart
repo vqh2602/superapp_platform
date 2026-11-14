@@ -595,9 +595,7 @@ class SecureStorageRepositoryImpl {
     final prefix = '$prefixV2:$userHash:';
     final all = await _secureStorage.readAll();
     final keys = all.keys.where((k) => k.startsWith(prefix)).toList();
-    for (final k in keys) {
-      await _secureStorage.delete(key: k);
-    }
+    await Future.wait(keys.map((k) => _secureStorage.delete(key: k)));
     return {'cleared': true, 'userId': userId, 'count': keys.length};
   }
 
@@ -622,9 +620,7 @@ class SecureStorageRepositoryImpl {
       }).toList();
     }
 
-    for (final k in keysToDelete) {
-      await _secureStorage.delete(key: k);
-    }
+    await Future.wait(keysToDelete.map((k) => _secureStorage.delete(key: k)));
 
     // Xóa cả legacy v1
     final legacyPrefix = 'sec_${appId}_';

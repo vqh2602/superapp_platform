@@ -2,6 +2,7 @@
 //
 // Hỗ trợ tìm kiếm ứng dụng theo tên và mô tả theo thời gian thực, gợi ý từ khóa phổ biến,
 // hiển thị danh mục khám phá nhanh và lọc kết quả tìm kiếm.
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _currentQuery = '';
+  Timer? _debounceTimer;
 
   final List<String> _popularKeywords = [
     'FC Mobile VN',
@@ -42,14 +44,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onKeywordSelected(String keyword) {
+    _debounceTimer?.cancel();
     setState(() {
       _searchController.text = keyword;
       _currentQuery = keyword;
+    });
+  }
+
+  void _onSearchChanged(String val) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) {
+        setState(() {
+          _currentQuery = val;
+        });
+      }
+    });
+  }
+
+  void _clearSearch() {
+    _debounceTimer?.cancel();
+    _searchController.clear();
+    setState(() {
+      _currentQuery = '';
     });
   }
 
@@ -121,21 +144,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       border: InputBorder.none,
                       isDense: true,
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        _currentQuery = val;
-                      });
-                    },
+                    onChanged: _onSearchChanged,
                   ),
                 ),
                 if (_currentQuery.isNotEmpty)
                   GestureDetector(
-                    onTap: () {
-                      _searchController.clear();
-                      setState(() {
-                        _currentQuery = '';
-                      });
-                    },
+                    onTap: _clearSearch,
                     child: const Icon(Icons.cancel, color: Color(0xFF94A3B8), size: 18),
                   ),
               ],
@@ -171,12 +185,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               )
             else
-              ...List.generate(filteredApps.length, (index) {
-                return FadeSlideIn(
-                  delay: Duration(milliseconds: 20 * index),
-                  child: AppListItem(app: filteredApps[index]),
-                );
-              }),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredApps.length,
+                separatorBuilder: (_, __) => const Padding(
+                  padding: EdgeInsets.only(left: 84, right: 16),
+                  child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ),
+                itemBuilder: (context, index) {
+                  return FadeSlideIn(
+                    delay: Duration(milliseconds: 20 * index),
+                    child: AppListItem(app: filteredApps[index]),
+                  );
+                },
+              ),
             const SizedBox(height: 24),
           ],
 

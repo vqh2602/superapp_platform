@@ -88,6 +88,14 @@ class AuthNotifier extends Notifier<AuthState> {
     return const AuthState();
   }
 
+  /// Khôi phục phiên đăng nhập trước đó từ bộ nhớ bảo mật
+  Future<void> restoreSession() async {
+    final restored = await _repository.restorePersistedSession();
+    if (restored != null) {
+      state = state.copyWith(session: restored, clearError: true);
+    }
+  }
+
   /// Đăng nhập tài khoản bằng email/userId và mật khẩu vào backend
   Future<bool> login(String emailOrUserId, [String? password]) async {
     state = state.copyWith(isLoading: true, clearError: true);

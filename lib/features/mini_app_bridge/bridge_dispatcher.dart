@@ -38,6 +38,7 @@ class BridgeDispatcher {
   bool _isDisposed = false;
   int _activeCallCount = 0;
   final Set<String> _inFlightRequestIds = {};
+  String? _cachedCurrentUrl;
 
   static final RegExp _idRegex = RegExp(r'"id"\s*:\s*"([^"]+)"');
 
@@ -83,6 +84,14 @@ class BridgeDispatcher {
     _inFlightRequestIds.clear();
     _activeCallCount = 0;
     _rateLimiter.reset();
+  }
+
+  /// Cập nhật URL hiện tại của WebView được bắt từ NavigationDelegate để tránh gọi
+  /// `await controller.currentUrl()` qua Platform Channel trên mỗi RPC.
+  void updateCurrentUrl(String? url) {
+    if (url != null && url.isNotEmpty) {
+      _cachedCurrentUrl = url;
+    }
   }
 
   String? _extractRequestId(String raw) {
@@ -221,11 +230,14 @@ class BridgeDispatcher {
 
       // 4. Xác thực nguồn gốc (Origin Validation): Đảm bảo trang web đang gọi Bridge
       // phải nằm trong phạm vi domain và path được cấp phép của Mini App này.
-      String? currentUrl;
-      try {
-        currentUrl = await controller.currentUrl();
-      } catch (_) {
-        // Fallback khi chạy trên môi trường test không có native webview
+      String? currentUrl = _cachedCurrentUrl;
+      if (currentUrl == null || currentUrl.isEmpty) {
+        try {
+          currentUrl = await controller.currentUrl();
+          _cachedCurrentUrl = currentUrl;
+        } catch (_) {
+          // Fallback khi chạy trên môi trường test không có native webview
+        }
       }
 
       if (_isDisposed || !_inFlightRequestIds.contains(requestId)) return;

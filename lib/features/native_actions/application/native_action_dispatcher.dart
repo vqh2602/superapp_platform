@@ -331,16 +331,13 @@ class NativeActionDispatcher {
     if (handler.requiredCapability != null) {
       final cap = handler.requiredCapability!;
       permissionService.verifyCapabilityInManifest(effectiveContext, cap);
-    }
 
-    // Restore this user's saved grants before handlers inspect or prompt.
-    effectiveContext.checkCancelled();
-    await permissionService.ensurePermissionsLoaded(effectiveContext.appId);
-    effectiveContext.checkCancelled();
+      // Restore this user's saved grants before handlers inspect or prompt.
+      effectiveContext.checkCancelled();
+      await permissionService.ensurePermissionsLoaded(effectiveContext.appId);
+      effectiveContext.checkCancelled();
 
-    // 4. Runtime permission check với quy trình duy nhất qua PermissionService
-    if (handler.requiredCapability != null) {
-      final cap = handler.requiredCapability!;
+      // 4. Runtime permission check với quy trình duy nhất qua PermissionService
       final isGranted = permissionService.isGranted(effectiveContext.appId, cap);
       if (!isGranted) {
         final granted = await permissionService.requestPermission(

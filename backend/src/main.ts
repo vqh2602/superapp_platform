@@ -3,12 +3,15 @@ dotenv.config({ override: true });
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { json } from 'express';
+import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('SuperAppRegistryBootstrap');
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
+  // Enable gzip/deflate compression for API responses & Mini App assets
+  app.use(compression());
   app.use(json({ limit: '1mb' }));
 
   // Enable CORS for Flutter Master App and Web Builder

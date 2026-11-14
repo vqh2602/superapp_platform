@@ -553,9 +553,14 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
   Future<void> _initSession(MiniAppRuntimeSession session) async {
     if (session.isDisposed || _currentSession != session || !mounted) return;
 
-    // Revalidate execution authorization & active version with backend on every launch.
     final repo = ref.read(miniAppRepositoryProvider);
-    final authorization = await repo.authorizeExecution(session.appId);
+    final permissionRepo = ref.read(permissionRepositoryProvider);
+
+    // Kích hoạt song song xác thực quyền thực thi và đồng bộ quyền đã lưu từ Backend
+    final authFuture = repo.authorizeExecution(session.appId);
+    final permFuture = permissionRepo.fetchPermissionsFromBackend(session.appId);
+
+    final authorization = await authFuture;
     if (!mounted || session.isDisposed || _currentSession != session) return;
 
     if (authorization == null || !authorization.isValid) {
@@ -579,10 +584,9 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
       status: 'Đang xác thực quyền & bảo mật...',
     );
 
-    // Refresh saved consent on every launch, before WebView startup actions run.
-    final permissionRepo = ref.read(permissionRepositoryProvider);
+    // Đợi kết quả nạp quyền đã lưu (đã được chạy ngầm đồng thời với authorizeExecution)
     try {
-      await permissionRepo.fetchPermissionsFromBackend(session.appId);
+      await permFuture;
     } catch (_) {
       if (!mounted || session.isDisposed || _currentSession != session) return;
       session.dispose();
@@ -662,6 +666,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     );
 
     final emitter = BridgeEventEmitter(controller);
+    dispatcher.updateCurrentUrl(initialApprovedOrigin);
 
     // Gắn tài nguyên vào session để giải phóng đồng bộ
     session.controller = controller;
@@ -730,16 +735,20 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     if (session.isDisposed || _currentSession != session || !mounted) return;
 
-    if (await controller.isUserScriptInjectionSupported(
-      WebViewUserScriptInjectionTime.documentStart,
-    )) {
-      await controller.addUserScript(
-        WebViewUserScript(
-          source:
-              '${BridgeChannel.webDebugPolyfillScript}\n${BridgeChannel.bridgePolyfillScript}',
-        ),
-      );
-    }
+    bool isUserScriptSupported = false;
+    try {
+      if (await controller.isUserScriptInjectionSupported(
+        WebViewUserScriptInjectionTime.documentStart,
+      )) {
+        await controller.addUserScript(
+          WebViewUserScript(
+            source:
+                '${BridgeChannel.webDebugPolyfillScript}\n${BridgeChannel.bridgePolyfillScript}',
+          ),
+        );
+        isUserScriptSupported = true;
+      }
+    } catch (_) {}
 
     if (session.isDisposed || _currentSession != session || !mounted) return;
 
@@ -779,6 +788,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
           // 2. Cho phép in-page anchor navigation (ví dụ: #section)
           if (uri.hasFragment && (!uri.hasScheme || uri.scheme.isEmpty) && uri.host.isEmpty) {
+            dispatcher.updateCurrentUrl(rawUrl);
             return NavigationDecision.navigate;
           }
 
@@ -790,6 +800,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           );
 
           if (isTrusted) {
+            dispatcher.updateCurrentUrl(rawUrl);
             return NavigationDecision.navigate;
           }
 
@@ -823,6 +834,7 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         },
         onPageStarted: (url) {
           if (session.isDisposed || _currentSession != session) return;
+          dispatcher.updateCurrentUrl(url);
           _updateProgressTarget(
             68.0,
             newCeiling: 92.0,
@@ -830,8 +842,10 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
           );
           if (!kIsWeb) {
             _safeRunScript(controller, resetScript);
-            _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
-            _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
+            if (!isUserScriptSupported) {
+              _safeRunScript(controller, BridgeChannel.webDebugPolyfillScript);
+              _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
+            }
             if (validManifest.isSchemaApp && validManifest.schema != null) {
               final schemaJson = jsonEncode(validManifest.schema);
               _safeRunScript(
@@ -847,12 +861,15 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         },
         onPageFinished: (url) async {
           if (session.isDisposed || _currentSession != session) return;
-          await _safeRunScript(controller, resetScript);
-          await _safeRunScript(
-            controller,
-            BridgeChannel.webDebugPolyfillScript,
-          );
-          await _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
+          dispatcher.updateCurrentUrl(url);
+          if (!isUserScriptSupported) {
+            await _safeRunScript(controller, resetScript);
+            await _safeRunScript(
+              controller,
+              BridgeChannel.webDebugPolyfillScript,
+            );
+            await _safeRunScript(controller, BridgeChannel.bridgePolyfillScript);
+          }
           if (validManifest.isSchemaApp && validManifest.schema != null) {
             final schemaJson = jsonEncode(validManifest.schema);
             await _safeRunScript(

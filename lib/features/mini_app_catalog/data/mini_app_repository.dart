@@ -312,7 +312,7 @@ final catalogSearchQueryProvider =
 
 /// Dynamic catalog query provider (FutureProvider for automatic async state & refresh)
 final dynamicCatalogProvider =
-    FutureProvider.autoDispose<List<MiniAppManifest>>((ref) async {
+    FutureProvider<List<MiniAppManifest>>((ref) async {
   final repo = ref.watch(miniAppRepositoryProvider);
   final category = ref.watch(selectedCategoryProvider);
   final search = ref.watch(catalogSearchQueryProvider);
@@ -325,7 +325,7 @@ final dynamicCatalogProvider =
 
 /// Categories list provider
 final catalogCategoriesProvider =
-    FutureProvider.autoDispose<List<String>>((ref) async {
+    FutureProvider<List<String>>((ref) async {
   final repo = ref.watch(miniAppRepositoryProvider);
   return repo.getCategories();
 });

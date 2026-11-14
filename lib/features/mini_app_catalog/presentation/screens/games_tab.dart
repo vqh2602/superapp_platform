@@ -50,94 +50,105 @@ class GamesTab extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        children: [
+      body: CustomScrollView(
+        slivers: [
           // Game Hero Banner
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 60),
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFEA580C), Color(0xFFF59E0B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFEA580C).withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: FadeSlideIn(
+                delay: const Duration(milliseconds: 60),
+                child: Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEA580C), Color(0xFFF59E0B)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                child: const Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '🎮 THẾ GIỚI GAME MINI',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'Chiến game tức thì',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Không cần tải bộ cài nặng. Chơi mượt trên đám mây.',
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
-                          ),
-                        ],
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                    PulseEffect(
-                      minScale: 0.95,
-                      maxScale: 1.05,
-                      child: Icon(Icons.sports_esports_rounded, color: Colors.white, size: 54),
-                    ),
-                  ],
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: const Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '🎮 THẾ GIỚI GAME MINI',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Chiến game tức thì',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Không cần tải bộ cài nặng. Chơi mượt trên đám mây.',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PulseEffect(
+                        minScale: 0.95,
+                        maxScale: 1.05,
+                        child: Icon(Icons.sports_esports_rounded, color: Colors.white, size: 54),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: const Text(
-              'Trò chơi được yêu thích nhất',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Trò chơi được yêu thích nhất',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
               ),
             ),
           ),
 
-          ...List.generate(displayGames.length, (index) {
-            return FadeSlideIn(
-              delay: Duration(milliseconds: 30 * index),
-              child: AppListItem(app: displayGames[index]),
-            );
-          }),
+          SliverList.separated(
+            itemCount: displayGames.length,
+            separatorBuilder: (_, __) => const Padding(
+              padding: EdgeInsets.only(left: 84, right: 16),
+              child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ),
+            itemBuilder: (context, index) {
+              return FadeSlideIn(
+                delay: Duration(milliseconds: 25 * index),
+                child: AppListItem(app: displayGames[index]),
+              );
+            },
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );

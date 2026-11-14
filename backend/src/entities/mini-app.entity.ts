@@ -5,11 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { MiniAppStatus, MiniAppRuntimeType } from './enums';
 import { MiniAppVersionEntity } from './mini-app-version.entity';
 
 @Entity('mini_apps')
+@Index(['status', 'activePublishedVersion', 'updatedAt'])
+@Index(['status', 'category'])
 export class MiniAppEntity {
   @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string; // e.g. "coffee_shop", "sdk_playground"

@@ -280,13 +280,20 @@ class HomeTab extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: Column(
-                    children: List.generate(allApps.length, (index) {
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: allApps.length,
+                    separatorBuilder: (_, __) => const Padding(
+                      padding: EdgeInsets.only(left: 84, right: 16),
+                      child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    ),
+                    itemBuilder: (context, index) {
                       return FadeSlideIn(
-                        delay: Duration(milliseconds: 30 * index),
+                        delay: Duration(milliseconds: 25 * index),
                         child: AppListItem(app: allApps[index]),
                       );
-                    }),
+                    },
                   ),
                 ),
               ],

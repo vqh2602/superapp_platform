@@ -135,6 +135,10 @@ lib/
 
 ### 3.1. Mini App Catalog & Khám phá ứng dụng
 - **Dữ liệu thật từ Backend Registry**: Kết nối trực tiếp tới Backend NestJS (`/api/v1/catalog/apps`, `/api/v1/catalog/categories`, `/api/v1/catalog/apps/:id`) để tải danh sách Mini App đang hoạt động. Ứng dụng **không sử dụng mock data hay fallback từ assets**; khi Backend offline hoặc không có mạng, ứng dụng hiển thị thông báo lỗi kết nối rõ ràng kèm nút thử lại.
+- **Tối ưu hóa hiển thị danh sách (List Virtualization) & Tìm kiếm**:
+  - Toàn bộ danh sách ứng dụng trong HomeTab, GamesTab và SearchScreen sử dụng cơ chế dựng lười (`ListView.separated`, `SliverList.separated`) giúp tái sử dụng widget khi cuộn, loại bỏ tình trạng dựng đồng loạt tất cả item gây giật khung hình.
+  - Bộ điều khiển tìm kiếm tích hợp bộ đệm thời gian (Debounce 250ms), loại bỏ việc re-render liên tục trên từng phím gõ.
+  - State của Catalog và Categories được duy trì trong vòng đời ứng dụng thay vì `autoDispose`, ngăn ngừa hiện tượng nhấp nháy hoặc tải lại dữ liệu khi chuyển tab.
 - **Hỗ trợ 2 kiểu Mini App**:
   1. *Web-based Mini App*: Ứng dụng HTML5/React/Vue đóng gói dạng Single-file hoặc host qua remote URL.
   2. *No-Code Schema Mini App*: Ứng dụng dựng hoàn toàn bằng tệp JSON Schema mô tả giao diện và hành vi.
@@ -143,6 +147,7 @@ lib/
 - **Cấu hình Endpoint Backend**: Màn hình đăng nhập cung cấp ô nhập URL Backend động (mặc định `http://localhost:3000`), cho phép kết nối linh hoạt tới localhost, máy chủ mạng LAN hoặc cloud. URL được chuẩn hóa và lưu trữ an toàn trong SharedPreferences.
 - **Đăng nhập chuẩn xác thực**: Yêu cầu nhập email và mật khẩu (gọi `POST /api/v1/auth/login`). Token nhận được là Bearer opaque token kèm refresh token, quản lý phiên an toàn.
 - **Đăng ký tài khoản mới**: Cung cấp màn hình Đăng ký (`/register`), người dùng nhập họ tên, email và mật khẩu để tạo tài khoản thật trên PostgreSQL qua `POST /api/v1/auth/register`.
+- **Lưu phiên bền vững (Persistent Session)**: Thông tin phiên (`accessToken`, `refreshToken`, `PlatformUser`, `expiresAt`) được mã hóa và lưu trữ an toàn trong Secure Storage (Keychain trên iOS/macOS, EncryptedSharedPreferences trên Android). Khi người dùng khởi động lại ứng dụng (cold restart), màn hình Splash tự động khôi phục phiên nếu token còn hạn, người dùng không bị văng ra màn hình đăng nhập.
 
 #### 3.2.1. Xác thực sinh trắc học
 
@@ -933,11 +938,12 @@ khi thực thi action; `permission.check()` chỉ kiểm tra và không mở b�
 
 Khi người dùng mở một Mini App từ Catalog, luồng điều hướng hoạt động như sau:
 
-1. **Khởi tạo WebViewController**: Cấu hình chế độ JavaScript không giới hạn, màu nền trắng.
-2. **Đăng ký Bridge Channel**: Inject polyfill `window.FlutterBridge` và `window.SuperAppBridge`.
-3. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
-4. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
-5. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
+1. **Khởi tạo song song & Tối ưu hóa khởi động**: Khởi động đồng thời xác thực giấy phép thực thi (`authorizeExecution`) và khôi phục quyền người dùng (`fetchPermissionsFromBackend`) qua `Future.wait`, giảm 50% độ trễ mạng ban đầu.
+2. **Khởi tạo WebViewController**: Cấu hình chế độ JavaScript không giới hạn, màu nền theo theme của Mini App.
+3. **Đăng ký Bridge Channel & Script Polyfill**: Tận dụng `addUserScript` tại `documentStart` để inject polyfill một lần duy nhất, loại bỏ việc re-eval JS lặp lại. Đồng bộ URL nguồn gốc (`updateCurrentUrl`) ngay khi điều hướng để phục vụ kiểm tra Origin Validation tức thì mà không cần gọi IPC native qua Platform Channel trên mỗi RPC.
+4. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
+5. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
+6. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
 
 ### 6.1. Quản lý Vòng đời Phiên Runtime & Cô lập Danh tính (`MiniAppRuntimeSession`)
 

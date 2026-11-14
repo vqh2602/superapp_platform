@@ -50,6 +50,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   }
 
   Future<void> _bootstrap() async {
+    try {
+      await ref.read(authStateProvider.notifier).restoreSession();
+    } catch (_) {}
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
 

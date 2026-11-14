@@ -15,12 +15,33 @@ describe('Package asset delivery', () => {
     controller = new PackageAssetsController({ findOneBy: async () => app } as any, { findOneBy: async () => snapshot } as any, packages);
     response = { setHeader: jest.fn(), type: jest.fn().mockReturnThis(), send: jest.fn() };
   });
-  it('sets a file extension MIME type for nested CSS/JS/HTML paths', async () => {
-    for (const [filename, extension] of [['dist/index.html', '.html'], ['dist/assets/app.js', '.js'], ['dist/assets/style.css', '.css']]) {
-      await controller.file('demo_app', '1.0.0', filename, response);
-      expect(response.type).toHaveBeenCalledWith(extension);
-    }
-    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
+  it('sets a file extension MIME type and Cache-Control headers', async () => {
+    await controller.file('demo_app', '1.0.0', 'dist/index.html', response);
+    expect(response.type).toHaveBeenCalledWith('.html');
+    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+
+    await controller.file('demo_app', '1.0.0', 'dist/assets/app.js', response);
+    expect(response.type).toHaveBeenCalledWith('.js');
+    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=31536000, immutable');
+
+    await controller.file('demo_app', '1.0.0', 'dist/assets/style.css', response);
+    expect(response.type).toHaveBeenCalledWith('.css');
+    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=31536000, immutable');
+  });
+  it('returns 304 when ETag matches If-None-Match header', async () => {
+    const endMock = jest.fn();
+    response.status = jest.fn().mockReturnValue({ end: endMock });
+    const req: any = { headers: {} };
+
+    await controller.file('demo_app', '1.0.0', 'dist/index.html', response, req);
+    const etagCall = response.setHeader.mock.calls.find((call: any[]) => call[0] === 'ETag');
+    expect(etagCall).toBeDefined();
+    const calculatedEtag = etagCall[1];
+
+    req.headers['if-none-match'] = calculatedEtag;
+    await controller.file('demo_app', '1.0.0', 'dist/index.html', response, req);
+    expect(response.status).toHaveBeenCalledWith(304);
+    expect(endMock).toHaveBeenCalled();
   });
   it('blocks runtime resources for hidden apps', async () => {
     app.status = MiniAppStatus.UNPUBLISHED;

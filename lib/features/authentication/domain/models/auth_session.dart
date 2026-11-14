@@ -63,4 +63,25 @@ class AuthSession {
     'expiresAt': expiresAt.toIso8601String(),
     'isExpired': isExpired,
   };
+
+  /// Chuyển đổi đầy đủ thông tin phiên để lưu bền vững vào Secure Storage
+  Map<String, dynamic> toStorageJson() => {
+    'user': user.toFullProfileJson(),
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'expiresAt': expiresAt.toIso8601String(),
+  };
+
+  /// Khôi phục [AuthSession] từ dữ liệu đã lưu trong Secure Storage
+  factory AuthSession.fromStorageJson(Map<String, dynamic> json) {
+    final userJson = (json['user'] as Map<String, dynamic>?) ?? {};
+    final expiresStr = json['expiresAt'] as String? ?? '';
+    final parsedExpires = DateTime.tryParse(expiresStr) ?? DateTime.now();
+    return AuthSession(
+      user: PlatformUser.fromBackendJson(userJson),
+      accessToken: json['accessToken'] as String? ?? '',
+      refreshToken: json['refreshToken'] as String? ?? '',
+      expiresAt: parsedExpires,
+    );
+  }
 }

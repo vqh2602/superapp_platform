@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../domain/models/auth_session.dart';
 import '../domain/models/platform_user.dart';
@@ -14,12 +15,18 @@ import '../domain/repositories/auth_repository.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final http.Client? httpClient;
   final String _authUrl;
+  final FlutterSecureStorage? secureStorage;
+  static const String _sessionStorageKey = 'superapp:auth:session_v2';
 
   AuthSession? _currentSession;
   final _sessionController = StreamController<AuthSession?>.broadcast();
 
-  AuthRepositoryImpl({this.httpClient, String? authUrl})
-    : _authUrl = authUrl ?? 'http://localhost:3000/api/v1/auth';
+  AuthRepositoryImpl({
+    this.httpClient,
+    String? authUrl,
+    FlutterSecureStorage? secureStorage,
+  })  : _authUrl = authUrl ?? 'http://localhost:3000/api/v1/auth',
+        secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   @override
   AuthSession? get currentSession => _currentSession;
@@ -33,6 +40,38 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Stream<AuthSession?> get sessionStream => _sessionController.stream;
+
+  Future<void> _persistSession(AuthSession session) async {
+    try {
+      await secureStorage?.write(
+        key: _sessionStorageKey,
+        value: jsonEncode(session.toStorageJson()),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearPersistedSession() async {
+    try {
+      await secureStorage?.delete(key: _sessionStorageKey);
+    } catch (_) {}
+  }
+
+  /// Khôi phục phiên đăng nhập đã lưu trong Keychain/Keystore an toàn
+  Future<AuthSession?> restorePersistedSession() async {
+    try {
+      final raw = await secureStorage?.read(key: _sessionStorageKey);
+      if (raw != null && raw.isNotEmpty) {
+        final data = jsonDecode(raw) as Map<String, dynamic>;
+        final session = AuthSession.fromStorageJson(data);
+        if (!session.isExpired && session.accessToken.isNotEmpty) {
+          _currentSession = session;
+          _sessionController.add(_currentSession);
+          return session;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
 
   @override
   Future<AuthSession> login(String emailOrUserId, [String? password]) async {
@@ -63,6 +102,7 @@ class AuthRepositoryImpl implements AuthRepository {
         final session = AuthSession.fromBackendJson(data);
         _currentSession = session;
         _sessionController.add(_currentSession);
+        await _persistSession(session);
         return session;
       }
 
@@ -119,6 +159,7 @@ class AuthRepositoryImpl implements AuthRepository {
         final session = AuthSession.fromBackendJson(data);
         _currentSession = session;
         _sessionController.add(_currentSession);
+        await _persistSession(session);
         return session;
       }
 
@@ -184,11 +225,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
     _currentSession = null;
     _sessionController.add(null);
+    await _clearPersistedSession();
   }
 
   void reset() {
     _currentSession = null;
     _sessionController.add(null);
+    _clearPersistedSession();
   }
 
   void dispose() {

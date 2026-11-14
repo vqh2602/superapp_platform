@@ -147,7 +147,7 @@ Payload `PATCH /orders/:orderId/status`:
 | GET | `/catalog/apps` | Các app đang hiện, hỗ trợ category/search/page/limit |
 | GET | `/catalog/apps/:id` | Manifest/schema phiên bản đang dùng |
 | GET | `/catalog/categories` | Danh mục đang hiện |
-| GET | `/miniapps/:id/:version/*` | File chạy của phiên bản đang hiện; icon vẫn tải được cho Manager khi app ẩn |
+| GET | `/miniapps/:id/:version/*` | File chạy của phiên bản đang hiện (hỗ trợ nén gzip/deflate, ETag 304, cache bất biến cho static chunks và `no-cache` cho HTML); icon vẫn tải được cho Manager khi app ẩn |
 
 Registry/Manager vẫn phục vụ demo không có tài khoản admin/phân vai. Ứng dụng Flutter SuperApp đã kết nối trực tiếp vào toàn bộ API Backend: Dynamic Catalog (không fallback asset), Quản lý User/Auth (đăng nhập, đăng ký tài khoản mới, refresh, logout), Consent / Quyền riêng tư theo người dùng, và Quản lý Đơn hàng / Lịch sử thanh toán.
 
