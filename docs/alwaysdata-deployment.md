@@ -37,10 +37,9 @@ Hệ thống đã được thiết lập sẵn script tự động hóa deployme
    - **Name**: `SuperApp Backend API`
    - **Addresses**: Chọn domain mặc định `[tên_account].alwaysdata.net` hoặc subdomain tùy chọn.
    - **Type**: Chọn **Node.js**.
-   - **Working directory**: `superapp_backend` (tương ứng `/home/[tên_account]/superapp_backend`).
+   - **Working directory**: `superapp-backend` (tương ứng `/home/[tên_account]/superapp-backend`).
    - **Command**: `node dist/main.js` (hoặc `npm run start:prod`).
    - **Node.js version**: `20.x` hoặc `22.x`.
-   - **Hot restart**: Chọn `Restart on touch: tmp/restart.txt` hoặc `SIGHUP`.
 3. Nhấn **Submit** để lưu. Lưu lại **Site ID** (hiển thị trên URL hoặc danh sách Sites).
 
 ### Bước 1.3: Kích hoạt quyền SSH
@@ -70,7 +69,7 @@ Hệ thống đã được thiết lập sẵn script tự động hóa deployme
    DB_PASSWORD=mat_khau_db
    DB_DATABASE=ten_account_cua_ban_superapp_registry
    ```
-3. Chạy lệnh deploy tự động:
+3. [Cài phụ thuộc build](../mini_apps/README.md), rồi chạy lệnh deploy:
    ```sh
    cd backend
    npm run deploy:alwaysdata
@@ -81,7 +80,7 @@ Script sẽ tự động:
 - Đóng gói file cần thiết (`dist`, `seed-bundles`, `package.json`, `package-lock.json`); không đóng gói storage upload của người dùng
 - SCP lên máy chủ Alwaysdata
 - Giải nén, thiết lập `.env` bảo mật và cài đặt `node_modules`
-- Tự động restart site và kiểm tra HTTP Health check API.
+- Yêu cầu restart qua API khi đã cấu hình API key và Site ID, rồi kiểm tra Catalog API. Nếu catalog vẫn trả phiên bản cũ, vào **Web** > **Sites** và chọn **Restart** cho site backend. [Hướng dẫn khởi động lại site của Alwaysdata](https://help.alwaysdata.com/en/docs/web-hosting/sites/restart-a-site/)
 
 ---
 
