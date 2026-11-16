@@ -1227,4 +1227,33 @@ Nhằm đảm bảo trải nghiệm mượt mà và tránh làm nghẽn giao ti�
      * **Max Message Size**: Tối đa 1MB cho mỗi gói tin JSON.
    - Các giới hạn này bảo vệ UI isolate của Flutter và chỉ được điều chỉnh sau khi đo kiểm benchmark thực tế.
 
+## 5. Tối ưu Đóng gói Bundle, Lazy Singleton & Vòng đời Listener
+
+1. **Mock Engine & Cấu hình Tree-shaking**:
+   - Thư mục `dist/mock/` hiện tại chỉ là các stub class và type definitions tối giản (< 1.0 KB JS unminified), không chứa mã giả lập phức tạp, không làm phình bundle Mini App.
+   - Package khai báo `"sideEffects": false` trong `package.json`, cho phép bundler (Vite, Rollup, Webpack) tự tin loại bỏ dead code khi không sử dụng.
+   - Khuyến nghị nhập các thành phần mock từ subpath riêng: `import { SDKMockEngine } from '@vqh2602/mini-app-sdk/mock';` thay vì nhập từ entrypoint chính.
+
+2. **Lazy Proxy Singleton (`superApp`)**:
+   - Singleton `superApp` mặc định được triển khai dưới dạng Proxy lười (Lazy on first access).
+   - Việc `import superApp from '@vqh2602/mini-app-sdk'` hoặc `import { SuperAppSDK } from '@vqh2602/mini-app-sdk'` hoàn toàn **zero-side-effect**: Không tạo Transport, không gắn listener vào `window`, không gửi handshake trước khi Mini App thực sự gọi API đầu tiên.
+
+3. **Chống Rò rỉ Listener (`PostMessageHub`)**:
+   - `PostMessageHub` duy trì **duy nhất 1** listener sự kiện `window.addEventListener('message', ...)` tại cấp trang cho tất cả các instance `PostMessageTransport`.
+   - Các phản hồi RPC được định tuyến chính xác đến đúng instance sở hữu `requestId`, triệt tiêu hoàn toàn cảnh báo dư thừa trên các instance khác.
+   - Cơ chế Reference Counting: Khi toàn bộ các instance `PostMessageTransport` bị `destroy()`, listener trên `window` sẽ tự động được gỡ bỏ bằng `window.removeEventListener`.
+   - `AdaptiveBridgeTransport` áp dụng lazy initialization: Khi Mini App chạy trong Flutter WebView của SuperApp Host (`isNativeAvailable() === true`), `PostMessageTransport` hoàn toàn không bao giờ được khởi tạo, đảm bảo không có bất kỳ message listener nào gắn vào window.
+
+4. **Giải phóng tài nguyên thống nhất (`destroy()` / `dispose()`)**:
+   - Cả instance `new SuperAppSDK()` lẫn singleton `superApp` đều cung cấp phương thức `destroy()` và `dispose()`.
+   - Trong ứng dụng React/Vue (SPA), hãy gọi `sdk.destroy()` trong hàm cleanup của `useEffect` khi component unmount:
+     ```typescript
+     useEffect(() => {
+       const sdk = new SuperAppSDK();
+       return () => {
+         sdk.destroy(); // Hủy toàn bộ pending RPCs, timers, và listeners
+       };
+     }, []);
+     ```
+
 SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

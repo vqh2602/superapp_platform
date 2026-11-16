@@ -129,9 +129,6 @@ async function main() {
     if (fs.existsSync(pkgPath)) {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       pkg.version = nextVersion;
-      if (pkg.dependencies && pkg.dependencies['@vqh2602/mini-app-sdk']) {
-        pkg.dependencies['@vqh2602/mini-app-sdk'] = `^${nextVersion}`;
-      }
       fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
     }
 
@@ -193,10 +190,6 @@ async function main() {
   }
 
   for (const appId of ['sdk_playground', 'schema_runtime']) {
-    const targetSdkDir = path.join(MINI_APPS_DIR, appId, 'node_modules', '@vqh2602', 'mini-app-sdk');
-    if (fs.existsSync(targetSdkDir)) {
-      execSync(`cp -r dist package.json "${targetSdkDir}/"`, { cwd: SDK_DIR });
-    }
     const viteCache = path.join(MINI_APPS_DIR, appId, 'node_modules', '.vite');
     if (fs.existsSync(viteCache)) {
       fs.rmSync(viteCache, { recursive: true, force: true });

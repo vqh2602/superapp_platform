@@ -2,7 +2,7 @@ import { ITransport } from './transport.interface.js';
 import { NativeBridgeTransport, isNativeBridgeAvailable } from './native-transport.js';
 import { PostMessageTransport } from './postmessage-transport.js';
 import { MockBridgeTransport, MockDispatcher } from './mock-transport.js';
-import { BridgeEventListener, TransportConfig, TransportType } from './types.js';
+import { BridgeError, BridgeEventListener, TransportConfig, TransportType } from './types.js';
 
 export interface AdaptiveTransportOptions extends TransportConfig {
   mockDispatcher?: MockDispatcher;
@@ -12,22 +12,47 @@ export interface AdaptiveTransportOptions extends TransportConfig {
  * AdaptiveBridgeTransport automatically selects and routes requests to:
  * 1. Native container (SuperApp Flutter WebView via window.FlutterBridge or window.SuperAppBridge)
  * 2. Parent Simulator iframe (Browser Simulator via window.parent.postMessage)
- * 3. Mock Bridge Transport (Local dev, test suites, or standalone browser tabs)
+ * With neither channel present, calls return the native bridge availability error.
  *
- * It re-evaluates the environment dynamically so that if the native bridge
- * becomes available after script evaluation, calls are seamlessly routed to native.
+ * Transports are lazily instantiated so that in a native environment,
+ * PostMessageTransport and MockBridgeTransport are never created, eliminating
+ * unnecessary event listeners and postMessage handshakes.
  */
 export class AdaptiveBridgeTransport implements ITransport {
-  private nativeTransport: NativeBridgeTransport;
-  private postmessageTransport: PostMessageTransport;
-  private mockTransport: MockBridgeTransport;
+  private _nativeTransport?: NativeBridgeTransport;
+  private _postmessageTransport?: PostMessageTransport;
+  private _mockTransport?: MockBridgeTransport;
+  private isDestroyed = false;
+  private options: AdaptiveTransportOptions;
   private debug: boolean;
 
   constructor(options: AdaptiveTransportOptions = {}) {
+    this.options = options;
     this.debug = options.debug ?? false;
-    this.nativeTransport = new NativeBridgeTransport(options);
-    this.postmessageTransport = new PostMessageTransport(options);
-    this.mockTransport = new MockBridgeTransport({ ...options, dispatcher: options.mockDispatcher });
+  }
+
+  public get nativeTransport(): NativeBridgeTransport {
+    if (!this._nativeTransport) {
+      this._nativeTransport = new NativeBridgeTransport(this.options);
+    }
+    return this._nativeTransport;
+  }
+
+  public get postmessageTransport(): PostMessageTransport {
+    if (!this._postmessageTransport) {
+      this._postmessageTransport = new PostMessageTransport(this.options);
+    }
+    return this._postmessageTransport;
+  }
+
+  public get mockTransport(): MockBridgeTransport {
+    if (!this._mockTransport) {
+      this._mockTransport = new MockBridgeTransport({
+        ...this.options,
+        dispatcher: this.options.mockDispatcher,
+      });
+    }
+    return this._mockTransport;
   }
 
   public setMockDispatcher(dispatcher: MockDispatcher): void {
@@ -66,11 +91,15 @@ export class AdaptiveBridgeTransport implements ITransport {
   public async invoke<T = any>(action: string, payload: Record<string, any> = {}, timeoutMs?: number): Promise<T> {
     // If not immediately available, perform a brief micro-poll (up to 100ms)
     // to give Flutter WebView's addJavaScriptChannel time to attach
-    if (!this.isNativeAvailable() && !this.isSimulatorAvailable() && typeof window !== 'undefined') {
+    if (!this.isDestroyed && !this.isNativeAvailable() && !this.isSimulatorAvailable() && typeof window !== 'undefined') {
       for (let i = 0; i < 4; i++) {
-        if (this.isNativeAvailable()) break;
+        if (this.isDestroyed || this.isNativeAvailable()) break;
         await new Promise((r) => setTimeout(r, 25));
       }
+    }
+
+    if (this.isDestroyed) {
+      throw { code: 'TRANSPORT_DESTROYED', message: 'AdaptiveBridgeTransport has been destroyed' } satisfies BridgeError;
     }
 
     const active = this.getActiveTransport();
@@ -81,30 +110,51 @@ export class AdaptiveBridgeTransport implements ITransport {
   }
 
   public on(event: string, listener: BridgeEventListener): () => void {
-    const unsubNative = this.nativeTransport.on(event, listener);
-    const unsubPost = this.postmessageTransport.on(event, listener);
-    const unsubMock = this.mockTransport.on(event, listener);
+    if (this.isDestroyed) return () => {};
+    const unsubs = [this.nativeTransport.on(event, listener)];
+    if (!this.isNativeAvailable() && this.isSimulatorAvailable()) {
+      unsubs.push(this.postmessageTransport.on(event, listener));
+    }
+    if (this._mockTransport) {
+      unsubs.push(this._mockTransport.on(event, listener));
+    }
     return () => {
-      unsubNative();
-      unsubPost();
-      unsubMock();
+      for (const unsub of unsubs) {
+        unsub();
+      }
     };
   }
 
   public off(event: string, listener: BridgeEventListener): void {
-    this.nativeTransport.off(event, listener);
-    this.postmessageTransport.off(event, listener);
-    this.mockTransport.off(event, listener);
+    if (this._nativeTransport) {
+      this._nativeTransport.off(event, listener);
+    }
+    if (this._postmessageTransport) {
+      this._postmessageTransport.off(event, listener);
+    }
+    if (this._mockTransport) {
+      this._mockTransport.off(event, listener);
+    }
   }
 
   public emit(event: string, payload: any): void {
-    this.getActiveTransport().emit(event, payload);
+    if (!this.isDestroyed) this.getActiveTransport().emit(event, payload);
   }
 
   public destroy(): void {
-    this.nativeTransport.destroy();
-    this.postmessageTransport.destroy();
-    this.mockTransport.destroy();
+    this.isDestroyed = true;
+    if (this._nativeTransport) {
+      this._nativeTransport.destroy();
+      this._nativeTransport = undefined;
+    }
+    if (this._postmessageTransport) {
+      this._postmessageTransport.destroy();
+      this._postmessageTransport = undefined;
+    }
+    if (this._mockTransport) {
+      this._mockTransport.destroy();
+      this._mockTransport = undefined;
+    }
   }
 
   public dispose(): void {

@@ -12,6 +12,7 @@ export {
   BridgeHub,
   NativeBridgeTransport,
   PostMessageTransport,
+  PostMessageHub,
   MockBridgeTransport,
   AdaptiveBridgeTransport,
   TransportResolver,

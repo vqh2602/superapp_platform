@@ -1,6 +1,6 @@
 {
   "name": "@vqh2602/mini-app-sdk",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Official Unified TypeScript SDK & CLI for SuperApp Mini Apps: Core API, Bridge Transport, Mock Engine, and Browser Simulator",
   "type": "module",
   "bin": {
@@ -12,6 +12,7 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -53,7 +54,7 @@
     "test": "npm run build:ts && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^12.2.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {

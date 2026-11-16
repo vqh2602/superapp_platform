@@ -1,7 +1,7 @@
 name: flutter_scanner
 description: "SuperApp Flutter Web QR & Barcode Scanner Mini App"
 publish_to: 'none'
-version: 1.0.5
+version: 1.0.6
 
 environment:
   sdk: ^3.12.0

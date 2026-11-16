@@ -4,7 +4,7 @@
   "name": "Flutter Scanner (Flutter Web)",
   "description": "Mini App viết bằng Flutter Web: Quét mã QR, mã vạch sản phẩm thông qua SuperApp Native Bridge",
   "category": "Utilities",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "runtimeType": "web",
   "entry": "dist/index.html",
   "icon": "icon.png",

@@ -137,8 +137,8 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   async seedExistingApps() {
-    this.logger.log('Checking & seeding initial Mini Apps in Registry v1.0.5 (Remote Backend Hosted)...');
-    const targetVersion = '1.0.5';
+    this.logger.log('Checking & seeding initial Mini Apps in Registry v1.0.6 (Remote Backend Hosted)...');
+    const targetVersion = '1.0.6';
 
     // 0. Seed Schema Runtime (Host engine for all No-Code schema apps)
     const schemaRuntimeManifest = this.getSystemManifest('schema_runtime', targetVersion);

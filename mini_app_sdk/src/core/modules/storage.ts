@@ -28,6 +28,21 @@ export interface SecureStorageClearResult {
   count: number;
 }
 
+export interface StorageGetItemsOptions {
+  keys: string[];
+  domain?: string;
+}
+
+export interface StorageSetItemsOptions {
+  items: Record<string, unknown>;
+  domain?: string;
+}
+
+export interface StorageSetItemsResult {
+  success: true;
+  count: number;
+}
+
 export interface CredentialSetResult {
   domain: string;
   username: string;
@@ -55,23 +70,42 @@ export class StorageModule {
   /**
    * Lưu trữ dữ liệu cách ly theo Mini App
    */
-  public async setItem(key: string, value: any): Promise<any> {
+  public async setItem(key: string, value: any, domain?: string): Promise<any> {
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.transport.invoke('storage.setItem', { key, value: serialized });
+    return this.transport.invoke('storage.setItem', { key, value: serialized, domain });
   }
 
   /**
    * Lấy dữ liệu đã lưu
    */
-  public async getItem(key: string): Promise<{key: string; value: string | null; exists: boolean; domain: string; securityLevel: string}> {
-    return this.transport.invoke('storage.getItem', { key });
+  public async getItem(key: string, domain?: string): Promise<SecureStorageGetResult> {
+    return this.transport.invoke('storage.getItem', { key, domain });
+  }
+
+  /** Đọc tối đa 50 khóa trong một lần gọi Bridge. */
+  public async getItems(options: StorageGetItemsOptions): Promise<Record<string, string | null>> {
+    return this.transport.invoke('storage.getItems', options);
+  }
+
+  /** Lưu tối đa 50 mục trong một lần gọi Bridge. */
+  public async setItems({ items, domain }: StorageSetItemsOptions): Promise<StorageSetItemsResult> {
+    const serialized = Object.fromEntries(
+      Object.entries(items).map(([key, value]) => {
+        const encoded = typeof value === 'string' ? value : JSON.stringify(value);
+        if (encoded === undefined) {
+          throw { code: 'INVALID_PARAMS', message: `Storage value for "${key}" must be JSON-serializable` };
+        }
+        return [key, encoded];
+      })
+    );
+    return this.transport.invoke('storage.setItems', { items: serialized, domain });
   }
 
   /**
    * Xoá một khoá lưu trữ
    */
-  public async removeItem(key: string): Promise<any> {
-    return this.transport.invoke('storage.removeItem', { key });
+  public async removeItem(key: string, domain?: string): Promise<any> {
+    return this.transport.invoke('storage.removeItem', { key, domain });
   }
 
   /**
@@ -84,8 +118,8 @@ export class StorageModule {
   /**
    * Lấy toàn bộ cặp key-value
    */
-  public async getAll(): Promise<Record<string, string>> {
-    return this.transport.invoke<Record<string, string>>('storage.getAll');
+  public async getAll(options?: { domain?: string }): Promise<Record<string, string>> {
+    return this.transport.invoke<Record<string, string>>('storage.getAll', options);
   }
 
   /**

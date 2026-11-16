@@ -102,4 +102,4 @@ Workflow sẽ tự động build và deploy lên Alwaysdata.
 
 Release backend phải chứa `seed-bundles/<appId>/dist/index.html` và icon. Seed so sánh HTML đang lưu với bản build đi kèm và cập nhật package key khi khác nhau, kể cả các gói giữ chỗ cũ chỉ có dòng `sdk_playground loaded`. Thiếu bản build sẽ dừng bootstrap và báo lỗi thay vì tạo HTML giữ chỗ.
 
-Kiểm tra `GET /api/v1/miniapps/sdk_playground/1.0.5/dist/index.html`: nội dung phải chứa bundle JavaScript của Playground, không chỉ dòng `loaded`. Tương tự với `schema_runtime` và `sample_store`.
+Kiểm tra `GET /api/v1/miniapps/sdk_playground/1.0.6/dist/index.html`: nội dung phải chứa bundle JavaScript của Playground, không chỉ dòng `loaded`. Tương tự với `schema_runtime` và `sample_store`.

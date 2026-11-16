@@ -401,6 +401,28 @@ export const FeatureCatalog: React.FC = () => {
     run: async (p) => superApp.removeSecretData(p.key, p.domain),
   };
 
+  const storageSetItemsConfig: RunnerConfig = {
+    id: 'storage_set_items',
+    category: '2.8. Keychain & Keystore',
+    title: 'storage.setItems',
+    description: 'Lưu nhiều tùy chọn trong một lần gọi Bridge.',
+    actionCode: 'superApp.storage.setItems({ items, domain })',
+    hasParams: true,
+    defaultParams: { items: { theme: 'dark', lang: 'vi' }, domain: 'playground.settings' },
+    run: async (p) => superApp.storage.setItems(p),
+  };
+
+  const storageGetItemsConfig: RunnerConfig = {
+    id: 'storage_get_items',
+    category: '2.8. Keychain & Keystore',
+    title: 'storage.getItems',
+    description: 'Đọc nhiều khóa trong một lần gọi Bridge. Khóa chưa lưu trả về null.',
+    actionCode: 'superApp.storage.getItems({ keys, domain })',
+    hasParams: true,
+    defaultParams: { keys: ['theme', 'lang', 'missing'], domain: 'playground.settings' },
+    run: async (p) => superApp.storage.getItems(p),
+  };
+
   const credentialsSetConfig: RunnerConfig = {
     id: 'cred_set',
     category: '2.8. Secret Data (Keychain/Keystore)',
@@ -788,6 +810,8 @@ export const FeatureCatalog: React.FC = () => {
           <h2 className="category-title">2.8. Keychain & Keystore (Secret Data & Credentials)</h2>
         </div>
         <div className="feature-grid">
+          <FeatureItem icon={<Database size={20} />} config={storageSetItemsConfig} statusText="Batch Write" />
+          <FeatureItem icon={<Database size={20} />} config={storageGetItemsConfig} statusText="Batch Read" />
           <FeatureItem icon={<Lock size={20} />} config={secSetSecretDataConfig} statusText="Keychain/Keystore" />
           <FeatureItem icon={<Unlock size={20} />} config={secGetSecretDataConfig} statusText="Decrypted Read" />
           <FeatureItem icon={<Trash2 size={20} />} config={secRemoveSecretDataConfig} statusText="Remove Key" />

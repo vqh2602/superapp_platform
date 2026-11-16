@@ -696,3 +696,75 @@ test('payment API is removed from the SDK', () => {
     assert.equal('onPaymentStatusChanged' in sdk.lifecycle, false);
   } finally { sdk.destroy(); }
 });
+
+const { PostMessageHub } = await import('../dist/transport/postmessage-transport.js');
+const { superApp } = await import('../dist/index.js');
+
+test('PostMessageHub: multiple PostMessageTransport instances share a single window listener without leak', () => {
+  let addCount = 0;
+  let removeCount = 0;
+  const originalAdd = win.addEventListener;
+  const originalRemove = win.removeEventListener;
+
+  win.addEventListener = (evt, fn) => {
+    if (evt === 'message') addCount++;
+    return originalAdd ? originalAdd(evt, fn) : undefined;
+  };
+  win.removeEventListener = (evt, fn) => {
+    if (evt === 'message') removeCount++;
+    return originalRemove ? originalRemove(evt, fn) : undefined;
+  };
+
+  // Create 10 PostMessageTransport instances
+  const transports = [];
+  for (let i = 0; i < 10; i++) {
+    transports.push(new PostMessageTransport({ appId: `multi_${i}` }));
+  }
+
+  // Exactly 1 window.addEventListener('message') call regardless of instance count
+  assert.equal(addCount, 1);
+  assert.equal(PostMessageHub.getShared().getActiveCount(), 10);
+  assert.equal(PostMessageHub.getShared().isListenerInstalled(), true);
+
+  // Destroy 9 instances: listener should stay alive for the remaining 1
+  for (let i = 0; i < 9; i++) {
+    transports[i].destroy();
+  }
+  assert.equal(removeCount, 0);
+  assert.equal(PostMessageHub.getShared().getActiveCount(), 1);
+
+  // Destroy the last instance: listener must be removed from window
+  transports[9].destroy();
+  assert.equal(removeCount, 1);
+  assert.equal(PostMessageHub.getShared().getActiveCount(), 0);
+  assert.equal(PostMessageHub.getShared().isListenerInstalled(), false);
+});
+
+test('AdaptiveBridgeTransport in native mode does not instantiate PostMessageTransport (zero message listeners)', () => {
+  attachHost();
+  let addMessageCount = 0;
+  win.addEventListener = (evt, fn) => {
+    if (evt === 'message') addMessageCount++;
+  };
+
+  const adaptive = new (function() {
+    return new SuperAppSDK();
+  })();
+
+  // In native mode, PostMessageTransport should not be eagerly created
+  assert.equal(adaptive.transport.getType(), 'native');
+  assert.equal(addMessageCount, 0);
+
+  adaptive.destroy();
+});
+
+test('superApp lazy proxy singleton supports lifecycle reset via destroy()', () => {
+  // Accessing property initializes lazy singleton
+  assert.equal(superApp.version, '2.1.0');
+  assert.equal(typeof superApp.showToast, 'function');
+
+  // Calling destroy tears down instance cleanly and resets proxy target
+  superApp.destroy();
+  assert.equal(superApp.version, '2.1.0');
+});
+

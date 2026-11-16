@@ -4,7 +4,7 @@
   "name": "Sample Store (HTML + JS)",
   "description": "Secondary Mini App to demonstrate cross-mini-app native switching",
   "category": "Food & Beverage",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "runtimeType": "web",
   "entry": "dist/index.html",
   "icon": "icon.png",
