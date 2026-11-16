@@ -54,7 +54,7 @@
     "test": "npm run build:ts && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "commander": "^12.2.0",
+    "commander": "^12.1.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {

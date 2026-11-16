@@ -7,7 +7,7 @@
  * 2. Tự động tính toán phiên bản mới (patch/minor/major) để đảm bảo không bị lỗi 403 Forbidden
  * 3. Đồng bộ vào:
  *    - mini_app_sdk (package.json, client.ts, cli/index.ts)
- *    - mini_apps: sdk_playground, schema_runtime, sample_store (package.json, app.json)
+ *    - mini_apps: sdk_playground, schema_runtime, sample_store, flutter_scanner (package.json, app.json)
  *    - backend: seed.service.ts, registry.service.ts
  *    - test/unit/ (Dart unit test manifests)
  * 4. Rebuild SDK và đồng bộ vào local/global node_modules
@@ -123,7 +123,7 @@ async function main() {
   );
 
   // 4. Cập nhật các Mini Apps
-  const miniApps = ['sdk_playground', 'schema_runtime', 'sample_store'];
+  const miniApps = ['sdk_playground', 'schema_runtime', 'sample_store', 'flutter_scanner'];
   for (const appId of miniApps) {
     const pkgPath = path.join(MINI_APPS_DIR, appId, 'package.json');
     if (fs.existsSync(pkgPath)) {
@@ -139,6 +139,11 @@ async function main() {
       fs.writeFileSync(appJsonPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
     }
   }
+  replaceInFile(
+    path.join(MINI_APPS_DIR, 'flutter_scanner', 'pubspec.yaml'),
+    /^version: .+$/m,
+    `version: ${nextVersion}`
+  );
 
   // 5. Cập nhật Backend Seeding & Registry
   replaceInFile(

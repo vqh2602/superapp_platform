@@ -124,14 +124,11 @@ npm run start:dev
 *Backend sẽ lắng nghe tại `http://localhost:3000/api/v1` và tự động nạp dữ liệu mẫu ban đầu.*
 
 ### Bước 2: Tự động Biên dịch & Đẩy Mini Apps lên Backend
-Tại thư mục gốc dự án:
+Sau khi [cài phụ thuộc cho các ví dụ](mini_apps/README.md), chạy từ thư mục gốc.
 ```bash
-# Tự động build SDK monorepo, build toàn bộ Mini Apps (sdk_playground, schema_runtime, sample_store) và đẩy lên Backend Storage
-node scripts/build-and-deploy-miniapps.cjs
-# Hoặc sử dụng npm:
-npm run build
+npm run build:miniapps
 ```
-*(Bản dựng inlined được đóng gói theo chuẩn SuperApp v1 và triển khai trực tiếp lên Backend Storage/Registry API. Ứng dụng Flutter SuperApp nạp Mini App qua Backend HTTP URL, không còn lưu trữ trong local assets)*.
+Lệnh tạo các gói Mini App trong thư mục backend cục bộ. Xem [quy trình triển khai Alwaysdata](docs/alwaysdata-deployment.md) để đưa các gói lên web.
 
 ### Bước 3: Khởi chạy SuperApp Platform (Flutter)
 ```bash

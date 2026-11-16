@@ -234,6 +234,17 @@ Quyền chưa được người dùng đồng ý sẽ hiện bảng cấp quyề
 được manifest/nền tảng cho phép. Capability không khai báo vẫn bị từ chối;
 `permission.check()` chỉ đọc trạng thái và không tự mở bảng cấp quyền.
 
+## Đọc và ghi nhiều khóa
+
+Từ SDK `2.2.0`, chạy các API này trong Flutter Host có hỗ trợ `storage.setItems` và `storage.getItems`. Mỗi lần gọi nhận 1–50 khóa và không yêu cầu capability hoặc đăng nhập.
+
+```typescript
+await superApp.storage.setItems({ items: { theme: 'dark', lang: 'vi' }, domain: 'settings' });
+const settings = await superApp.storage.getItems({ keys: ['theme', 'lang'], domain: 'settings' });
+```
+
+`setItems` trả về `{ success: true, count: number }` và mã hóa các giá trị không phải chuỗi thành JSON. `getItems` trả về giá trị dạng chuỗi hoặc `null` cho khóa chưa lưu. Domain mặc định là `default`.
+
 ## Tối ưu hóa Bundle, Lazy Singleton & Quản lý Vòng đời
 
 * **Mock Engine & Tree-shaking**: Mock Engine (`dist/mock/`) chỉ là các stub class tối giản (<1KB). SDK khai báo `"sideEffects": false` trong `package.json` và hỗ trợ subpaths riêng (`@vqh2602/mini-app-sdk/mock` và `@vqh2602/mini-app-sdk/transport`), cho phép bundler loại bỏ hoàn toàn mã không sử dụng.

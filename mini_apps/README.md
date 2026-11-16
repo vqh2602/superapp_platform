@@ -9,7 +9,17 @@ Tên trong catalog backend, manifest `app.json` và giao diện miniapp được
 | `sample_store` | Sample Store (HTML + JS) | HTML/JavaScript, chuyển qua lại miniapp |
 | `flutter_scanner` | Flutter Scanner (Flutter Web) | Flutter Web, quét QR/barcode và gọi bridge trực tiếp |
 
-Chạy `npm run build:miniapps` từ thư mục gốc. Pipeline đóng gói toàn bộ `dist/`, gồm JS/WASM/font của Flutter Scanner, vào `backend/seed-bundles/` và ZIP. Release backend phải mang theo `seed-bundles/` và chạy seed để cập nhật catalog, manifest và package key.
+Cài phụ thuộc rồi chạy pipeline từ thư mục gốc.
+
+```sh
+npm ci --prefix backend
+npm ci --prefix mini_app_sdk
+npm ci --prefix mini_apps/sdk_playground
+npm ci --prefix mini_apps/schema_runtime
+npm run build:miniapps
+```
+
+Playground và Schema Runtime liên kết trực tiếp với SDK trong repo qua `file:../../mini_app_sdk`. Pipeline build SDK trước khi build các ví dụ, sau đó đóng gói toàn bộ `dist/`, gồm JS/WASM/font của Flutter Scanner, vào `backend/seed-bundles/` và ZIP. Release backend mang theo `seed-bundles/` để cập nhật catalog, manifest và package key khi seed.
 
 Flutter dùng SDK ở `.fvm/flutter_sdk/bin/flutter` nếu có; CI dùng `flutter` trên PATH. Có thể chọn SDK bằng biến `FLUTTER_BIN`. Các asset Flutter dùng đường dẫn tương đối trong URL của package.
 
@@ -20,7 +30,8 @@ thiết lập và xác thực vân tay / Face ID. Đăng nhập SuperApp, mở P
 kiểm tra trạng thái rồi chạy xác thực. Khi chưa thiết lập, ví dụ hiển thị hướng
 dẫn kiểm tra Cài đặt thiết bị. Xem [API và xử lý lỗi](../docs/authentication.md#xác-thực-sinh-trắc-học-trong-mini-app).
 
-Playground dùng SDK đã phát hành trên npm (`@vqh2602/mini-app-sdk@^2.0.0`).
-Chạy `npm install` và `npm run build` tại `mini_apps/sdk_playground`.
+### Ví dụ lưu trữ hàng loạt
+
+Trong Playground, mở **2.8. Keychain & Keystore** trên Flutter Host có hỗ trợ lưu trữ lô. Chạy `storage.setItems` rồi `storage.getItems` với cùng domain. Kết quả mặc định gồm `theme: "dark"`, `lang: "vi"` và `missing: null`. Xem [hợp đồng Bridge](../docs/superapp.md#storagegetitems--storagesetitems).
 
 SDK `2.0.0` sửa định danh native để lời gọi đến được bảng cấp quyền. Playground, Schema Runtime và Sample Store đã gỡ các ví dụ thanh toán.

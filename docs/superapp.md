@@ -539,6 +539,17 @@ Ghi và đọc dữ liệu khóa-giá trị bảo mật.
 
 ---
 
+##### `storage.getItems` & `storage.setItems`
+
+Hai action xử lý 1–50 khóa trong một lần gọi Bridge trên Flutter Host có hỗ trợ lưu trữ lô. Dữ liệu được cách ly theo người dùng, Mini App và `domain`. Domain mặc định là `default`. Hai action không yêu cầu đăng nhập hoặc capability trong manifest.
+
+| Action | Alias Bridge | Payload | Kết quả |
+| --- | --- | --- | --- |
+| `storage.getItems` | `storage.getBatch` | `{ keys: string[], domain?: string }` | `Record<string, string \| null>`, với `null` cho khóa chưa lưu |
+| `storage.setItems` | `storage.setBatch` | `{ items: Record<string, string>, domain?: string }` | `{ success: true, count: number }` |
+
+Batch trống hoặc vượt 50 mục trả về `INVALID_PARAMS`. Host ghi từng mục theo thứ tự và giữ các mục đã ghi nếu thao tác sau đó gặp lỗi I/O. SDK cung cấp hai phương thức cùng tên từ phiên bản `2.2.0`.
+
 ##### `storage.removeItem` & `storage.clear`
 Xóa 1 khóa hoặc dọn sạch toàn bộ dữ liệu lưu trữ của Mini App.
 

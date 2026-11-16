@@ -759,12 +759,49 @@ test('AdaptiveBridgeTransport in native mode does not instantiate PostMessageTra
 });
 
 test('superApp lazy proxy singleton supports lifecycle reset via destroy()', () => {
-  // Accessing property initializes lazy singleton
-  assert.equal(superApp.version, '2.1.0');
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url)));
+  const transport = superApp.transport;
+  assert.equal(superApp.version, pkg.version);
   assert.equal(typeof superApp.showToast, 'function');
 
-  // Calling destroy tears down instance cleanly and resets proxy target
   superApp.destroy();
-  assert.equal(superApp.version, '2.1.0');
+  assert.notEqual(superApp.transport, transport);
+  superApp.destroy();
 });
 
+test('SDK storage batches requests and preserves native response data', async () => {
+  attachHost();
+  const sdk = new SuperAppSDK();
+  const stored = { success: true, count: 2 };
+  const loaded = { theme: 'dark', filters: '{"enabled":true}', missing: null };
+  win.FlutterBridge.postMessage = (raw) => {
+    const req = JSON.parse(raw);
+    requests.push(req);
+    win.SuperAppBridge.dispatchResponse({
+      id: req.id,
+      success: true,
+      data: req.action === 'storage.setItems' ? stored : loaded,
+    });
+  };
+
+  try {
+    const domain = 'settings';
+    assert.deepEqual(await sdk.storage.setItems({ items: { theme: 'dark', filters: { enabled: true } }, domain }), stored);
+    assert.deepEqual(await sdk.storage.getItems({ keys: ['theme', 'filters', 'missing'], domain }), loaded);
+    assert.deepEqual(requests.map(({ action, payload }) => ({ action, payload })), [
+      { action: 'storage.setItems', payload: { items: { theme: 'dark', filters: '{"enabled":true}' }, domain } },
+      { action: 'storage.getItems', payload: { keys: ['theme', 'filters', 'missing'], domain } },
+    ]);
+  } finally {
+    sdk.destroy();
+  }
+});
+
+test('destroy cancels an adaptive call waiting for the native channel', async () => {
+  const sdk = new SuperAppSDK();
+  const pending = sdk.transport.invoke('debug.echo');
+  sdk.destroy();
+  attachHost();
+  await assert.rejects(pending, { code: 'TRANSPORT_DESTROYED' });
+  assert.equal(requests.length, 0);
+});

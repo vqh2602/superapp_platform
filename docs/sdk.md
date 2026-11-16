@@ -661,11 +661,17 @@ async function handlePickImage() {
 ```typescript
 async function handleStorageAndToast() {
   try {
-    // Lưu cấu hình người dùng vào Keychain / Keystore mã hóa
-    await superApp.storage.setItem('user_theme_pref', 'dark');
+    await superApp.storage.setItems({
+      items: { theme: 'dark', lang: 'vi' },
+      domain: 'settings',
+    });
+    const settings = await superApp.storage.getItems({
+      keys: ['theme', 'lang'],
+      domain: 'settings',
+    });
 
     // Hiển thị thông báo Toast native
-    await superApp.ui.showToast('Đã lưu tùy chọn giao diện!');
+    await superApp.ui.showToast(`Đã lưu giao diện ${settings.theme}!`);
   } catch (error: any) {
     console.error('Lỗi lưu trữ:', error);
   }
@@ -889,7 +895,9 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 | **Lưu trữ** | `storage.setSecureItem` | *Không cần* | `{ key: string, value: string }` | `{ success: true }` |
 | | `storage.getSecureItem` | *Không cần* | `{ key: string }` | `{ key: string, value: string }` |
 | | `storage.removeSecureItem`| *Không cần*| `{ key: string }` | `{ success: true }` |
-| | `storage.getAll` | *Không cần* | `{}` | `Record<string, string>` |
+| | `storage.getAll` | *Không cần* | `{ domain?: string }` | `Record<string, string>` |
+| | `storage.getItems` | *Không cần* | `{ keys: string[], domain?: string }` | `Record<string, string \| null>` |
+| | `storage.setItems` | *Không cần* | `{ items: Record<string, string>, domain?: string }` | `{ success: true, count: number }` |
 | | `storage.clear` | *Không cần* | `{}` | `{ success: true }` |
 | **Điều hướng** | `navigation.close` / `navigation.closeApp` | `navigation.close` | `{}` | `{ success: true }` |
 | | `navigation.minimizeApp` | *Không cần* | `{}` | `{ success: true, status: 'minimized', appId: string }` |
@@ -1211,6 +1219,8 @@ Nhằm đảm bảo trải nghiệm mượt mà và tránh làm nghẽn giao ti�
    - Tránh gọi nhiều RPC riêng lẻ liên tiếp để đọc hoặc ghi từng khóa cấu hình.
    - Sử dụng `storage.getItems({ keys: ['theme', 'lang'], domain: 'settings' })` hoặc `storage.getAll({ domain: 'settings' })` để nạp dữ liệu một lần duy nhất.
    - Sử dụng `storage.setItems({ items: { theme: 'dark', lang: 'vi' }, domain: 'settings' })` khi lưu nhiều mục.
+   - Hai API batch cần SDK `2.2.0` và Flutter Host có hỗ trợ các action tương ứng. Mỗi lần gọi xử lý 1–50 khóa. Giá trị không phải chuỗi được mã hóa JSON khi ghi. Khi đọc, một khóa chưa lưu trả về `null`.
+   - Host trả `INVALID_PARAMS` khi batch trống hoặc vượt giới hạn và `ACTION_NOT_FOUND` khi chưa hỗ trợ action. Xem [hợp đồng Bridge](superapp.md#storagegetitems--storagesetitems).
 
 2. **Không gửi dữ liệu ảnh nhị phân dạng Base64 qua RPC**:
    - Toàn bộ các API hình ảnh/tệp tin (`device.pickImage`, `media.getPhoto`, `media.pickImages`, `pickFile`) luôn trả về đường dẫn URI tệp cục bộ (`uri: "/path/to/file.jpg"` hoặc resource handle), tuyệt đối không nhúng chuỗi Base64 Data URL.
