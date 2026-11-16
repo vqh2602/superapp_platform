@@ -20,71 +20,86 @@ class NativeDebugScreen extends ConsumerStatefulWidget {
 
 class _NativeDebugScreenState extends ConsumerState<NativeDebugScreen> {
   @override
+  void initState() {
+    super.initState();
+    ref.read(debugLogRepositoryProvider).isDebugCenterOpen = true;
+  }
+
+  @override
+  void dispose() {
+    ref.read(debugLogRepositoryProvider).isDebugCenterOpen = false;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final debugRepo = ref.watch(debugLogRepositoryProvider);
-    final logs = debugRepo.logs;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bridge Debug Center'),
-        actions: [
-          IconButton(
-            tooltip: 'Mở SERP Debug Overlay',
-            icon: const Icon(Icons.bug_report_rounded, color: Colors.blueAccent),
-            onPressed: () {
-              final overlay = DebugOverlay.maybeOf(context);
-              if (overlay != null) {
-                overlay.toggleVisibility();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Debug Overlay chưa sẵn sàng hoặc bị vô hiệu hóa'),
-                  ),
-                );
-              }
-            },
+    return StreamBuilder<List<BridgeLogEntry>>(
+      stream: debugRepo.stream,
+      initialData: debugRepo.logs,
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? debugRepo.logs;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Bridge Debug Center'),
+            actions: [
+              IconButton(
+                tooltip: 'Mở SERP Debug Overlay',
+                icon: const Icon(Icons.bug_report_rounded, color: Colors.blueAccent),
+                onPressed: () {
+                  final overlay = DebugOverlay.maybeOf(context);
+                  if (overlay != null) {
+                    overlay.toggleVisibility();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Debug Overlay chưa sẵn sàng hoặc bị vô hiệu hóa'),
+                      ),
+                    );
+                  }
+                },
+              ),
+              IconButton(
+                tooltip: 'Xóa logs',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () {
+                  debugRepo.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã xóa toàn bộ Bridge logs')),
+                  );
+                },
+              ),
+              IconButton(
+                tooltip: 'Xoá nhật ký',
+                icon: const Icon(Icons.refresh_rounded, color: Colors.amber),
+                onPressed: () => _resetAllData(),
+              ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Xóa logs',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              setState(() {
-                debugRepo.clear();
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã xóa toàn bộ Bridge logs')),
-              );
-            },
+          body: Column(
+            children: [
+              Expanded(
+                child: logs.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Chưa có bridge request nào được ghi nhận.\nHãy mở Mini App và thực hiện các tính năng demo.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF94A3B8)),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: logs.length,
+                        itemBuilder: (ctx, idx) {
+                          final log = logs[idx];
+                          return _buildLogTile(log);
+                        },
+                      ),
+              ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Xoá nhật ký',
-            icon: const Icon(Icons.refresh_rounded, color: Colors.amber),
-            onPressed: () => _resetAllData(),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-
-          Expanded(
-            child: logs.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Chưa có bridge request nào được ghi nhận.\nHãy mở Mini App và thực hiện các tính năng demo.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF94A3B8)),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: logs.length,
-                    itemBuilder: (ctx, idx) {
-                      final log = logs[idx];
-                      return _buildLogTile(log);
-                    },
-                  ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

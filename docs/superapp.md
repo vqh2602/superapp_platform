@@ -955,6 +955,13 @@ Mỗi lần khởi chạy Mini App, một phiên thực thi `MiniAppRuntimeSessi
    - **Đăng xuất (`logged_out`)**: Khi người dùng đăng xuất, Runtime phát sự kiện `logged_out` vào WebView, chủ động hủy phiên (`session.dispose()`), giải phóng WebViewController và đóng màn hình Mini App (`Navigator.maybePop()`), ngăn chặn triệt để nguy cơ truy cập dữ liệu (Secure Storage) của tài khoản cũ.
    - **Đổi tài khoản (`account_switched`)**: Khi phát hiện tài khoản đăng nhập khác (`prevUserId != nextUserId`), Runtime phát sự kiện `account_switched`, hủy phiên cũ và tự động khởi tạo lại phiên mới (`_startNewSession`) cô lập hoàn toàn cho tài khoản mới.
 
+### 6.2. Tối ưu hóa Nhật ký Bridge & Debug Center (`DebugLogRepository`)
+
+Nhằm xử lý trường hợp Mini App phát sinh RPC tần suất cao (ví dụ: 50 RPC/giây), `DebugLogRepository` áp dụng các giải pháp kiến trúc tối ưu:
+1. **Ring Buffer (Circular Buffer)**: Quản lý cố định 200 bản ghi nhật ký gần nhất với độ phức tạp $O(1)$, ghi đè bản ghi cũ nhất khi đầy mà không dịch chuyển mảng (`insert(0, ...)`), triệt tiêu chi phí cấp phát bộ nhớ lặp lại.
+2. **Gom cụm phát Stream (Batched Emission 100–250ms)**: Thay vì tạo bản sao và phát Stream ở mỗi RPC đơn lẻ, Repository gom cụm log theo cửa sổ thời gian (150ms) và **chỉ phát khi Debug Center đang mở** (`_logController.hasListener || isDebugCenterOpen`). Khi màn hình đóng, Repository không thực hiện copy mảng và không phát stream event, tiết kiệm tối đa CPU/RAM.
+3. **Loại bỏ Payload trong Release Mode**: Trong môi trường Release (`kReleaseMode`), Repository không lưu trữ `responseData` và chỉ lưu danh sách các khóa tham số (`params._keys`), ngăn chặn rò rỉ thông tin nhạy cảm và nguy cơ tràn bộ nhớ (OOM) khi response chứa dữ liệu lớn (ảnh base64, danh sách dài). Trong môi trường Debug, chuỗi ký tự vượt quá 2KB được cắt tỉa an toàn.
+
 ---
 
 ## 7. Hướng dẫn cài đặt & Chạy ứng dụng

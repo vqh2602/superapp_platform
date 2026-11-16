@@ -55,6 +55,21 @@ class BridgeLogEntry {
     return sanitized;
   }
 
+  /// Tạo một bản sao rút gọn của log entry dành riêng cho Release mode (loại bỏ params chi tiết và responseData lớn)
+  BridgeLogEntry toReleaseEntry() {
+    return BridgeLogEntry(
+      id: id,
+      action: action,
+      params: params.isEmpty ? const {} : {'_keys': params.keys.toList()},
+      success: success,
+      responseData: null,
+      errorMessage: errorMessage,
+      executionTimeMs: executionTimeMs,
+      timestamp: timestamp,
+      appId: appId,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'action': action,
