@@ -190,4 +190,57 @@ void main() {
       expect(reads, 1);
     },
   );
+
+  test('ensurePermissionsLoaded honors TTL cache and re-fetches when expired', () async {
+    permissionResponse = (_) async => state(['device.scanQRCode']);
+    // Initial fetch
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 1);
+
+    // Call within TTL should use cache without network read
+    await permissions.ensurePermissionsLoaded('sdk_playground', ttl: const Duration(minutes: 5));
+    expect(reads, 1);
+
+    // Call with zero/expired TTL should trigger a re-fetch
+    await permissions.ensurePermissionsLoaded('sdk_playground', ttl: Duration.zero);
+    expect(reads, 2);
+  });
+
+  test('forceRefresh bypasses TTL cache and fetches fresh permissions from backend', () async {
+    permissionResponse = (_) async => state(['device.scanQRCode']);
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 1);
+
+    // forceRefresh: true forces backend fetch even if cache is still fresh
+    await permissions.ensurePermissionsLoaded('sdk_playground', forceRefresh: true);
+    expect(reads, 2);
+  });
+
+  test('invalidatePermissions clears cache and causes subsequent ensurePermissionsLoaded to re-fetch', () async {
+    permissionResponse = (_) async => state(['device.scanQRCode']);
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 1);
+
+    // Invalidate
+    permissions.invalidatePermissions('sdk_playground');
+
+    // Next load must fetch from backend
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 2);
+  });
+
+  test('revokeAll clears cache and timestamps so subsequent reads re-fetch', () async {
+    permissionResponse = (_) async => state(['device.scanQRCode']);
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 1);
+
+    await permissions.revokeAll('sdk_playground');
+    expect(permissions.isGranted('sdk_playground', 'device.scanQRCode'), isFalse);
+    // revokeAll performs an HTTP DELETE request to sync revocation with backend (reads becomes 2)
+    expect(reads, 2);
+
+    // Next load must fetch from backend again (reads becomes 3)
+    await permissions.ensurePermissionsLoaded('sdk_playground');
+    expect(reads, 3);
+  });
 }

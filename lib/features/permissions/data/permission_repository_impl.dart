@@ -22,7 +22,11 @@ class PermissionRepositoryImpl {
   // Map of appId -> Map of capabilityKey -> isGranted
   final Map<String, Map<String, bool>> _storage = {};
 
+  /// Thời hạn hiệu lực mặc định của cache quyền truy cập (15 phút, tương đồng với authorizeExecution)
+  static const Duration defaultPermissionsTtl = Duration(minutes: 15);
+
   final Set<String> _loadedApps = {};
+  final Map<String, DateTime> _loadedTimestamps = {};
   final Map<String, Future<Map<String, bool>>> _loadingApps = {};
   final Map<String, int> _revisions = {};
   final Map<String, int> _capRevisions = {};
@@ -50,10 +54,20 @@ class PermissionRepositoryImpl {
     _sessionSubscription?.cancel();
   }
 
-  /// Load before any permission check; concurrent startup calls share a request.
-  Future<Map<String, bool>> ensurePermissionsLoaded(String appId) {
+  /// Đảm bảo quyền của Mini App đã được tải trước khi kiểm tra;
+  /// Áp dụng cơ chế cache có thời hạn (TTL) và chia sẻ request đồng thời (deduplication).
+  Future<Map<String, bool>> ensurePermissionsLoaded(
+    String appId, {
+    Duration? ttl,
+    bool forceRefresh = false,
+  }) {
     _checkUser();
-    if (_loadedApps.contains(appId)) {
+    final effectiveTtl = ttl ?? defaultPermissionsTtl;
+    final loadedAt = _loadedTimestamps[appId];
+    final isExpired =
+        loadedAt == null || DateTime.now().difference(loadedAt) > effectiveTtl;
+
+    if (!forceRefresh && !isExpired && _loadedApps.contains(appId)) {
       return Future.value(getPermissionsForApp(appId));
     }
     return _loadingApps[appId] ??= fetchPermissionsFromBackend(appId);
@@ -164,6 +178,10 @@ class PermissionRepositoryImpl {
             'Đồng bộ quyền lên máy chủ thất bại (HTTP ${response.statusCode})',
           );
         }
+
+        // Cập nhật trạng thái nạp và timestamp sau khi đồng bộ thành công
+        _loadedApps.add(appId);
+        _loadedTimestamps[appId] = DateTime.now();
       } catch (e) {
         _checkUser();
         _rollbackPermissionIfLatest(
@@ -225,6 +243,8 @@ class PermissionRepositoryImpl {
     final targetAppRev = (_revisions[appId] ?? 0) + 1;
     _revisions[appId] = targetAppRev;
     _storage.remove(appId);
+    _loadedApps.remove(appId);
+    _loadedTimestamps.remove(appId);
 
     final session = authRepo?.currentSession;
     if (usersUrl != null &&
@@ -307,6 +327,7 @@ class PermissionRepositoryImpl {
           }
           if ((_revisions[appId] ?? 0) == revision) _storage[appId] = appMap;
           _loadedApps.add(appId);
+          _loadedTimestamps[appId] = DateTime.now();
         }
       }
     } catch (e) {
@@ -350,10 +371,25 @@ class PermissionRepositoryImpl {
     return [];
   }
 
+  /// Xóa cache quyền của một Mini App cụ thể khi quyền thay đổi
+  void invalidatePermissions(String appId) {
+    _loadedApps.remove(appId);
+    _loadedTimestamps.remove(appId);
+    _storage.remove(appId);
+  }
+
+  /// Xóa toàn bộ cache quyền
+  void invalidateAllPermissions() {
+    _loadedApps.clear();
+    _loadedTimestamps.clear();
+    _storage.clear();
+  }
+
   void reset() {
     _generation++;
     _storage.clear();
     _loadedApps.clear();
+    _loadedTimestamps.clear();
     _loadingApps.clear();
     _revisions.clear();
     _capRevisions.clear();

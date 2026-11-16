@@ -9,6 +9,7 @@ import 'screens/apps_tab.dart';
 import 'screens/games_tab.dart';
 import 'screens/search_screen.dart';
 import 'screens/profile_tab.dart';
+import '../../mini_app_runtime/application/webview_engine_warmer.dart';
 
 /// Widget quản lý toàn bộ trải nghiệm khám phá và chạy Mini App
 class MiniAppCatalogScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,11 @@ class _MiniAppCatalogScreenState extends ConsumerState<MiniAppCatalogScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialTabIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(webViewEngineWarmerProvider).warmUp();
+      }
+    });
   }
 
   void _onTabSelected(int index) {

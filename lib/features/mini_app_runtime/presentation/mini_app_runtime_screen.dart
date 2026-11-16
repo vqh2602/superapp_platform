@@ -29,6 +29,7 @@ import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../domain/mini_app_runtime_session.dart';
 import '../domain/web_log_entry.dart';
+import '../application/webview_engine_warmer.dart';
 import 'widgets/mini_app_action_bottom_sheet.dart';
 import 'widgets/webview_debug_bottom_sheet.dart';
 import '../../../../core/animations/app_motion.dart';
@@ -555,10 +556,23 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
 
     final repo = ref.read(miniAppRepositoryProvider);
     final permissionRepo = ref.read(permissionRepositoryProvider);
+    final warmer = ref.read(webViewEngineWarmerProvider);
 
-    // Kích hoạt song song xác thực quyền thực thi và đồng bộ quyền đã lưu từ Backend
+    // 1. Chuẩn bị trước WebViewController (engine pre-warming) mà chưa tải hoặc chạy code Mini App
+    final controller = warmer.consume() ?? warmer.createEngine();
+    session.controller = controller;
+
+    // 2. Kích hoạt song song: xác thực quyền thực thi (authorizeExecution) và đồng bộ quyền đã lưu (ensurePermissionsLoaded).
+    // authorizeExecution duy trì cache hiệu lực mặc định 15 phút.
+    // ensurePermissionsLoaded tận dụng cache TTL 15 phút và cơ chế invalidation khi quyền thay đổi.
     final authFuture = repo.authorizeExecution(session.appId);
-    final permFuture = permissionRepo.fetchPermissionsFromBackend(session.appId);
+    Object? permException;
+    final permFuture = permissionRepo
+        .ensurePermissionsLoaded(session.appId)
+        .catchError((e) {
+          permException = e;
+          return <String, bool>{};
+        });
 
     final authorization = await authFuture;
     if (!mounted || session.isDisposed || _currentSession != session) return;
@@ -585,9 +599,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
     );
 
     // Đợi kết quả nạp quyền đã lưu (đã được chạy ngầm đồng thời với authorizeExecution)
-    try {
-      await permFuture;
-    } catch (_) {
+    await permFuture;
+    if (permException != null) {
       if (!mounted || session.isDisposed || _currentSession != session) return;
       session.dispose();
       setState(() {
@@ -611,9 +624,8 @@ class _MiniAppRuntimeScreenState extends ConsumerState<MiniAppRuntimeScreen>
         validManifest.schema?['theme']?['backgroundColor'] as String?;
     final themeBg = _parseColor(themeHex, defaultColor: Colors.white);
 
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(themeBg);
+    // Áp dụng màu nền theme cho WebViewController đã chuẩn bị trước
+    controller.setBackgroundColor(themeBg);
 
     final endpoint = ref.read(backendEndpointProvider);
     final actionDispatcher = NativeActionDispatcher(

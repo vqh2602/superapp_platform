@@ -50,9 +50,26 @@ class PermissionService {
     return permissionRepo.isExplicitlyDenied(appId, capability);
   }
 
-  /// Đảm bảo quyền đã được tải từ máy chủ trước khi xử lý
-  Future<Map<String, bool>> ensurePermissionsLoaded(String appId) {
-    return permissionRepo.ensurePermissionsLoaded(appId);
+  /// Đảm bảo quyền đã được tải từ máy chủ trước khi xử lý (có hỗ trợ TTL cache và forceRefresh)
+  Future<Map<String, bool>> ensurePermissionsLoaded(
+    String appId, {
+    Duration? ttl,
+    bool forceRefresh = false,
+  }) {
+    return permissionRepo.ensurePermissionsLoaded(
+      appId,
+      ttl: ttl,
+      forceRefresh: forceRefresh,
+    );
+  }
+
+  /// Xóa cache quyền của một Mini App cụ thể hoặc toàn bộ
+  void invalidateCache([String? appId]) {
+    if (appId != null) {
+      permissionRepo.invalidatePermissions(appId);
+    } else {
+      permissionRepo.invalidateAllPermissions();
+    }
   }
 
   /// Lấy toàn bộ quyền đã cấp của Mini App

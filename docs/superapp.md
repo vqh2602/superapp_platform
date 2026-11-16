@@ -938,12 +938,14 @@ khi thực thi action; `permission.check()` chỉ kiểm tra và không mở b�
 
 Khi người dùng mở một Mini App từ Catalog, luồng điều hướng hoạt động như sau:
 
-1. **Khởi tạo song song & Tối ưu hóa khởi động**: Khởi động đồng thời xác thực giấy phép thực thi (`authorizeExecution`) và khôi phục quyền người dùng (`fetchPermissionsFromBackend`) qua `Future.wait`, giảm 50% độ trễ mạng ban đầu.
-2. **Khởi tạo WebViewController**: Cấu hình chế độ JavaScript không giới hạn, màu nền theo theme của Mini App.
-3. **Đăng ký Bridge Channel & Script Polyfill**: Tận dụng `addUserScript` tại `documentStart` để inject polyfill một lần duy nhất, loại bỏ việc re-eval JS lặp lại. Đồng bộ URL nguồn gốc (`updateCurrentUrl`) ngay khi điều hướng để phục vụ kiểm tra Origin Validation tức thì mà không cần gọi IPC native qua Platform Channel trên mỗi RPC.
-4. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
-5. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
-6. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
+1. **Khởi tạo song song & Tối ưu hóa khởi động**: Kích hoạt đồng thời xác thực giấy phép thực thi (`authorizeExecution`) và đồng bộ quyền người dùng (`ensurePermissionsLoaded`). Hai tác vụ độc lập chạy ngầm song song; chỉ khi cả hai đều thành công thì Mini App mới được phép thực thi. Nếu giấy phép bị thu hồi hoặc tải quyền thất bại, phiên thực thi sẽ bị hủy ngay lập tức và tuyệt đối không tải hay chạy code Mini App.
+2. **Bộ nhớ đệm quyền có thời hạn & Invalidation (`ensurePermissionsLoaded`)**: Áp dụng cache hiệu lực mặc định 15 phút (tương đồng với thời hạn 15 phút của giấy phép thực thi `authorizeExecution`), triệt tiêu các lượt gọi mạng trùng lặp khi mở lại ứng dụng. Cache tự động cập nhật hoặc bị hủy (invalidation) khi quyền thay đổi (`updatePermission`, `revokeAll` hoặc `invalidatePermissions`).
+3. **Chuẩn bị trước WebView Engine (`WebViewEngineWarmer`)**: Cho phép chuẩn bị trước WebViewController (pre-warming) từ sớm (ví dụ: khi hiển thị Catalog hoặc ngay khi tạo phiên), triệt tiêu độ trễ cấp phát WebView Native (150-300ms). WebView engine chuẩn bị trước tuân thủ nghiêm ngặt nguyên tắc bảo mật: chỉ thiết lập cấu hình nền tảng cơ bản, tuyệt đối không tải URL hay thực thi bất kỳ đoạn mã HTML/JS/WASM nào của Mini App trước khi xác thực thành công.
+4. **Tận dụng HTTP Cache theo phiên bản cho tài nguyên tĩnh**: Backend Registry phân phối các tài nguyên tĩnh (JS chunks, CSS, WASM, ảnh) kèm tiêu đề `Cache-Control: public, max-age=31536000, immutable` và ETag, trong khi entrypoint `index.html` sử dụng `Cache-Control: no-cache` để revalidation nhanh. WebView Host tận dụng bộ nhớ đệm HTTP disk cache, giúp các lần khởi chạy sau nạp trực tiếp tài nguyên tĩnh từ đĩa mà không tốn băng thông mạng.
+5. **Đăng ký Bridge Channel & Script Polyfill**: Tận dụng `addUserScript` tại `documentStart` để inject polyfill một lần duy nhất, loại bỏ việc re-eval JS lặp lại. Đồng bộ URL nguồn gốc (`updateCurrentUrl`) ngay khi điều hướng để phục vụ kiểm tra Origin Validation tức thì mà không cần gọi IPC native qua Platform Channel trên mỗi RPC.
+6. **Nạp Bundle**: Tải URL trực tiếp từ Backend Registry server (ví dụ: `http://localhost:3000/api/v1/miniapps/:appId/:version/dist/index.html`). Toàn bộ Mini App được tự build, đóng gói và phục vụ qua Backend, không còn phụ thuộc vào local Flutter assets.
+7. **Bắn sự kiện khởi động**: Khi trang hoàn tất nạp (`onPageFinished`), emit sự kiện `miniapp.ready` và `miniapp.show`.
+8. **Đóng gói điều hướng**: Người dùng có thể nhấn nút `⊙` trên thanh Capsule Bar để trở về Catalog bất kỳ lúc nào.
 
 ### 6.1. Quản lý Vòng đời Phiên Runtime & Cô lập Danh tính (`MiniAppRuntimeSession`)
 
