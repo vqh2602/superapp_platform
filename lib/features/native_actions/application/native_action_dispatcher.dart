@@ -135,6 +135,8 @@ class NativeActionDispatcher {
       StorageRemoveSecureItemHandler(secureStorageRepo: secureStorageRepo),
       StorageClearHandler(secureStorageRepo: secureStorageRepo),
       StorageGetAllHandler(secureStorageRepo: secureStorageRepo),
+      StorageGetItemsHandler(secureStorageRepo: secureStorageRepo),
+      StorageSetItemsHandler(secureStorageRepo: secureStorageRepo),
       StorageSetCredentialsHandler(secureStorageRepo: secureStorageRepo),
       StorageGetCredentialsHandler(secureStorageRepo: secureStorageRepo),
       StorageDeleteCredentialsHandler(secureStorageRepo: secureStorageRepo),
@@ -209,6 +211,10 @@ class NativeActionDispatcher {
     _handlers['storage.removeItem'] = removeItemHandler;
     _handlers['storage.clear'] = StorageClearHandler(secureStorageRepo: secureStorageRepo);
     _handlers['storage.getAll'] = StorageGetAllHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['storage.getItems'] = StorageGetItemsHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['storage.getBatch'] = StorageGetItemsHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['storage.setItems'] = StorageSetItemsHandler(secureStorageRepo: secureStorageRepo);
+    _handlers['storage.setBatch'] = StorageSetItemsHandler(secureStorageRepo: secureStorageRepo);
     _handlers['getStorage'] = getItemHandler;
     _handlers['setStorage'] = setItemHandler;
     _handlers['removeStorage'] = removeItemHandler;

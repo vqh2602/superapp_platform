@@ -273,3 +273,89 @@ class StorageDeleteCredentialsHandler implements NativeActionHandler {
     );
   }
 }
+
+/// Xử lý action `storage.getItems`: Đọc hàng loạt (batch read) nhiều khóa trong một RPC duy nhất
+class StorageGetItemsHandler implements NativeActionHandler {
+  final SecureStorageRepositoryImpl secureStorageRepo;
+
+  StorageGetItemsHandler({required this.secureStorageRepo});
+
+  @override
+  String get actionName => 'storage.getItems';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final keysRaw = payload['keys'];
+    if (keysRaw is! List || keysRaw.isEmpty) {
+      throw BridgeError.invalidParams('keys must be a non-empty list of string keys');
+    }
+    final keys = keysRaw.map((e) => e.toString()).toList();
+    if (keys.length > 50) {
+      throw BridgeError.invalidParams('Cannot request more than 50 keys in a single batch');
+    }
+
+    final domain = (payload['domain']?.toString().isNotEmpty ?? false)
+        ? payload['domain'].toString()
+        : 'default';
+
+    final result = <String, dynamic>{};
+    for (final key in keys) {
+      final item = await secureStorageRepo.getItem(
+        appId: context.appId,
+        key: key,
+        domain: domain,
+        userId: context.userId,
+      );
+      result[key] = item['value'];
+    }
+    return result;
+  }
+}
+
+/// Xử lý action `storage.setItems`: Ghi hàng loạt (batch write) nhiều cặp khóa - giá trị trong một RPC duy nhất
+class StorageSetItemsHandler implements NativeActionHandler {
+  final SecureStorageRepositoryImpl secureStorageRepo;
+
+  StorageSetItemsHandler({required this.secureStorageRepo});
+
+  @override
+  String get actionName => 'storage.setItems';
+
+  @override
+  String? get requiredCapability => null;
+
+  @override
+  bool get requiresAuth => false;
+
+  @override
+  Future<dynamic> handle(Map<String, dynamic> payload, ActionContext context) async {
+    final itemsRaw = payload['items'];
+    if (itemsRaw is! Map || itemsRaw.isEmpty) {
+      throw BridgeError.invalidParams('items must be a non-empty key-value map');
+    }
+    if (itemsRaw.length > 50) {
+      throw BridgeError.invalidParams('Cannot set more than 50 items in a single batch');
+    }
+
+    final domain = (payload['domain']?.toString().isNotEmpty ?? false)
+        ? payload['domain'].toString()
+        : 'default';
+
+    for (final entry in itemsRaw.entries) {
+      await secureStorageRepo.setItem(
+        appId: context.appId,
+        key: entry.key.toString(),
+        value: entry.value.toString(),
+        domain: domain,
+        userId: context.userId,
+      );
+    }
+    return {'success': true, 'count': itemsRaw.length};
+  }
+}

@@ -264,6 +264,71 @@ void main() {
       expect(delCredRes['deleted'], true);
     });
 
+    test('Dispatches storage.setItems and storage.getItems (batch storage optimization)', () async {
+      final context = ActionContext(appId: 'sdk_playground', manifest: testManifest);
+
+      // 1. Batch write 3 items
+      final batchSetRes = await dispatcher.dispatch(
+        'storage.setItems',
+        {
+          'items': {
+            'user_name': 'Nguyen Van A',
+            'theme': 'dark',
+            'locale': 'vi_VN',
+          },
+          'domain': 'app_settings',
+        },
+        context,
+      );
+      expect(batchSetRes['success'], true);
+      expect(batchSetRes['count'], 3);
+
+      // 2. Batch read back the 3 items plus 1 non-existent item
+      final batchGetRes = await dispatcher.dispatch(
+        'storage.getItems',
+        {
+          'keys': ['user_name', 'theme', 'locale', 'non_existent_key'],
+          'domain': 'app_settings',
+        },
+        context,
+      );
+      expect(batchGetRes['user_name'], 'Nguyen Van A');
+      expect(batchGetRes['theme'], 'dark');
+      expect(batchGetRes['locale'], 'vi_VN');
+      expect(batchGetRes['non_existent_key'], isNull);
+
+      // 3. Test alias storage.getBatch and storage.setBatch
+      final aliasSetRes = await dispatcher.dispatch(
+        'storage.setBatch',
+        {
+          'items': {'cached_token': 'xyz789'},
+          'domain': 'app_settings',
+        },
+        context,
+      );
+      expect(aliasSetRes['success'], true);
+
+      final aliasGetRes = await dispatcher.dispatch(
+        'storage.getBatch',
+        {
+          'keys': ['cached_token'],
+          'domain': 'app_settings',
+        },
+        context,
+      );
+      expect(aliasGetRes['cached_token'], 'xyz789');
+
+      // 4. Validation errors: empty keys or items
+      expect(
+        () => dispatcher.dispatch('storage.getItems', {'keys': []}, context),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.invalidParams)),
+      );
+      expect(
+        () => dispatcher.dispatch('storage.setItems', {'items': {}}, context),
+        throwsA(isA<BridgeError>().having((e) => e.code, 'code', BridgeErrorCode.invalidParams)),
+      );
+    });
+
     test('Dispatches permission.getPermissions returning granted list', () async {
       final context = ActionContext(appId: 'sdk_playground', manifest: testManifest);
       await permissionRepo.updatePermission('sdk_playground', 'device.getLocation', true);

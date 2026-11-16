@@ -962,6 +962,22 @@ Nhằm xử lý trường hợp Mini App phát sinh RPC tần suất cao (ví d�
 2. **Gom cụm phát Stream (Batched Emission 100–250ms)**: Thay vì tạo bản sao và phát Stream ở mỗi RPC đơn lẻ, Repository gom cụm log theo cửa sổ thời gian (150ms) và **chỉ phát khi Debug Center đang mở** (`_logController.hasListener || isDebugCenterOpen`). Khi màn hình đóng, Repository không thực hiện copy mảng và không phát stream event, tiết kiệm tối đa CPU/RAM.
 3. **Loại bỏ Payload trong Release Mode**: Trong môi trường Release (`kReleaseMode`), Repository không lưu trữ `responseData` và chỉ lưu danh sách các khóa tham số (`params._keys`), ngăn chặn rò rỉ thông tin nhạy cảm và nguy cơ tràn bộ nhớ (OOM) khi response chứa dữ liệu lớn (ảnh base64, danh sách dài). Trong môi trường Debug, chuỗi ký tự vượt quá 2KB được cắt tỉa an toàn.
 
+### 6.3. Tối ưu hóa Đường truyền Phản hồi RPC & Giới hạn Tải (`BridgeDispatcher`)
+
+Đường truyền phản hồi RPC hiện hành sử dụng cơ chế:
+1. `jsonEncode(response.toJson())` để serialize gói tin phản hồi.
+2. Escape các ký tự ngắt dòng JS (`\u2028`, `\u2029`) và tạo câu lệnh script compact một dòng: `if(window.SuperAppBridge&&window.SuperAppBridge.dispatchResponse){window.SuperAppBridge.dispatchResponse($jsonStr);}`.
+3. Gọi `controller.runJavaScript(script)` để gửi kết quả vào JavaScript context của WebView.
+4. JavaScript SDK tìm callback theo `response.id` và resolve hoặc reject Promise tương ứng.
+
+Đây là đường truyền chuẩn mực và tin cậy nhất cho WebView Native Bridge. Nhằm giảm thiểu chi phí serialization và chuyển đổi ngữ cảnh native/web, SuperApp áp dụng các định hướng tối ưu:
+- **Tối ưu cách sử dụng API trước khi đổi giao thức**:
+  * **Batch các thao tác đọc/ghi dữ liệu nhỏ**: Sử dụng `storage.getItems` / `storage.setItems` hoặc `storage.getAll` thay vì gọi hàng chục RPC nối tiếp nhau để đọc/ghi từng giá trị riêng lẻ.
+  * **Không gửi dữ liệu ảnh nhị phân dạng Base64 qua RPC**: Các API phần cứng/đa phương tiện (`device.pickImage`, `media.getPhoto`, `media.pickImages`) luôn trả về đường dẫn URI file cục bộ (`file.path` hoặc resource handle) để WebView nạp trực tiếp qua thẻ `<img>` hoặc upload qua FormData, tránh làm phình RAM và tốn chi phí serialize chuỗi JS.
+  * **Tránh gọi Bridge mỗi frame hoặc mỗi lần scroll**: Nghiêm cấm gọi Bridge bên trong `requestAnimationFrame`, `window.onscroll` mà không có cơ chế throttle/debounce (khuyến nghị tối thiểu 100–250ms).
+- **Lớp bảo vệ mặc định (Load Protection)**:
+  * Giữ nguyên **Rate Limiter 50 requests/giây** và **Concurrency Limit 15 requests đồng thời** làm mạch ngắt (circuit breaker) bảo vệ UI isolate của Flutter; chỉ điều chỉnh các thông số này sau khi thực hiện benchmark đo kiểm hiệu năng thực tế.
+
 ---
 
 ## 7. Hướng dẫn cài đặt & Chạy ứng dụng

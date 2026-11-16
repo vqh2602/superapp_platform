@@ -651,7 +651,7 @@ async function handleScanQR() {
 // Chọn ảnh từ thư viện máy
 async function handlePickImage() {
   const photo = await superApp.device.pickImage();
-  // photo.uri là định dạng Base64 Data URL, có thể gán trực tiếp vào thẻ <img src="...">
+  // photo.uri là đường dẫn URI file cục bộ (không dùng Base64 để tránh quá tải bộ nhớ và serialization), có thể gán trực tiếp vào <img src="..."> hoặc upload
   const imgElement = document.getElementById('preview-avatar') as HTMLImageElement;
   if (imgElement) imgElement.src = photo.uri;
 }
@@ -870,7 +870,7 @@ Mọi API được gọi thông qua Bridge đều được bảo vệ bởi **H�
 | | `user.getBasicInfo` | *Không cần* | `{}` | `{ id, name, avatarUrl }` |
 | **Phần cứng** | `device.scanQRCode` | `device.scanQRCode` | `{}` | `{ content: string, format: string }` |
 | | `device.getLocation` | `device.getLocation` | `{ highAccuracy?: boolean }` | `{ latitude, longitude, address, city }` |
-| | `device.pickImage` | `device.pickImage` | `{}` | `{ uri: "data:image/png;base64,...", fileName, sizeBytes }` |
+| | `device.pickImage` | `device.pickImage` | `{}` | `{ uri: "/path/to/image.jpg", fileName, sizeBytes }` |
 | | `device.getBatteryInfo` | *Không cần* | `{}` | `{ batteryLevel: number, isCharging: boolean }` |
 | | `device.getNetworkInfo` | *Không cần* | `{}` | `{ isConnected: boolean, networkType, isWifi }` |
 | | `device.getSystemInfo` | *Không cần* | `{}` | `{ platform, model, systemVersion, screenWidth, screenHeight }` |
@@ -1202,5 +1202,29 @@ chạy; ID sai bị chặn trước hộp thoại cấp quyền.
 Quyền chưa được người dùng đồng ý sẽ hiện bảng cấp quyền nếu capability đã
 được manifest/nền tảng cho phép. Capability không khai báo vẫn bị từ chối;
 `permission.check()` chỉ đọc trạng thái và không tự mở bảng cấp quyền.
+
+## 4. Nguyên tắc Tối ưu Hiệu năng Bridge RPC (Performance & Best Practices)
+
+Nhằm đảm bảo trải nghiệm mượt mà và tránh làm nghẽn giao tiếp giữa WebView và Flutter Host, các Mini App cần tuân thủ các nguyên tắc sau:
+
+1. **Gom cụm (Batching) các thao tác đọc/ghi dữ liệu nhỏ**:
+   - Tránh gọi nhiều RPC riêng lẻ liên tiếp để đọc hoặc ghi từng khóa cấu hình.
+   - Sử dụng `storage.getItems({ keys: ['theme', 'lang'], domain: 'settings' })` hoặc `storage.getAll({ domain: 'settings' })` để nạp dữ liệu một lần duy nhất.
+   - Sử dụng `storage.setItems({ items: { theme: 'dark', lang: 'vi' }, domain: 'settings' })` khi lưu nhiều mục.
+
+2. **Không gửi dữ liệu ảnh nhị phân dạng Base64 qua RPC**:
+   - Toàn bộ các API hình ảnh/tệp tin (`device.pickImage`, `media.getPhoto`, `media.pickImages`, `pickFile`) luôn trả về đường dẫn URI tệp cục bộ (`uri: "/path/to/file.jpg"` hoặc resource handle), tuyệt đối không nhúng chuỗi Base64 Data URL.
+   - Mini App có thể gán trực tiếp URI vào thẻ `<img src="...">` của WebView hoặc tạo `FormData` để upload tệp tin thẳng lên máy chủ/cloud qua HTTP, loại bỏ hoàn toàn chi phí serialize/deserialize chuỗi base64 khổng lồ qua ranh giới native/web.
+
+3. **Tránh gọi Bridge mỗi frame hoặc mỗi lần scroll**:
+   - Tuyệt đối không gọi Bridge RPC bên trong `requestAnimationFrame`, vòng lặp render, hoặc các sự kiện tần suất cao như `window.onscroll`, `touchmove`, `resize` mà không có cơ chế `throttle` hoặc `debounce` (tối thiểu 100–250ms).
+   - Hãy xử lý trạng thái giao diện nội bộ trong DOM của WebView và chỉ đồng bộ về Native khi có hành động dứt điểm từ người dùng.
+
+4. **Lớp bảo vệ giới hạn tải mặc định (Rate Limiter & Concurrency Limit)**:
+   - SuperApp Host duy trì lớp bảo vệ mặc định:
+     * **Rate Limiter**: Tối đa 50 requests/giây (vượt quá sẽ trả lỗi `RATE_LIMIT_EXCEEDED`).
+     * **Concurrency Limit**: Tối đa 15 requests đồng thời (vượt quá sẽ trả lỗi `CONCURRENCY_LIMIT_EXCEEDED`).
+     * **Max Message Size**: Tối đa 1MB cho mỗi gói tin JSON.
+   - Các giới hạn này bảo vệ UI isolate của Flutter và chỉ được điều chỉnh sau khi đo kiểm benchmark thực tế.
 
 SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

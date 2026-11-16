@@ -42,6 +42,12 @@ class BridgeRateLimiter {
 }
 
 /// Cấu hình giới hạn tải an toàn cho Native Bridge nhằm bảo vệ UI isolate và hệ thống.
+///
+/// Lớp bảo vệ mặc định:
+/// - Rate Limiter: 50 requests/giây (bảo vệ UI thread khỏi nghẽn hàng đợi RPC)
+/// - Concurrency Limit: 15 requests đồng thời (ngăn tràn tài nguyên native I/O)
+/// - Max Message Size: 1MB (ngăn OOM khi serialize dữ liệu lớn)
+/// Chỉ điều chỉnh các thông số này sau khi thực hiện benchmark hiệu năng thực tế.
 class BridgeLoadConfig {
   /// Kích thước tối đa cho phép của một message raw JSON (bytes). Mặc định 1MB (1,048,576 bytes).
   final int maxMessageSizeBytes;

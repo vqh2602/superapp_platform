@@ -383,16 +383,13 @@ class BridgeDispatcher {
   /// Gửi kết quả BridgeResponse vào WebView thông qua hàm JavaScript `window.SuperAppBridge.dispatchResponse`.
   Future<void> _sendResponse(BridgeResponse response) async {
     if (_isDisposed) return;
-    final jsonStr = jsonEncode(response.toJson());
-    final script = '''
-      try {
-        if (window.SuperAppBridge && typeof window.SuperAppBridge.dispatchResponse === 'function') {
-          window.SuperAppBridge.dispatchResponse($jsonStr);
-        }
-      } catch (err) {
-        console.error('[Bridge Dispatcher] Failed to dispatch response for "${response.id}":', err.message || err, err.stack || '');
-      }
-    ''';
+    // jsonEncode an toàn và escape các ký tự ngắt dòng JS (\u2028, \u2029) để ngăn lỗi cú pháp JavaScriptCore/V8
+    final jsonStr = jsonEncode(response.toJson())
+        .replaceAll('\u2028', r'\u2028')
+        .replaceAll('\u2029', r'\u2029');
+    // Tối ưu hóa: Sử dụng biểu thức compact gọn nhẹ, loại bỏ overhead định dạng multiline string của Dart và giảm tải biên dịch JS
+    final script =
+        'if(window.SuperAppBridge&&window.SuperAppBridge.dispatchResponse){window.SuperAppBridge.dispatchResponse($jsonStr);}';
     try {
       await controller.runJavaScript(script);
     } catch (_) {

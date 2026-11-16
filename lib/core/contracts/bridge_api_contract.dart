@@ -319,6 +319,18 @@ class BridgeApiContract {
       aliases: ['getAllStorage'],
     ),
     BridgeActionSpec(
+      action: 'storage.getItems',
+      module: 'storage',
+      description: 'Đọc hàng loạt nhiều khóa cùng lúc trong sandbox storage',
+      aliases: ['storage.getBatch'],
+    ),
+    BridgeActionSpec(
+      action: 'storage.setItems',
+      module: 'storage',
+      description: 'Lưu hàng loạt nhiều cặp key-value cùng lúc trong sandbox storage',
+      aliases: ['storage.setBatch'],
+    ),
+    BridgeActionSpec(
       action: 'storage.setSecureItem',
       module: 'storage',
       description: 'Lưu dữ liệu mã hóa Keychain/Keystore an toàn',
