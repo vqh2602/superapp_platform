@@ -250,6 +250,7 @@ const settings = await superApp.storage.getItems({ keys: ['theme', 'lang'], doma
 * **Mock Engine & Tree-shaking**: Mock Engine (`dist/mock/`) chỉ là các stub class tối giản (<1KB). SDK khai báo `"sideEffects": false` trong `package.json` và hỗ trợ subpaths riêng (`@vqh2602/mini-app-sdk/mock` và `@vqh2602/mini-app-sdk/transport`), cho phép bundler loại bỏ hoàn toàn mã không sử dụng.
 * **Lazy Proxy Singleton**: Import `superApp` từ SDK không gây ra bất kỳ side effect nào lúc nạp module. Transport và các module chỉ được khởi tạo khi thuộc tính hoặc phương thức đầu tiên được gọi.
 * **PostMessageHub**: Chia sẻ 1 listener `message` duy nhất trên `window` cho mọi instance `PostMessageTransport`. Khi tất cả instance bị `destroy()`, listener tự động được gỡ bỏ, triệt tiêu nguy cơ rò rỉ listener trong ứng dụng SPA.
+* **Simulator**: Dùng SDK `2.2.1` trở lên để listener dùng chung kiểm tra origin khi nhận sự kiện và xác thực origin khai báo trong handshake.
 * **Giải phóng tài nguyên**: Gọi `sdk.destroy()` hoặc `superApp.destroy()` trong hàm dọn dẹp (cleanup) của React `useEffect` / Vue `onUnmounted` để hủy toàn bộ các pending requests, PKCE verifiers, timers và event listeners.
 
 SDK `2.0.0` đã gỡ API `payment`, sự kiện thanh toán và giao diện checkout của SuperApp. Các ví dụ không còn gọi API thanh toán.

@@ -805,3 +805,25 @@ test('destroy cancels an adaptive call waiting for the native channel', async ()
   await assert.rejects(pending, { code: 'TRANSPORT_DESTROYED' });
   assert.equal(requests.length, 0);
 });
+
+test('PostMessageHub delivers simulator events only to transports that trust the sender origin', () => {
+  let receive;
+  win.addEventListener = (name, listener) => { if (name === 'message') receive = listener; };
+  win.parent = { postMessage() {} };
+  const trusted = new PostMessageTransport({ trustedHostOrigin: 'https://simulator.test' });
+  const other = new PostMessageTransport({ trustedHostOrigin: 'https://other.test' });
+  const hits = [];
+  trusted.on('miniapp.ready', () => hits.push('trusted'));
+  other.on('miniapp.ready', () => hits.push('other'));
+  try {
+    receive({
+      source: win.parent,
+      origin: 'https://simulator.test',
+      data: { type: 'SUPERAPP_BRIDGE_EVENT', event: 'miniapp.ready' },
+    });
+    assert.deepEqual(hits, ['trusted']);
+  } finally {
+    trusted.destroy();
+    other.destroy();
+  }
+});

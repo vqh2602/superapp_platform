@@ -142,11 +142,23 @@ export class PostMessageHub {
     if (data.type === 'SUPERAPP_BRIDGE_EVENT') {
       if (data.event) {
         for (const transport of this.transports) {
-          transport.emit(data.event, data.payload);
+          if (matchesHostOrigin(transport, event)) {
+            transport.emit(data.event, data.payload);
+          }
         }
       }
     }
   }
+}
+
+function matchesHostOrigin(transport: PostMessageTransport, event: MessageEvent): boolean {
+  const origin = transport.getTrustedHostOrigin();
+  if (!origin || origin === '*' || event.origin === origin) return true;
+
+  if (transport.isDebug()) {
+    console.warn(`[PostMessageTransport] Rejected message from untrusted origin: "${event.origin}". Expected: "${origin}"`);
+  }
+  return false;
 }
 
 export class PostMessageTransport implements ITransport {
@@ -322,8 +334,8 @@ export class PostMessageTransport implements ITransport {
   }
 
   public handleHandshakeMessage(data: any, event: MessageEvent): void {
-    const hostOrigin = data.hostOrigin || event.origin;
-    if (hostOrigin && this.isValidHostOrigin(hostOrigin)) {
+    const hostOrigin = event.origin;
+    if ((!data.hostOrigin || data.hostOrigin === hostOrigin) && this.isValidHostOrigin(hostOrigin)) {
       if (!this.trustedHostOrigin) {
         this.trustedHostOrigin = hostOrigin;
         if (this.debug) {
@@ -334,17 +346,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   public handleResponseMessage(res: BridgeResponse, event: MessageEvent): void {
-    // 2. Verify event origin against trustedHostOrigin
-    if (this.trustedHostOrigin && this.trustedHostOrigin !== '*') {
-      if (event.origin && event.origin !== this.trustedHostOrigin) {
-        if (this.debug) {
-          console.warn(
-            `[PostMessageTransport] Rejected message from untrusted origin: "${event.origin}". Expected: "${this.trustedHostOrigin}"`
-          );
-        }
-        return;
-      }
-    }
+    if (!matchesHostOrigin(this, event)) return;
 
     const pending = this.callbacks.get(res.id);
     if (!pending) return;

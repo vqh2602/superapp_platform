@@ -28,7 +28,7 @@ import {
 } from './types/index.js';
 
 export class SuperAppSDK {
-  public readonly version = '2.2.0';
+  public readonly version = '2.2.1';
   public readonly transport: ITransport;
 
   // Domain modules

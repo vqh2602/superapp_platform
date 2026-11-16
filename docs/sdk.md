@@ -1251,6 +1251,7 @@ Nhằm đảm bảo trải nghiệm mượt mà và tránh làm nghẽn giao ti�
 3. **Chống Rò rỉ Listener (`PostMessageHub`)**:
    - `PostMessageHub` duy trì **duy nhất 1** listener sự kiện `window.addEventListener('message', ...)` tại cấp trang cho tất cả các instance `PostMessageTransport`.
    - Các phản hồi RPC được định tuyến chính xác đến đúng instance sở hữu `requestId`, triệt tiêu hoàn toàn cảnh báo dư thừa trên các instance khác.
+   - Từ SDK `2.2.1`, listener dùng chung kiểm tra origin của Simulator khi phân phối sự kiện và xác minh origin được khai báo trong handshake khớp với origin của bên gửi.
    - Cơ chế Reference Counting: Khi toàn bộ các instance `PostMessageTransport` bị `destroy()`, listener trên `window` sẽ tự động được gỡ bỏ bằng `window.removeEventListener`.
    - `AdaptiveBridgeTransport` áp dụng lazy initialization: Khi Mini App chạy trong Flutter WebView của SuperApp Host (`isNativeAvailable() === true`), `PostMessageTransport` hoàn toàn không bao giờ được khởi tạo, đảm bảo không có bất kỳ message listener nào gắn vào window.
 
